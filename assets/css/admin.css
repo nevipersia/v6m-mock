@@ -1809,25 +1809,27 @@ body.has-drawer {
 
 .demo-account {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
   padding: 10px 12px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   text-align: left;
-  cursor: pointer;
 }
 
 .demo-account:hover {
-  border-color: var(--orange);
+  border-color: var(--line-strong);
 }
 
 .demo-account__text {
   display: grid;
+  flex: 1 1 60%;
   min-width: 0;
 }
 
-.demo-account .pill {
+.demo-account .button-row {
   margin-left: auto;
+  flex-wrap: nowrap;
 }

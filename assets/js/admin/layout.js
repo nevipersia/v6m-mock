@@ -41,6 +41,7 @@ export function renderShell(ctx, route, content) {
       <div class="desk__main">
         <header class="topbar">
           <span class="pill pill--brand" title="The mock data is frozen on this date">Demo date · ${formatDate(state.meta.asOf, 'short')}</span>
+          ${staff.demo ? html`<span class="pill pill--warning topbar__hide-sm" title="Sample data only, no real bookings or guests">Demo account</span>` : ''}
           <div class="topbar__actions">
             <button class="btn btn--quiet btn--sm" type="button" data-action="reset-data">
               ${icon('refresh')}<span class="topbar__hide-sm">Reset data</span>

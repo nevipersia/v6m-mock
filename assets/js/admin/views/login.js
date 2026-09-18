@@ -23,14 +23,20 @@ function demoHints(state) {
     <div class="login__demos">
       <p class="field__label">Demo accounts</p>
       ${demoAccounts.map((person) => html`
-        <button class="demo-account" type="button" data-action="use-demo" data-staff="${person.id}">
+        <div class="demo-account">
           <span class="demo-account__text">
             <strong>${ROLE_LABELS[person.role]}</strong>
             <span class="small muted">${person.email} · ${person.password}</span>
           </span>
-          <span class="pill pill--neutral">Fill in</span>
-        </button>`)}
-      <p class="small muted">Mock passwords, kept in plain text in the sample data.</p>
+          <span class="button-row">
+            <button class="btn btn--quiet btn--sm" type="button" data-action="use-demo" data-staff="${person.id}">Fill in</button>
+            <button class="btn btn--secondary btn--sm" type="button" data-action="demo-sign-in" data-staff="${person.id}">Sign in</button>
+          </span>
+        </div>`)}
+      <p class="small muted">
+        Open accounts so anyone can see the tool working. They read the sample data in
+        <span class="mono">mock-data.json</span> and never touch real resort bookings or guests.
+      </p>
     </div>`;
 }
 
@@ -47,7 +53,10 @@ export function renderLogin(state) {
         </div>
 
         ${ui.mode === 'password' ? html`
-          <p class="login__intro">Sign in with your work email. Accounts are created by the owner.</p>
+          <p class="login__intro">
+            Sign in with your work email, or use a demo account below to look around. Accounts are
+            created by the owner.
+          </p>
 
           <form class="login__form" data-submit="sign-in" novalidate>
             <label class="field">
@@ -93,6 +102,20 @@ export function renderLogin(state) {
 }
 
 export const loginActions = {
+  'demo-sign-in': ({ el, ctx }) => {
+    const person = ctx.state.staff.find((staff) => staff.id === el.dataset.staff);
+    const { staff, error } = signInWithPassword(ctx.state, person.email, person.password);
+    if (error) {
+      ui.error = error;
+      ctx.redraw();
+      return;
+    }
+    ui.email = '';
+    ui.password = '';
+    ui.error = '';
+    ctx.signedIn(staff);
+  },
+
   'use-demo': ({ el, ctx }) => {
     const person = ctx.state.staff.find((staff) => staff.id === el.dataset.staff);
     ui.email = person.email;

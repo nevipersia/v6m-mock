@@ -21,8 +21,10 @@ Then open http://localhost:4789/admin/.
 
 ## Signing in
 
-Sign in with an email and password. Two demo accounts are listed on the sign-in page, and one click
-fills them in:
+Sign in with an email and password. Two demo accounts sit on the sign-in page so anyone can open the
+tool and see how it works: **Sign in** gets you straight in, **Fill in** drops the credentials into
+the form. They read the sample data in `data/mock-data.json` and never touch real resort bookings or
+guests, and the top bar shows a "Demo account" badge while you use one.
 
 | Account | Email | Password | Can do |
 | --- | --- | --- | --- |

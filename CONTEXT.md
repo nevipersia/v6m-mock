@@ -124,7 +124,9 @@ It contains 42 bookings, 36 payments, 53 guests, 40 inquiries, one event (Cruz 1
 reserved, ₱48,000, closes the resort), saved replies, an activity log and the 2 staff accounts. The
 calendar is not limited to that week: staff can page back or forward to any date.
 
-Two demo accounts sign in without a code:
+Two demo accounts are ready on the sign-in page (one-click Sign in, or Fill in to see the
+credentials). They exist so anyone can see the tool working against the sample data; the top bar
+shows a "Demo account" badge while one is in use.
 
 | Account | Role | Sign-in |
 | --- | --- | --- |
