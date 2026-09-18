@@ -65,29 +65,6 @@ function randomCode(prefix) {
   return `${prefix}-${[...bytes].map((byte) => alphabet[byte % alphabet.length]).join('')}`;
 }
 
-// ---------- Website ----------
-
-export function addInquiry({ name, mobile, message }) {
-  return update((state) => {
-    const guest = findOrCreateGuest(state, { name, mobile });
-    const inquiry = {
-      id: nextId(state.inquiries, 'IQ'),
-      channel: 'website',
-      guestId: guest.id,
-      from: guest.name,
-      receivedAt: demoNow(state),
-      topic: 'availability',
-      message,
-      status: 'new',
-      assignedTo: null,
-      firstReplyMinutes: null,
-      relatedBookingId: null,
-    };
-    state.inquiries.unshift(inquiry);
-    return inquiry;
-  });
-}
-
 // ---------- Bookings ----------
 
 /**
@@ -216,6 +193,7 @@ export function inviteUser({ name, email, role, permissions }, staffId) {
       email: email.trim(),
       role,
       permissions: [...permissions],
+      password: null,
       status: 'invited',
       demo: false,
     };
@@ -235,7 +213,7 @@ export function inviteUser({ name, email, role, permissions }, staffId) {
 }
 
 /** @returns the staff record the code unlocked, or null when it is unknown or spent. */
-export function redeemInvite(code) {
+export function redeemInvite(code, password) {
   return update((state) => {
     const invite = state.invites.find((item) => item.code.toUpperCase() === code.trim().toUpperCase() && !item.usedAt);
     if (!invite) return null;
@@ -243,6 +221,7 @@ export function redeemInvite(code) {
     if (!staff) return null;
     invite.usedAt = demoNow(state);
     staff.status = 'active';
+    staff.password = password;
     logActivity(state, staff.id, 'user.joined', staff.id, `${staff.name} accepted the invite`);
     return staff;
   });

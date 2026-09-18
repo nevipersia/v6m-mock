@@ -51,29 +51,29 @@ personas, prioritised features, design direction, technical notes, rollout and r
 Claude doc:
 https://claude.ai/code/artifact/85caaa34-b90e-40ca-a2e1-bdd759b52bb3
 
-And this repo — a working prototype with three parts sharing one data file:
+And this repo — a working prototype of the staff tool. The guest-facing website was built first and
+then removed on request; its inquiries stay in the data as inbox history.
 
-- **Guest website** (`/`): hero, rate checker with live availability, promo banner, week availability
-  grid, rooms and cottages, pool rates, event packages, FAQs, inquiry form.
-- **V6M Desk** (`/admin/`): invite-only staff app — sign-in (two demo accounts or an invite code),
+- **V6M Desk** (`/admin/`): staff app — email and password sign-in (two demo accounts, or an invite
+  code that also sets a password),
   Dashboard, Calendar (day/week/month with free navigation), Bookings, Inbox, Events, Users.
 - **Booking link** (`/book/?code=…`): single-use page a staff member sends to one guest; the booking
   they submit lands on the calendar as a hold under that staff member.
 
-Static files, no build step, ES modules. Run it with `npm start`, then http://localhost:4789 and
-http://localhost:4789/admin/. Opening the HTML directly does not work because the browser blocks
-reading `data/mock-data.json`.
+Static files, no build step, ES modules. Run it with `npm start`, then http://localhost:4789/admin/
+(`/` redirects there). Opening the HTML directly does not work because the browser blocks reading
+`data/mock-data.json`.
 
 ## Project structure
 
 ```
-index.html                  Guest website markup
+index.html                  Redirect to /admin/
 admin/index.html            V6M Desk shell
 book/index.html             Single-use booking page
 data/mock-data.json         Sample data
 assets/
   img/                      logo.svg, hero.svg
-  css/                      tokens.css, base.css (shared) · site.css · admin.css · book.css
+  css/                      tokens.css, base.css (shared) · admin.css · book.css
   js/
     core/                   Shared by every page
       store.js              Loads JSON, saves changes to localStorage, syncs tabs
@@ -82,7 +82,6 @@ assets/
       format.js             Pesos, dates, times, digit grouping, PH mobile check
       pdf.js                Minimal dependency-free PDF writer
       dom.js                html`` templating (escapes by default) + event delegation
-    site/                   One module per website section
     book/                   Single-use booking page
     admin/
       main.js               Sign-in, hash routing, event dispatch, focus restore
@@ -112,7 +111,9 @@ assets/
 - A booking stays "on hold" until a payment is recorded, then becomes confirmed.
 - Deposits: 50% rooms, cottages and overnight; 30% day tours; 40% events; Airbnb paid in full.
 - Check-in needs a valid-ID tick and collects any balance.
-- V6M Desk is invite only: the owner creates an account and a code, and each code works once.
+- Sign-in takes an email and password; demo passwords live in the data in plain text (mock only).
+- V6M Desk is invite only: the owner creates an account and a code, each code works once, and the
+  person sets their own password when redeeming it.
 - Permissions live on each staff record, so the owner can change them per account from the Users page.
 - Booking links are single use and expire; using one creates a hold for the staff member who sent it.
 
@@ -125,10 +126,10 @@ calendar is not limited to that week: staff can page back or forward to any date
 
 Two demo accounts sign in without a code:
 
-| Account | Role | Access |
+| Account | Role | Sign-in |
 | --- | --- | --- |
-| Liza Manalo | owner | Everything, including cancellations and user accounts |
-| Joy Dimaculangan | manager | Bookings, payments, inbox and events |
+| Liza Manalo | owner | liza@v6mresort.example / owner1234 |
+| Joy Dimaculangan | manager | joy@v6mresort.example / manager1234 |
 
 Anyone else needs an invite code created on the Users page. The data also carries `invites` and
 `bookingLinks` arrays, both empty at the start.

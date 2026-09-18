@@ -24,11 +24,14 @@ function goHome(staff) {
   draw();
 }
 
-/** Context for the signed-out screen: it only needs to redraw and hand over. */
+/** Context for the signed-out screen: it only needs data, a redraw and a hand-over. */
 const loginContext = {
+  get state() {
+    return getState();
+  },
   redraw: () => draw(),
   toast: showToast,
-  signedIn: () => goHome(currentStaff(getState())),
+  signedIn: (staff) => goHome(staff ?? currentStaff(getState())),
 };
 
 function buildContext(state, staff) {

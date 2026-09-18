@@ -73,6 +73,20 @@ export function signOut() {
   }
 }
 
+/**
+ * Mock credential check. Passwords sit in the data in plain text because this
+ * is a prototype; a real build would hash them on a server.
+ * @returns {{ staff?: object, error?: string }}
+ */
+export function signInWithPassword(state, email, password) {
+  const staff = state.staff.find((person) => person.email?.toLowerCase() === email.trim().toLowerCase());
+  if (!staff || !staff.password || staff.password !== password) return { error: 'That email and password do not match an account.' };
+  if (staff.status === 'invited') return { error: 'That account still needs its invite code.' };
+  if (staff.status !== 'active') return { error: 'That account is suspended. Ask the owner to reactivate it.' };
+  signIn(staff.id);
+  return { staff };
+}
+
 export function currentStaff(state) {
   const id = readSession();
   const staff = state.staff.find((person) => person.id === id);

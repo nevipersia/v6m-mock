@@ -36,7 +36,6 @@ export function renderShell(ctx, route, content) {
           <span>V6M Desk</span>
         </a>
         <nav class="sidebar__nav" aria-label="Sections">${navLinks(ctx, route.id, 'nav-link')}</nav>
-        <a class="nav-link sidebar__site" href="../">${icon('globe')}<span class="nav-link__label">Guest website</span></a>
       </aside>
 
       <div class="desk__main">

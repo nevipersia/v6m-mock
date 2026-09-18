@@ -15,9 +15,10 @@
       "Rooms and cottages add per-head overnight entrance; the Airbnb villa does not.",
       "A booking stays on hold until a payment is recorded; checked-out bookings have zero balance.",
       "Deposits: 50% rooms, cottages and overnight; 30% day tours; 40% events; Airbnb paid in full.",
-      "V6M Desk is invite only: new accounts exist only after the owner invites them, and each invite code works once.",
       "Booking links are single use: a staff member sends one, the guest fills it in, and the booking lands on the calendar.",
-      "Rates come from public listings; promo PR-BTS and all event packages are invented for testing."
+      "Rates come from public listings; promo PR-BTS and all event packages are invented for testing.",
+      "V6M Desk signs in with an email and password. Demo passwords sit in this file in plain text because it is a mock; a real build would never store them this way.",
+      "New accounts are invite only: the owner creates the account, the invite code is used once, and the person sets their own password."
     ],
     "counts": {
       "staff": 2,
@@ -45,7 +46,8 @@
         "users.manage"
       ],
       "status": "active",
-      "demo": true
+      "demo": true,
+      "password": "owner1234"
     },
     {
       "id": "ST-02",
@@ -59,7 +61,8 @@
         "events.manage"
       ],
       "status": "active",
-      "demo": true
+      "demo": true,
+      "password": "manager1234"
     }
   ],
   "invites": [],

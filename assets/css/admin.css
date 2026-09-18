@@ -1790,3 +1790,44 @@ body.has-drawer {
   font-size: 12px;
   word-break: break-all;
 }
+
+/* ---------- Sign-in form ---------- */
+
+.login__form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.login__demos {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  background: var(--cream-deep);
+  border-radius: var(--radius);
+}
+
+.demo-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.demo-account:hover {
+  border-color: var(--orange);
+}
+
+.demo-account__text {
+  display: grid;
+  min-width: 0;
+}
+
+.demo-account .pill {
+  margin-left: auto;
+}

@@ -33,8 +33,7 @@ function problemScreen(message) {
     ${header()}
     ${card(html`
       <p class="book__problem">${message}</p>
-      <p class="small muted">Message V6M Resort on Facebook or Instagram and they will send a fresh link.</p>
-      <a class="btn btn--secondary" href="../">Visit the website</a>`)}`);
+      <p class="small muted">Message V6M Resort on Facebook or Instagram and they will send a fresh link.</p>`)}`);
 }
 
 function bookableProducts(state) {
@@ -142,8 +141,7 @@ function doneScreen(state, booking) {
         <div class="facts__row"><dt>Estimated total</dt><dd>${peso(booking.total)}</dd></div>
         ${unit ? html`<div class="facts__row"><dt>Check in</dt><dd>${formatTime(unit.checkIn)}</dd></div>` : ''}
       </dl>
-      <p class="small muted">V6M holds the slot until the deposit comes in. This link cannot be used again.</p>
-      <a class="btn btn--secondary" href="../">Visit the website</a>`)}`);
+      <p class="small muted">V6M holds the slot until the deposit comes in. This link cannot be used again.</p>`)}`);
 }
 
 function bindForm(state, link) {
