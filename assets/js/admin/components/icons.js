@@ -19,6 +19,12 @@ const PATHS = {
   message: '<path d="M4 5h16v11H9l-5 4z"/>',
   wallet: '<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M16 13h2M3 10h18M7 6V4h10v2"/>',
   arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  chevronLeft: '<path d="M15 6l-6 6 6 6"/>',
+  chevronRight: '<path d="M9 6l6 6-6 6"/>',
+  key: '<circle cx="8" cy="12" r="4"/><path d="M12 12h9M17 12v4M20.5 12v3"/>',
+  link: '<path d="M10 13a4 4 0 0 0 5.7.4l2.6-2.6A4 4 0 0 0 12.6 5l-1.5 1.5"/><path d="M14 11a4 4 0 0 0-5.7-.4L5.7 13.2A4 4 0 0 0 11.4 19l1.5-1.5"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0M16 4.5a3.5 3.5 0 0 1 0 7M18 20a6 6 0 0 0-3-5.2"/>',
+  download: '<path d="M12 4v11M7.5 11.5L12 16l4.5-4.5M5 19h14"/>',
 };
 
 export function icon(name, label) {

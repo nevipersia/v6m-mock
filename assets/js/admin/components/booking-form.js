@@ -2,9 +2,9 @@
 
 import { createBooking } from '../../core/actions.js';
 import { $, html, render } from '../../core/dom.js';
-import { formatDate, isPHMobile, peso } from '../../core/format.js';
+import { formatDate, formatDigits, isPHMobile, parseDigits, peso } from '../../core/format.js';
 import {
-  METHOD_LABELS, SOURCE_LABELS, checkAvailability, closingEvent, depositRequired, findUnit, periodDays, quote,
+  METHOD_LABELS, SOURCE_LABELS, checkAvailability, closingEvent, depositRequired, findUnit, quote,
 } from '../../core/rules.js';
 
 const SOURCES = ['walk_in', 'phone', 'messenger', 'instagram', 'website'];
@@ -22,7 +22,6 @@ function bookableProducts(state) {
 }
 
 function initialDraft(state, prefill) {
-  const days = periodDays(state);
   const products = bookableProducts(state).map((option) => option.value);
   const product = products.includes(prefill.product) ? prefill.product : 'daytour';
   const unit = findUnit(state, product);
@@ -31,7 +30,7 @@ function initialDraft(state, prefill) {
     mobile: prefill.mobile ?? '',
     source: SOURCES.includes(prefill.source) ? prefill.source : 'walk_in',
     product,
-    date: days.includes(prefill.date) ? prefill.date : state.meta.asOf,
+    date: prefill.date || state.meta.asOf,
     adults: unit?.capacityMin > 1 ? unit.capacityMin : 2,
     kids: 0,
     deposit: 0,
@@ -127,17 +126,16 @@ export function createBookingForm(prefill) {
               </label>
               <label class="field">
                 <span class="field__label">Date</span>
-                <select class="input" name="date" data-input="field">
-                  ${periodDays(state).map((day) => option(day, `${formatDate(day)}${closingEvent(state, day) ? ' · closed' : ''}`, draft.date))}
-                </select>
+                <input class="input" name="date" data-input="field" type="date" value="${draft.date}">
+                ${closingEvent(state, draft.date) ? html`<span class="small muted">Closed that day for a private event.</span>` : ''}
               </label>
               <label class="field">
                 <span class="field__label">Adults</span>
-                <input class="input" name="adults" data-input="field" type="number" min="0" max="200" step="1" value="${draft.adults}" inputmode="numeric">
+                <input class="input" name="adults" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${draft.adults || ''}">
               </label>
               <label class="field">
                 <span class="field__label">Kids</span>
-                <input class="input" name="kids" data-input="field" type="number" min="0" max="200" step="1" value="${draft.kids}" inputmode="numeric">
+                <input class="input" name="kids" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${draft.kids || ''}">
               </label>
             </div>
             <label class="field">
@@ -153,7 +151,7 @@ export function createBookingForm(prefill) {
             <div class="form-grid">
               <label class="field">
                 <span class="field__label">Amount (₱)</span>
-                <input class="input" name="deposit" data-input="field" type="number" min="0" step="1" value="${draft.deposit}" inputmode="numeric">
+                <input class="input input--amount" name="deposit" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${formatDigits(draft.deposit)}">
               </label>
               <label class="field">
                 <span class="field__label">Method</span>
@@ -166,7 +164,7 @@ export function createBookingForm(prefill) {
               <span class="field__label">Reference (optional)</span>
               <input class="input" name="reference" data-input="field" value="${draft.reference}" placeholder="GCash or bank reference number">
             </label>
-            <p class="small muted">Leave the amount at ₱0 to hold the slot without a deposit.</p>
+            <p class="small muted">Leave the amount blank to hold the slot without a deposit.</p>
           </fieldset>
 
           <p class="form-error" data-slot="error" role="alert">${error}</p>
@@ -180,7 +178,17 @@ export function createBookingForm(prefill) {
 
     inputs: {
       field: ({ el, ctx, root }) => {
-        draft[el.name] = NUMBER_FIELDS.includes(el.name) ? Math.max(0, Number.parseInt(el.value, 10) || 0) : el.value;
+        if (NUMBER_FIELDS.includes(el.name)) {
+          const caretAtEnd = el.selectionStart === el.value.length;
+          draft[el.name] = parseDigits(el.value);
+          const formatted = el.name === 'deposit' ? formatDigits(el.value) : String(parseDigits(el.value) || '');
+          if (formatted !== el.value) {
+            el.value = formatted;
+            if (caretAtEnd) el.setSelectionRange(formatted.length, formatted.length);
+          }
+        } else {
+          draft[el.name] = el.value;
+        }
         error = '';
         refreshSummary(root, ctx.state);
       },
@@ -189,7 +197,7 @@ export function createBookingForm(prefill) {
     actions: {
       'use-suggested-deposit': ({ el, ctx, root }) => {
         draft.deposit = Number(el.dataset.amount);
-        $('[name="deposit"]', root).value = draft.deposit;
+        $('[name="deposit"]', root).value = formatDigits(draft.deposit);
         refreshSummary(root, ctx.state);
       },
 
@@ -201,6 +209,7 @@ export function createBookingForm(prefill) {
         const unit = findUnit(state, draft.product);
 
         if (!draft.guestName.trim()) error = 'Enter the guest name.';
+        else if (!draft.date) error = 'Pick a date.';
         else if (draft.mobile.trim() && !isPHMobile(draft.mobile)) error = 'Enter a PH mobile number, like 0917 123 4567, or leave it blank.';
         else if (guests === 0) error = 'Add at least one guest.';
         else if (!availability.ok) error = availability.reason;

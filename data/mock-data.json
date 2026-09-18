@@ -15,10 +15,12 @@
       "Rooms and cottages add per-head overnight entrance; the Airbnb villa does not.",
       "A booking stays on hold until a payment is recorded; checked-out bookings have zero balance.",
       "Deposits: 50% rooms, cottages and overnight; 30% day tours; 40% events; Airbnb paid in full.",
+      "V6M Desk is invite only: new accounts exist only after the owner invites them, and each invite code works once.",
+      "Booking links are single use: a staff member sends one, the guest fills it in, and the booking lands on the calendar.",
       "Rates come from public listings; promo PR-BTS and all event packages are invented for testing."
     ],
     "counts": {
-      "staff": 5,
+      "staff": 2,
       "units": 6,
       "guests": 53,
       "bookings": 42,
@@ -32,29 +34,35 @@
     {
       "id": "ST-01",
       "name": "Liza Manalo",
-      "role": "owner"
+      "email": "liza@v6mresort.example",
+      "role": "owner",
+      "permissions": [
+        "bookings.write",
+        "bookings.cancel",
+        "payments.write",
+        "inbox.write",
+        "events.manage",
+        "users.manage"
+      ],
+      "status": "active",
+      "demo": true
     },
     {
       "id": "ST-02",
       "name": "Joy Dimaculangan",
-      "role": "front_desk"
-    },
-    {
-      "id": "ST-03",
-      "name": "Mark Katigbak",
-      "role": "front_desk"
-    },
-    {
-      "id": "ST-04",
-      "name": "Nene Recto",
-      "role": "housekeeping"
-    },
-    {
-      "id": "ST-05",
-      "name": "Paolo Mercado",
-      "role": "events"
+      "email": "joy@v6mresort.example",
+      "role": "manager",
+      "permissions": [
+        "bookings.write",
+        "payments.write",
+        "inbox.write",
+        "events.manage"
+      ],
+      "status": "active",
+      "demo": true
     }
   ],
+  "invites": [],
   "poolSessions": [
     {
       "id": "daytour",
@@ -312,701 +320,267 @@
     {
       "id": "GU-0014",
       "name": "Jerome Mendoza",
-      "mobile": "0900 861 8427",
-      "email": "jerome.mendoza@example.com",
-      "city": "Taguig",
-      "instagram": "@jeromemendoza47",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 861 8427"
     },
     {
       "id": "GU-0017",
       "name": "Hazel Ramos",
-      "mobile": "0900 697 8088",
-      "email": "hazel.ramos@example.com",
-      "city": "Lipa City",
-      "instagram": null,
-      "tags": [
-        "pet_owner"
-      ],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 697 8088"
     },
     {
       "id": "GU-0019",
       "name": "Jerome Lontoc",
-      "mobile": "0900 107 4612",
-      "email": "jerome.lontoc@example.com",
-      "city": "Taguig",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 107 4612"
     },
     {
       "id": "GU-0022",
       "name": "Kristine Castillo",
-      "mobile": "0900 500 4072",
-      "email": "kristine.castillo@example.com",
-      "city": "Batangas City",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": true
+      "mobile": "0900 500 4072"
     },
     {
       "id": "GU-0029",
       "name": "Kevin Dela Cruz",
-      "mobile": "0900 980 5187",
-      "email": null,
-      "city": "Makati",
-      "instagram": "@kevindelacruz5",
-      "tags": [],
-      "firstVisit": "2026-09-16",
-      "visits": 1,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 980 5187"
     },
     {
       "id": "GU-0030",
       "name": "Kristine Perez",
-      "mobile": "0900 255 6824",
-      "email": null,
-      "city": "Lipa City",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 255 6824"
     },
     {
       "id": "GU-0049",
       "name": "Jasmine Cruz",
-      "mobile": "0900 619 1803",
-      "email": "jasmine.cruz@example.com",
-      "city": "San Jose",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 619 1803"
     },
     {
       "id": "GU-0055",
       "name": "Jose Ramos",
-      "mobile": "0900 937 4387",
-      "email": null,
-      "city": "Lipa City",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 937 4387"
     },
     {
       "id": "GU-0062",
       "name": "Trisha Tolentino",
-      "mobile": "0900 357 7100",
-      "email": "trisha.tolentino@example.com",
-      "city": "San Pablo",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": true
+      "mobile": "0900 357 7100"
     },
     {
       "id": "GU-0066",
       "name": "Mark Bautista",
-      "mobile": "0900 382 5893",
-      "email": null,
-      "city": "Makati",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 382 5893"
     },
     {
       "id": "GU-0067",
       "name": "Camille De Leon",
-      "mobile": "0900 967 7005",
-      "email": null,
-      "city": "Lipa City",
-      "instagram": "@camilledeleon51",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 967 7005"
     },
     {
       "id": "GU-0070",
       "name": "Kristine Arellano",
-      "mobile": "0900 192 7395",
-      "email": "kristine.arellano@example.com",
-      "city": "Tanauan",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 192 7395"
     },
     {
       "id": "GU-0071",
       "name": "Nico Dela Cruz",
-      "mobile": "0900 667 7034",
-      "email": "nico.dela.cruz@example.com",
-      "city": "San Pablo",
-      "instagram": null,
-      "tags": [
-        "event_client"
-      ],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 667 7034"
     },
     {
       "id": "GU-0072",
       "name": "Rafael Ocampo",
-      "mobile": "0900 305 3660",
-      "email": null,
-      "city": "Quezon City",
-      "instagram": null,
-      "tags": [
-        "airbnb"
-      ],
-      "firstVisit": "2026-09-15",
-      "visits": 1,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 305 3660"
     },
     {
       "id": "GU-0073",
       "name": "Luis Arellano",
-      "mobile": "0900 352 0023",
-      "email": null,
-      "city": "Lipa City",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": "2026-09-15",
-      "visits": 1,
-      "marketingConsent": true,
-      "photoRepostConsent": true
+      "mobile": "0900 352 0023"
     },
     {
       "id": "GU-0074",
       "name": "Vince Aguilar",
-      "mobile": "0900 163 5655",
-      "email": null,
-      "city": "Lipa City",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": "2026-09-15",
-      "visits": 1,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 163 5655"
     },
     {
       "id": "GU-0075",
       "name": "Kath De Leon",
-      "mobile": "0900 619 9583",
-      "email": "kath.de.leon@example.com",
-      "city": "Lipa City",
-      "instagram": "@kathdeleon99",
-      "tags": [],
-      "firstVisit": "2026-09-15",
-      "visits": 1,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 619 9583"
     },
     {
       "id": "GU-0076",
       "name": "Mark Salazar",
-      "mobile": "0900 842 1919",
-      "email": "mark.salazar@example.com",
-      "city": "Makati",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": "2026-09-16",
-      "visits": 1,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 842 1919"
     },
     {
       "id": "GU-0077",
       "name": "Kevin Marasigan",
-      "mobile": "0900 428 0044",
-      "email": "kevin.marasigan@example.com",
-      "city": "Dasmariñas",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": "2026-09-16",
-      "visits": 1,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 428 0044"
     },
     {
       "id": "GU-0078",
       "name": "Nico Mendoza",
-      "mobile": "0900 513 5582",
-      "email": "nico.mendoza@example.com",
-      "city": "Santo Tomas",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 513 5582"
     },
     {
       "id": "GU-0079",
       "name": "Trisha Pascual",
-      "mobile": "0900 337 0813",
-      "email": null,
-      "city": "Rosario",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 337 0813"
     },
     {
       "id": "GU-0080",
       "name": "Kristine Torres",
-      "mobile": "0900 886 3012",
-      "email": null,
-      "city": "Tanauan",
-      "instagram": null,
-      "tags": [
-        "pet_owner"
-      ],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": true
+      "mobile": "0900 886 3012"
     },
     {
       "id": "GU-0081",
       "name": "Paolo Perez",
-      "mobile": "0900 767 8591",
-      "email": null,
-      "city": "Rosario",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": true
+      "mobile": "0900 767 8591"
     },
     {
       "id": "GU-0082",
       "name": "Paolo Lontoc",
-      "mobile": "0900 273 4051",
-      "email": "paolo.lontoc@example.com",
-      "city": "Tanauan",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 273 4051"
     },
     {
       "id": "GU-0083",
       "name": "Lea Navarro",
-      "mobile": "0900 137 1491",
-      "email": "lea.navarro@example.com",
-      "city": "Lipa City",
-      "instagram": "@leanavarro67",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 137 1491"
     },
     {
       "id": "GU-0084",
       "name": "Joshua Reyes",
-      "mobile": "0900 234 7867",
-      "email": null,
-      "city": "Dasmariñas",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 234 7867"
     },
     {
       "id": "GU-0085",
       "name": "Hazel Castillo",
-      "mobile": "0900 416 8033",
-      "email": null,
-      "city": "Makati",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 416 8033"
     },
     {
       "id": "GU-0086",
       "name": "Mark Aguilar",
-      "mobile": "0900 218 6509",
-      "email": null,
-      "city": "Tanauan",
-      "instagram": "@markaguilar88",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": true
+      "mobile": "0900 218 6509"
     },
     {
       "id": "GU-0087",
       "name": "Vince Garcia",
-      "mobile": "0900 322 7024",
-      "email": "vince.garcia@example.com",
-      "city": "Lipa City",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 322 7024"
     },
     {
       "id": "GU-0088",
       "name": "Patricia Perez",
-      "mobile": "0900 138 5440",
-      "email": "patricia.perez@example.com",
-      "city": "Calamba",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": true
+      "mobile": "0900 138 5440"
     },
     {
       "id": "GU-0089",
       "name": "Trisha Cruz",
-      "mobile": "0900 397 6413",
-      "email": "trisha.cruz@example.com",
-      "city": "Taguig",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": true
+      "mobile": "0900 397 6413"
     },
     {
       "id": "GU-0090",
       "name": "Ramon Arellano",
-      "mobile": "0900 600 7992",
-      "email": "ramon.arellano@example.com",
-      "city": "Taguig",
-      "instagram": "@ramonarellano42",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": true
+      "mobile": "0900 600 7992"
     },
     {
       "id": "GU-0091",
       "name": "Mae Marasigan",
-      "mobile": "0900 258 9009",
-      "email": null,
-      "city": "Quezon City",
-      "instagram": "@maemarasigan43",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 258 9009"
     },
     {
       "id": "GU-0092",
       "name": "Trisha Lontoc",
-      "mobile": "0900 327 3240",
-      "email": null,
-      "city": "Batangas City",
-      "instagram": "@trishalontoc35",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 327 3240"
     },
     {
       "id": "GU-0093",
       "name": "Kath Magpantay",
-      "mobile": "0900 962 8688",
-      "email": null,
-      "city": "Calamba",
-      "instagram": null,
-      "tags": [
-        "pet_owner"
-      ],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": true
+      "mobile": "0900 962 8688"
     },
     {
       "id": "GU-0094",
       "name": "Vince Hernandez",
-      "mobile": "0900 967 7331",
-      "email": "vince.hernandez@example.com",
-      "city": "Rosario",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 967 7331"
     },
     {
       "id": "GU-0095",
       "name": "Maria Lontoc",
-      "mobile": "0900 542 4949",
-      "email": null,
-      "city": "Tanauan",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 542 4949"
     },
     {
       "id": "GU-0096",
       "name": "Patricia Marasigan",
-      "mobile": "0900 941 2670",
-      "email": "patricia.marasigan@example.com",
-      "city": "Quezon City",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 941 2670"
     },
     {
       "id": "GU-0097",
       "name": "Lovely Ocampo",
-      "mobile": "0900 318 5174",
-      "email": "lovely.ocampo@example.com",
-      "city": "Tanauan",
-      "instagram": "@lovelyocampo82",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 318 5174"
     },
     {
       "id": "GU-0098",
       "name": "Angelica Castillo",
-      "mobile": "0900 475 9755",
-      "email": "angelica.castillo@example.com",
-      "city": "Lipa City",
-      "instagram": "@angelicacastillo26",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 475 9755"
     },
     {
       "id": "GU-0099",
       "name": "Joshua Villanueva",
-      "mobile": "0900 217 6792",
-      "email": null,
-      "city": "San Jose",
-      "instagram": "@joshuavillanueva7",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 217 6792"
     },
     {
       "id": "GU-0100",
       "name": "Miguel Mendoza",
-      "mobile": "0900 934 1802",
-      "email": "miguel.mendoza@example.com",
-      "city": "Taguig",
-      "instagram": "@miguelmendoza44",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 934 1802"
     },
     {
       "id": "GU-0101",
       "name": "Arvin Castillo",
-      "mobile": "0900 300 0913",
-      "email": null,
-      "city": "Tanauan",
-      "instagram": "@arvincastillo32",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 300 0913"
     },
     {
       "id": "GU-0102",
       "name": "Ramon Hernandez",
-      "mobile": "0900 439 9562",
-      "email": "ramon.hernandez@example.com",
-      "city": "Lipa City",
-      "instagram": "@ramonhernandez5",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": true
+      "mobile": "0900 439 9562"
     },
     {
       "id": "GU-0103",
       "name": "Mark Villanueva",
-      "mobile": "0900 135 2020",
-      "email": null,
-      "city": "Quezon City",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 135 2020"
     },
     {
       "id": "GU-0104",
       "name": "Ella Panganiban",
-      "mobile": "0900 506 4725",
-      "email": null,
-      "city": "Taguig",
-      "instagram": "@ellapanganiban42",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": true
+      "mobile": "0900 506 4725"
     },
     {
       "id": "GU-0105",
       "name": "Camille Lontoc",
-      "mobile": "0900 743 4394",
-      "email": null,
-      "city": "Lipa City",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": true
+      "mobile": "0900 743 4394"
     },
     {
       "id": "GU-0106",
       "name": "Carlo Lontoc",
-      "mobile": "0900 952 9817",
-      "email": null,
-      "city": "Quezon City",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 952 9817"
     },
     {
       "id": "GU-0107",
       "name": "Gino Cruz",
-      "mobile": "0900 498 7291",
-      "email": "gino.cruz@example.com",
-      "city": "Lipa City",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 498 7291"
     },
     {
       "id": "GU-0108",
       "name": "Nico Lontoc",
-      "mobile": "0900 664 0385",
-      "email": null,
-      "city": "Lipa City",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 664 0385"
     },
     {
       "id": "GU-0109",
       "name": "Renz Lontoc",
-      "mobile": "0900 359 1597",
-      "email": null,
-      "city": "Taguig",
-      "instagram": null,
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 359 1597"
     },
     {
       "id": "GU-0110",
       "name": "Ella Tolentino",
-      "mobile": "0900 719 5963",
-      "email": "ella.tolentino@example.com",
-      "city": "Calamba",
-      "instagram": "@ellatolentino91",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": true,
-      "photoRepostConsent": false
+      "mobile": "0900 719 5963"
     },
     {
       "id": "GU-0111",
       "name": "Patricia Hernandez",
-      "mobile": "0900 487 8540",
-      "email": "patricia.hernandez@example.com",
-      "city": "Quezon City",
-      "instagram": "@patriciahernandez84",
-      "tags": [],
-      "firstVisit": null,
-      "visits": 0,
-      "marketingConsent": false,
-      "photoRepostConsent": false
+      "mobile": "0900 487 8540"
     }
   ],
   "bookings": [
@@ -1191,7 +765,7 @@
       "idVerified": true,
       "eventId": null,
       "createdAt": "2026-09-02T13:31:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": "2026-09-15T18:00:00+08:00",
       "checkedOutAt": "2026-09-16T06:00:00+08:00",
       "cancelledAt": null,
@@ -1285,7 +859,7 @@
       "idVerified": true,
       "eventId": null,
       "createdAt": "2026-08-30T20:36:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": "2026-09-16T08:00:00+08:00",
       "checkedOutAt": "2026-09-16T16:00:00+08:00",
       "cancelledAt": null,
@@ -1335,7 +909,7 @@
       "idVerified": true,
       "eventId": null,
       "createdAt": "2026-09-04T10:27:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": "2026-09-16T18:00:00+08:00",
       "checkedOutAt": "2026-09-17T06:00:00+08:00",
       "cancelledAt": null,
@@ -1379,7 +953,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-06T15:49:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -1423,7 +997,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-07T14:04:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -1473,7 +1047,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-10T14:22:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -1523,7 +1097,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-08-29T21:51:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -1679,7 +1253,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-08-29T17:44:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -1729,7 +1303,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-08-30T09:48:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -1845,7 +1419,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-17T08:15:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -1939,7 +1513,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-13T21:06:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -2039,7 +1613,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-15T19:18:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -2133,7 +1707,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-08-29T21:53:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -2177,7 +1751,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-17T08:15:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": "2026-09-17T09:30:00+08:00",
@@ -2549,7 +2123,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-08-31T13:40:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -2643,7 +2217,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-14T20:07:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -2693,7 +2267,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-06T09:32:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -2909,7 +2483,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-07T18:24:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -2959,7 +2533,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-01T12:36:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -3015,7 +2589,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-01T17:46:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -3059,7 +2633,7 @@
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-08T19:58:00+08:00",
-      "createdBy": "ST-03",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -3109,7 +2683,7 @@
       "idVerified": false,
       "eventId": "EV-001",
       "createdAt": "2026-07-26T10:00:00+08:00",
-      "createdBy": "ST-05",
+      "createdBy": "ST-02",
       "checkedInAt": null,
       "checkedOutAt": null,
       "cancelledAt": null,
@@ -3127,7 +2701,7 @@
       "reference": "BT-14936462",
       "proofAttached": true,
       "receivedAt": "2026-07-26T15:00:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0020",
@@ -3149,7 +2723,7 @@
       "reference": "6238 902 917952",
       "proofAttached": true,
       "receivedAt": "2026-08-29T07:50:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0015",
@@ -3160,7 +2734,7 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-08-30T07:50:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0027",
@@ -3171,7 +2745,7 @@
       "reference": "BT-55374156",
       "proofAttached": true,
       "receivedAt": "2026-08-30T07:50:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0005",
@@ -3193,7 +2767,7 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-08-30T12:30:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0033",
@@ -3204,7 +2778,7 @@
       "reference": "5651 162 831274",
       "proofAttached": true,
       "receivedAt": "2026-08-31T07:30:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0031",
@@ -3215,7 +2789,7 @@
       "reference": "BT-29427030",
       "proofAttached": true,
       "receivedAt": "2026-09-01T07:50:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0032",
@@ -3226,7 +2800,7 @@
       "reference": "4425 130 947698",
       "proofAttached": true,
       "receivedAt": "2026-09-01T07:50:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0009",
@@ -3248,7 +2822,7 @@
       "reference": "1147 289 275135",
       "proofAttached": true,
       "receivedAt": "2026-09-02T07:50:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0024",
@@ -3292,7 +2866,7 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-09-04T12:30:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0018",
@@ -3347,7 +2921,7 @@
       "reference": "6383 512 880260",
       "proofAttached": true,
       "receivedAt": "2026-09-07T07:50:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0019",
@@ -3369,7 +2943,7 @@
       "reference": "BT-37603626",
       "proofAttached": true,
       "receivedAt": "2026-09-13T07:50:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0029",
@@ -3380,7 +2954,7 @@
       "reference": "5099 686 328869",
       "proofAttached": true,
       "receivedAt": "2026-09-13T07:50:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0002",
@@ -3402,7 +2976,7 @@
       "reference": "BT-73247801",
       "proofAttached": true,
       "receivedAt": "2026-09-14T07:50:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0007",
@@ -3446,7 +3020,7 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-09-15T08:00:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0004",
@@ -3468,7 +3042,7 @@
       "reference": "7287 480 706381",
       "proofAttached": true,
       "receivedAt": "2026-09-16T08:00:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0012",
@@ -3479,7 +3053,7 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-09-16T08:00:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0014",
@@ -3501,7 +3075,7 @@
       "reference": "8341 508 500968",
       "proofAttached": true,
       "receivedAt": "2026-09-17T07:50:00+08:00",
-      "receivedBy": "ST-03"
+      "receivedBy": "ST-02"
     },
     {
       "id": "PY-0025",
@@ -3535,7 +3109,7 @@
       "blocksCalendar": true,
       "stage": "reserved",
       "contactGuestId": "GU-0071",
-      "coordinatorId": "ST-05",
+      "coordinatorId": "ST-02",
       "ocularDate": "2026-08-31",
       "bookingId": "BK-0921-001",
       "notes": "Program starts 6 PM"
@@ -3603,7 +3177,7 @@
       "topic": "availability",
       "message": "Open ba kayo Sep 19? Day tour for 3 people.",
       "status": "booked",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 4,
       "relatedBookingId": "BK-0919-030"
     },
@@ -3629,7 +3203,7 @@
       "topic": "availability",
       "message": "Hello! Cottage reservation for Sep 18, 10 persons. How much?",
       "status": "booked",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 21,
       "relatedBookingId": "BK-0918-013"
     },
@@ -3733,7 +3307,7 @@
       "topic": "availability",
       "message": "Available ba overnight on Sep 18? 7 pax.",
       "status": "booked",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 36,
       "relatedBookingId": "BK-0918-022"
     },
@@ -3759,7 +3333,7 @@
       "topic": "events",
       "message": "Can we do a prenup shoot there? How much?",
       "status": "replied",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 168,
       "relatedBookingId": null
     },
@@ -3772,7 +3346,7 @@
       "topic": "amenities",
       "message": "Do you have videoke?",
       "status": "replied",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 131,
       "relatedBookingId": null
     },
@@ -3785,7 +3359,7 @@
       "topic": "availability",
       "message": "Good day! Rates for day swimming please. We are 17.",
       "status": "booked",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 43,
       "relatedBookingId": "BK-0920-038"
     },
@@ -3824,7 +3398,7 @@
       "topic": "availability",
       "message": "Open ba kayo Sep 18? Day tour for 9 people.",
       "status": "booked",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 15,
       "relatedBookingId": "BK-0918-016"
     },
@@ -3837,7 +3411,7 @@
       "topic": "availability",
       "message": "Hi, how much overnight swimming for 3 persons on Sep 20?",
       "status": "booked",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 42,
       "relatedBookingId": "BK-0920-042"
     },
@@ -3850,7 +3424,7 @@
       "topic": "availability",
       "message": "Hello! Cottage reservation for Sep 20, 13 persons. How much?",
       "status": "booked",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 18,
       "relatedBookingId": "BK-0920-033"
     },
@@ -3928,7 +3502,7 @@
       "topic": "availability",
       "message": "Available ba Cottage B on Sep 15? We are 9 pax.",
       "status": "booked",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 36,
       "relatedBookingId": "BK-0915-003"
     },
@@ -3980,7 +3554,7 @@
       "topic": "availability",
       "message": "Available ba Cottage C on Sep 20? We are 6 pax.",
       "status": "booked",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 4,
       "relatedBookingId": "BK-0920-035"
     },
@@ -4032,7 +3606,7 @@
       "topic": "availability",
       "message": "Can we book Deluxe room for Sep 18? Check-in is 3 PM right?",
       "status": "booked",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 16,
       "relatedBookingId": "BK-0918-011"
     },
@@ -4045,7 +3619,7 @@
       "topic": "availability",
       "message": "Good day! Rates for day swimming please. We are 20.",
       "status": "booked",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 9,
       "relatedBookingId": "BK-0919-029"
     },
@@ -4058,81 +3632,16 @@
       "topic": "availability",
       "message": "Hi! How much for day tour on Sep 18? 6 pax, 2 of them kids.",
       "status": "booked",
-      "assignedTo": "ST-03",
+      "assignedTo": "ST-02",
       "firstReplyMinutes": 36,
       "relatedBookingId": "BK-0918-017"
     }
   ],
-  "housekeeping": [
-    {
-      "unitId": "suite",
-      "status": "ready",
-      "updatedAt": "2026-09-17T09:05:00+08:00",
-      "updatedBy": "ST-04",
-      "note": null,
-      "nextArrivalBookingId": null
-    },
-    {
-      "unitId": "deluxe",
-      "status": "ready",
-      "updatedAt": "2026-09-17T07:33:00+08:00",
-      "updatedBy": "ST-04",
-      "note": null,
-      "nextArrivalBookingId": null
-    },
-    {
-      "unitId": "cottageA",
-      "status": "ready",
-      "updatedAt": "2026-09-17T09:59:00+08:00",
-      "updatedBy": "ST-04",
-      "note": null,
-      "nextArrivalBookingId": null
-    },
-    {
-      "unitId": "cottageB",
-      "status": "maintenance",
-      "updatedAt": "2026-09-17T07:01:00+08:00",
-      "updatedBy": "ST-04",
-      "note": "Loose bench plank, carpenter scheduled Sep 18",
-      "nextArrivalBookingId": null
-    },
-    {
-      "unitId": "cottageC",
-      "status": "ready",
-      "updatedAt": "2026-09-17T07:13:00+08:00",
-      "updatedBy": "ST-04",
-      "note": null,
-      "nextArrivalBookingId": null
-    },
-    {
-      "unitId": "villa",
-      "status": "ready",
-      "updatedAt": "2026-09-17T08:14:00+08:00",
-      "updatedBy": "ST-04",
-      "note": null,
-      "nextArrivalBookingId": null
-    },
-    {
-      "unitId": "pool",
-      "status": "ready",
-      "updatedAt": "2026-09-17T07:05:00+08:00",
-      "updatedBy": "ST-04",
-      "note": "Chlorine checked, 1.5 ppm",
-      "nextArrivalBookingId": null
-    },
-    {
-      "unitId": "shower_rooms",
-      "status": "maintenance",
-      "updatedAt": "2026-09-17T07:40:00+08:00",
-      "updatedBy": "ST-04",
-      "note": "Water heater in shower 2 not working",
-      "nextArrivalBookingId": null
-    }
-  ],
+  "bookingLinks": [],
   "activityLog": [
     {
       "at": "2026-09-17T08:15:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0919-030",
       "detail": "Mae Marasigan · daytour · 2026-09-19"
@@ -4153,7 +3662,7 @@
     },
     {
       "at": "2026-09-17T08:15:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0918-013",
       "detail": "Kristine Torres · cottageB · 2026-09-18"
@@ -4167,7 +3676,7 @@
     },
     {
       "at": "2026-09-17T07:50:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0918-013",
       "detail": "PHP 1,700 gcash (deposit)"
@@ -4181,7 +3690,7 @@
     },
     {
       "at": "2026-09-16T18:00:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.checked_in",
       "ref": "BK-0916-008",
       "detail": "Valid ID verified"
@@ -4209,21 +3718,21 @@
     },
     {
       "at": "2026-09-16T12:00:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.checked_out",
       "ref": "BK-0915-002",
       "detail": null
     },
     {
       "at": "2026-09-16T08:00:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.checked_in",
       "ref": "BK-0916-007",
       "detail": "Valid ID verified"
     },
     {
       "at": "2026-09-16T08:00:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0916-007",
       "detail": "PHP 1,075 cash (balance)"
@@ -4237,7 +3746,7 @@
     },
     {
       "at": "2026-09-16T08:00:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0916-006",
       "detail": "PHP 400 gcash (balance)"
@@ -4258,14 +3767,14 @@
     },
     {
       "at": "2026-09-15T19:18:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0918-022",
       "detail": "Mark Aguilar · overnight · 2026-09-18"
     },
     {
       "at": "2026-09-15T18:00:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.checked_in",
       "ref": "BK-0915-003",
       "detail": "Valid ID verified"
@@ -4286,7 +3795,7 @@
     },
     {
       "at": "2026-09-15T16:00:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.checked_out",
       "ref": "BK-0915-004",
       "detail": null
@@ -4300,14 +3809,14 @@
     },
     {
       "at": "2026-09-15T08:00:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0915-005",
       "detail": "PHP 1,245 cash (balance)"
     },
     {
       "at": "2026-09-15T08:00:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.checked_in",
       "ref": "BK-0915-004",
       "detail": "Valid ID verified"
@@ -4328,7 +3837,7 @@
     },
     {
       "at": "2026-09-14T20:07:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0920-038",
       "detail": "Jerome Mendoza · daytour · 2026-09-20"
@@ -4356,14 +3865,14 @@
     },
     {
       "at": "2026-09-14T07:50:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0919-027",
       "detail": "PHP 1,100 bank_transfer (deposit)"
     },
     {
       "at": "2026-09-13T21:06:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0918-020",
       "detail": "Joshua Reyes · overnight · 2026-09-18"
@@ -4391,21 +3900,21 @@
     },
     {
       "at": "2026-09-13T07:50:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0919-031",
       "detail": "PHP 1,100 gcash (deposit)"
     },
     {
       "at": "2026-09-13T07:50:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0918-020",
       "detail": "PHP 300 bank_transfer (deposit)"
     },
     {
       "at": "2026-09-10T14:22:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0918-016",
       "detail": "Jose Ramos · daytour · 2026-09-18"
@@ -4426,21 +3935,21 @@
     },
     {
       "at": "2026-09-08T19:58:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0920-042",
       "detail": "Ramon Hernandez · overnight · 2026-09-20"
     },
     {
       "at": "2026-09-07T18:24:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0920-033",
       "detail": "Vince Hernandez · cottageA · 2026-09-20"
     },
     {
       "at": "2026-09-07T14:04:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0918-015",
       "detail": "Paolo Perez · daytour · 2026-09-18"
@@ -4468,7 +3977,7 @@
     },
     {
       "at": "2026-09-07T07:50:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0920-041",
       "detail": "PHP 500 gcash (deposit)"
@@ -4489,7 +3998,7 @@
     },
     {
       "at": "2026-09-06T15:49:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0917-009",
       "detail": "Nico Mendoza · overnight · 2026-09-17"
@@ -4503,7 +4012,7 @@
     },
     {
       "at": "2026-09-06T09:32:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0920-039",
       "detail": "Joshua Villanueva · daytour · 2026-09-20"
@@ -4531,14 +4040,14 @@
     },
     {
       "at": "2026-09-04T12:30:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0916-008",
       "detail": "PHP 700 cash (deposit)"
     },
     {
       "at": "2026-09-04T10:27:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0916-008",
       "detail": "Kevin Dela Cruz · overnight · 2026-09-16"
@@ -4552,7 +4061,7 @@
     },
     {
       "at": "2026-09-02T13:31:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0915-003",
       "detail": "Luis Arellano · cottageB · 2026-09-15"
@@ -4594,7 +4103,7 @@
     },
     {
       "at": "2026-09-02T07:50:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0918-019",
       "detail": "PHP 800 gcash (deposit)"
@@ -4608,14 +4117,14 @@
     },
     {
       "at": "2026-09-01T17:46:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0920-035",
       "detail": "Patricia Marasigan · cottageC · 2026-09-20"
     },
     {
       "at": "2026-09-01T12:36:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0920-034",
       "detail": "Maria Lontoc · cottageB · 2026-09-20"
@@ -4636,28 +4145,28 @@
     },
     {
       "at": "2026-09-01T07:50:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0920-035",
       "detail": "PHP 1,100 gcash (deposit)"
     },
     {
       "at": "2026-09-01T07:50:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0920-034",
       "detail": "PHP 1,700 bank_transfer (deposit)"
     },
     {
       "at": "2026-08-31T13:40:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0920-036",
       "detail": "Lovely Ocampo · daytour · 2026-09-20"
     },
     {
       "at": "2026-08-31T07:30:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0920-036",
       "detail": "PHP 2,450 gcash (full)"
@@ -4671,7 +4180,7 @@
     },
     {
       "at": "2026-08-30T20:36:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0916-007",
       "detail": "Kevin Marasigan · daytour · 2026-09-16"
@@ -4685,7 +4194,7 @@
     },
     {
       "at": "2026-08-30T12:30:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0916-007",
       "detail": "PHP 500 cash (deposit)"
@@ -4699,49 +4208,49 @@
     },
     {
       "at": "2026-08-30T09:48:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0918-011",
       "detail": "Trisha Pascual · deluxe · 2026-09-18"
     },
     {
       "at": "2026-08-30T07:50:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0919-028",
       "detail": "PHP 400 bank_transfer (deposit)"
     },
     {
       "at": "2026-08-30T07:50:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0918-011",
       "detail": "PHP 1,300 cash (deposit)"
     },
     {
       "at": "2026-08-29T21:53:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0919-029",
       "detail": "Ramon Arellano · daytour · 2026-09-19"
     },
     {
       "at": "2026-08-29T21:51:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0918-017",
       "detail": "Paolo Lontoc · daytour · 2026-09-18"
     },
     {
       "at": "2026-08-29T17:44:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0918-010",
       "detail": "Kristine Perez · suite · 2026-09-18"
     },
     {
       "at": "2026-08-29T07:50:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0919-029",
       "detail": "PHP 800 gcash (deposit)"
@@ -4755,14 +4264,14 @@
     },
     {
       "at": "2026-07-26T15:00:00+08:00",
-      "staffId": "ST-03",
+      "staffId": "ST-02",
       "action": "payment.recorded",
       "ref": "BK-0921-001",
       "detail": "PHP 19,200 bank_transfer (deposit)"
     },
     {
       "at": "2026-07-26T10:00:00+08:00",
-      "staffId": "ST-05",
+      "staffId": "ST-02",
       "action": "booking.created",
       "ref": "BK-0921-001",
       "detail": "Cruz 18th debut · event · 2026-09-21"

@@ -9,7 +9,7 @@ import { ROUTES } from './routes.js';
 
 function navCount(state, routeId) {
   if (routeId === 'inbox') return state.inquiries.filter((inquiry) => inquiry.status === 'new').length;
-  if (routeId === 'housekeeping') return state.housekeeping.filter((entry) => entry.status === 'maintenance').length;
+  if (routeId === 'users') return state.staff.filter((person) => person.status === 'invited').length;
   return 0;
 }
 

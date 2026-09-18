@@ -21,20 +21,6 @@ const STAGE_TONES = {
   done: 'neutral',
 };
 
-export const HOUSEKEEPING_LABELS = {
-  ready: 'Ready',
-  occupied: 'Occupied',
-  cleaning: 'Cleaning',
-  maintenance: 'Maintenance',
-};
-
-const HOUSEKEEPING_TONES = {
-  ready: 'success',
-  occupied: 'info',
-  cleaning: 'warning',
-  maintenance: 'danger',
-};
-
 export const statusPill = (booking) =>
   html`<span class="pill pill--${STATUS_TONES[booking.status]}">${STATUS_LABELS[booking.status]}</span>`;
 
@@ -47,9 +33,6 @@ export function paymentPill(booking) {
 
 export const stagePill = (stage) =>
   html`<span class="pill pill--${STAGE_TONES[stage]}">${STAGE_LABELS[stage]}</span>`;
-
-export const housekeepingPill = (status) =>
-  html`<span class="pill pill--${HOUSEKEEPING_TONES[status]}">${HOUSEKEEPING_LABELS[status]}</span>`;
 
 export const kindDot = (state, product) =>
   html`<span class="dot dot--${productKind(state, product)}" aria-hidden="true"></span>`;

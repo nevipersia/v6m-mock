@@ -18,6 +18,7 @@ export const SOURCE_LABELS = {
   website: 'Website',
   walk_in: 'Walk-in',
   airbnb: 'Airbnb',
+  booking_link: 'Booking link',
 };
 
 export const METHOD_LABELS = {

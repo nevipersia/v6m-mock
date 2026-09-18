@@ -3,7 +3,7 @@
 import { html } from '../../core/dom.js';
 import { formatDate, peso, plural, timeOf } from '../../core/format.js';
 import {
-  STATUS_LABELS, isActive, periodDays, productLabel,
+  STATUS_LABELS, isActive, productLabel,
 } from '../../core/rules.js';
 import { kindDot, statusPill } from '../components/badges.js';
 import { icon } from '../components/icons.js';
@@ -39,8 +39,6 @@ function filterBar(state) {
     { value: 'all', text: 'All statuses' },
     ...Object.entries(STATUS_LABELS).map(([value, text]) => ({ value, text })),
   ];
-  const dates = [{ value: 'all', text: 'All dates' }, ...periodDays(state).map((day) => ({ value: day, text: formatDate(day) }))];
-
   const select = (key, label, items) => html`
     <label class="field">
       <span class="field__label">${label}</span>
@@ -57,7 +55,10 @@ function filterBar(state) {
       </label>
       ${select('status', 'Status', statuses)}
       ${select('product', 'Type', products)}
-      ${select('date', 'Date', dates)}
+      <label class="field">
+        <span class="field__label">Date</span>
+        <input class="input" type="date" data-input="filter" name="date" value="${filters.date === 'all' ? '' : filters.date}">
+      </label>
     </div>`;
 }
 
@@ -72,7 +73,9 @@ export function render(ctx) {
     ${pageHead({
       title: 'Bookings',
       subtitle: `${plural(results.length, 'booking')} · ${peso(total)} total · ${peso(due)} still due`,
-      actions: ctx.can('bookings.write') ? html`<button class="btn btn--primary" type="button" data-action="new-booking">${icon('plus')} New booking</button>` : '',
+      actions: ctx.can('bookings.write') ? html`
+        <button class="btn btn--secondary" type="button" data-action="new-booking-link">${icon('link')} Send booking link</button>
+        <button class="btn btn--primary" type="button" data-action="new-booking">${icon('plus')} New booking</button>` : '',
     })}
 
     ${filterBar(state)}
@@ -115,7 +118,7 @@ export function render(ctx) {
 
 export const inputs = {
   filter: ({ el, ctx }) => {
-    filters = { ...filters, [el.name]: el.value };
+    filters = { ...filters, [el.name]: el.name === 'date' ? (el.value || 'all') : el.value };
     ctx.redraw();
   },
 };

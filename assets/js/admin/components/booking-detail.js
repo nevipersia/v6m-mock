@@ -8,6 +8,8 @@ import {
   METHOD_LABELS, SOURCE_LABELS, findBooking, findGuest, findPackage, findStaff, isActive, productLabel,
 } from '../../core/rules.js';
 import { kindDot, paymentPill, stagePill, statusPill } from './badges.js';
+import { downloadBookingPdf } from './booking-pdf.js';
+import { icon } from './icons.js';
 
 const ACTIVITY_LABELS = {
   'booking.created': 'Booking created',
@@ -209,6 +211,10 @@ export function createBookingDetail(bookingId) {
             ${statusPill(booking)} ${paymentPill(booking)}
             <span class="small muted mono">${booking.id}</span>
           </div>
+
+          <button class="btn btn--secondary btn--block" type="button" data-action="download-pdf">
+            ${icon('download')} Download confirmation PDF
+          </button>
           ${actionsSection(ctx, booking)}
           ${facts(ctx.state, booking)}
           ${priceSection(booking)}
@@ -218,6 +224,12 @@ export function createBookingDetail(bookingId) {
     },
 
     actions: {
+      'download-pdf': ({ ctx }) => {
+        const booking = findBooking(ctx.state, bookingId);
+        downloadBookingPdf(ctx.state, booking);
+        ctx.toast('Confirmation PDF downloaded');
+      },
+
       'start-check-in': ({ redraw }) => {
         ui.checkInOpen = true;
         ui.errors = {};

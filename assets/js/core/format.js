@@ -53,4 +53,13 @@ export const initials = (name) =>
 
 export const isPHMobile = (value) => /^(09|639)\d{9}$/.test(String(value).replace(/\D/g, ''));
 
+/** Digits only, grouped with commas: "12000" -> "12,000". Empty stays empty. */
+export function formatDigits(value) {
+  const digits = String(value ?? '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+  return digits ? Number(digits).toLocaleString('en-PH') : '';
+}
+
+/** Reads a typed amount or count back as a number; blank counts as 0. */
+export const parseDigits = (value) => Number(String(value ?? '').replace(/\D/g, '')) || 0;
+
 export const weekdayName = (index) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][index];
