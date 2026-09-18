@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>V6M Resort · Lipa City, Batangas</title>
+  <meta name="description" content="Mock website for V6M Resort: pool day tours, overnight stays, rooms, cottages and an events place in Lipa City, Batangas.">
+  <link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap">
+
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/site.css">
+
+  <script type="module" src="assets/js/site/main.js"></script>
+</head>
+<body>
+  <div class="demo-bar">
+    <span><strong>Mock website.</strong> Availability and prices come from sample data. Nothing is booked or paid.</span>
+    <a href="admin/">Staff login</a>
+  </div>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="#top" aria-label="V6M Resort home">
+        <img src="assets/img/logo.svg" alt="" width="38" height="38">
+        <span class="brand__text">
+          <span class="brand__name">V6M</span>
+          <span class="brand__tag">Resort</span>
+        </span>
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="#availability">Availability</a>
+        <a href="#stay">Stay</a>
+        <a href="#rates">Rates</a>
+        <a href="#events">Events</a>
+        <a href="#faqs">FAQs</a>
+      </nav>
+      <a class="btn btn--primary btn--sm" href="#book">Check dates</a>
+    </div>
+  </header>
+
+  <main id="top">
+    <div class="load-error container" id="load-error" role="alert" hidden></div>
+
+    <section class="hero">
+      <div class="container">
+        <div class="hero__grid">
+          <div class="hero__copy">
+            <p class="script hero__eyebrow">Ready for some serious chill vibes?</p>
+            <h1 class="hero__title">Your <em>ultimate</em> getaway in Lipa City</h1>
+            <p class="hero__lead">Swim by day, stay the night, or book the whole place for your debut, wedding or barkada party. About 10 minutes from SM Lipa.</p>
+            <ul class="hero__facts" id="hero-facts" aria-label="Highlights"></ul>
+          </div>
+          <img class="hero__art" src="assets/img/hero.svg" alt="Illustration of a red-roofed villa among palm trees beside a blue mosaic pool" width="520" height="380">
+        </div>
+
+        <form class="rate-checker" id="book" aria-labelledby="rate-checker-title" novalidate>
+          <h2 class="sr-only" id="rate-checker-title">Check availability and rates</h2>
+          <div class="rate-checker__fields">
+            <label class="field rate-checker__product">
+              <span class="field__label">What are you booking?</span>
+              <select class="input" name="product"></select>
+            </label>
+            <label class="field rate-checker__date">
+              <span class="field__label">Date</span>
+              <select class="input" name="date"></select>
+            </label>
+            <label class="field">
+              <span class="field__label">Adults</span>
+              <input class="input" name="adults" type="number" min="0" max="200" step="1" value="2" inputmode="numeric">
+            </label>
+            <label class="field">
+              <span class="field__label">Kids</span>
+              <input class="input" name="kids" type="number" min="0" max="200" step="1" value="0" inputmode="numeric">
+            </label>
+          </div>
+          <div class="rate-checker__result" data-slot="result" aria-live="polite"></div>
+        </form>
+      </div>
+    </section>
+
+    <section class="section section--flush" id="promos" hidden>
+      <div class="container" data-slot="promos"></div>
+    </section>
+
+    <section class="section" id="availability">
+      <div class="container">
+        <header class="section-head">
+          <p class="script section-head__eyebrow">Plan your visit</p>
+          <h2 class="section-head__title">This week at V6M</h2>
+          <p class="section-head__lead" id="week-lead">Open slots for the week. Tap one to see your rate.</p>
+        </header>
+        <div class="week" id="week-availability"></div>
+        <ul class="legend" aria-label="Legend">
+          <li><span class="pill pill--success">Open</span></li>
+          <li><span class="pill pill--warning">Filling up</span></li>
+          <li><span class="pill pill--neutral">Booked</span></li>
+          <li><span class="pill pill--event">Private event</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section section--tint" id="stay">
+      <div class="container">
+        <header class="section-head">
+          <p class="script section-head__eyebrow">Stay a little longer</p>
+          <h2 class="section-head__title">Rooms, cottages and villa</h2>
+          <p class="section-head__lead">Rooms and cottages add per-head entrance for the overnight swim. The Enclave Villa is booked through Airbnb.</p>
+        </header>
+        <div class="stay-grid" id="stay-list"></div>
+      </div>
+    </section>
+
+    <section class="section" id="rates">
+      <div class="container">
+        <header class="section-head">
+          <p class="script section-head__eyebrow">Simple, affordable rates</p>
+          <h2 class="section-head__title">Pool entrance</h2>
+        </header>
+        <div class="rate-grid" id="rate-list"></div>
+        <ul class="amenities" aria-label="Amenities">
+          <li>Swimming pools</li>
+          <li>Grilling station</li>
+          <li>Shower rooms</li>
+          <li>Free Wi-Fi</li>
+          <li>Parking</li>
+          <li>Pet-friendly, with rules</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section section--tint" id="events">
+      <div class="container">
+        <header class="section-head">
+          <p class="script section-head__eyebrow">Want to host a party?</p>
+          <h2 class="section-head__title">Events place</h2>
+          <p class="section-head__lead">Book V6M for your debut, wedding or birthday. Exclusive packages close the resort to other guests for the day.</p>
+        </header>
+        <p class="reserved-dates" id="event-dates" hidden></p>
+        <div class="package-grid" id="package-list"></div>
+      </div>
+    </section>
+
+    <section class="section" id="faqs">
+      <div class="container container--narrow">
+        <header class="section-head">
+          <p class="script section-head__eyebrow">Good to know</p>
+          <h2 class="section-head__title">FAQs</h2>
+        </header>
+        <div class="faq" id="faq-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="site-footer__grid">
+        <div>
+          <a class="brand brand--light" href="#top">
+            <img src="assets/img/logo.svg" alt="" width="38" height="38">
+            <span class="brand__text">
+              <span class="brand__name">V6M</span>
+              <span class="brand__tag">Resort</span>
+            </span>
+          </a>
+          <p class="site-footer__about">A sanctuary of relaxation and comfort in Munting Pulo, Lipa City. So, when's your next vacay?</p>
+        </div>
+        <div>
+          <h2 class="site-footer__heading">Visit</h2>
+          <ul class="site-footer__list">
+            <li>Purok 3, Brgy. Munting Pulo</li>
+            <li>Lipa City, Batangas</li>
+            <li>About 10 minutes from SM Lipa</li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="site-footer__heading">Follow</h2>
+          <ul class="site-footer__list">
+            <li><a href="https://www.facebook.com/v6mresort" target="_blank" rel="noopener">Facebook</a></li>
+            <li><a href="https://www.instagram.com/v6m_resort/" target="_blank" rel="noopener">Instagram</a></li>
+            <li><a href="admin/">Staff login</a></li>
+          </ul>
+        </div>
+      </div>
+      <p class="site-footer__fine" id="data-note">Mock prototype</p>
+    </div>
+  </footer>
+
+  <dialog class="dialog" id="inquiry-dialog" aria-labelledby="inquiry-title">
+    <div class="dialog__head">
+      <div>
+        <p class="script dialog__eyebrow">Hola!</p>
+        <h2 class="dialog__title" id="inquiry-title">Send an inquiry</h2>
+      </div>
+      <button class="btn btn--quiet btn--icon" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <form class="dialog__form" data-slot="form" novalidate>
+      <p class="dialog__summary" data-slot="summary"></p>
+      <label class="field">
+        <span class="field__label">Your name</span>
+        <input class="input" name="name" autocomplete="name" placeholder="Maria Santos">
+      </label>
+      <label class="field">
+        <span class="field__label">Mobile number</span>
+        <input class="input" name="mobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="0917 123 4567">
+      </label>
+      <label class="field">
+        <span class="field__label">Message (optional)</span>
+        <textarea class="input" name="message" rows="3" placeholder="Celebrating a birthday, bringing a dog…"></textarea>
+      </label>
+      <p class="form-error" data-slot="error" role="alert"></p>
+      <button class="btn btn--primary btn--block" type="submit">Send inquiry</button>
+    </form>
+
+    <div class="dialog__done" data-slot="done" hidden>
+      <p class="script dialog__thanks">Salamat!</p>
+      <p>We got your inquiry. This is a mock site, so nothing was sent, but staff can now see it in the V6M Desk inbox.</p>
+      <div class="dialog__actions">
+        <a class="btn btn--secondary" href="admin/#/inbox">Open V6M Desk</a>
+        <button class="btn btn--primary" type="button" data-close>Done</button>
+      </div>
+    </div>
+  </dialog>
+
+  <noscript><p class="container">This mock website needs JavaScript to load its data.</p></noscript>
+</body>
+</html>

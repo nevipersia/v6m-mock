@@ -1,0 +1,9 @@
+{
+  "name": "v6m-mock",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mock guest website and V6M Desk staff app for V6M Resort, driven by local mock data.",
+  "scripts": {
+    "start": "npx --yes serve -l 4789 ."
+  }
+}

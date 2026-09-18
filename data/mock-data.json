@@ -1,0 +1,4771 @@
+{
+  "meta": {
+    "description": "Mock operational data for V6M Desk, the V6M Resort internal tool. All guests, staff, contact details, references and events are fictional.",
+    "asOf": "2026-09-17",
+    "period": {
+      "from": "2026-09-15",
+      "to": "2026-09-21"
+    },
+    "timezone": "Asia/Manila",
+    "currency": "PHP",
+    "seed": 665709760,
+    "rules": [
+      "A unit holds one booking per night; exclusive events that are reserved, paid or done close the resort for the day.",
+      "Each pool session caps at 120 guests (placeholder until the owner confirms).",
+      "Rooms and cottages add per-head overnight entrance; the Airbnb villa does not.",
+      "A booking stays on hold until a payment is recorded; checked-out bookings have zero balance.",
+      "Deposits: 50% rooms, cottages and overnight; 30% day tours; 40% events; Airbnb paid in full.",
+      "Rates come from public listings; promo PR-BTS and all event packages are invented for testing."
+    ],
+    "counts": {
+      "staff": 5,
+      "units": 6,
+      "guests": 53,
+      "bookings": 42,
+      "payments": 36,
+      "events": 1,
+      "inquiries": 40,
+      "activityLog": 91
+    }
+  },
+  "staff": [
+    {
+      "id": "ST-01",
+      "name": "Liza Manalo",
+      "role": "owner"
+    },
+    {
+      "id": "ST-02",
+      "name": "Joy Dimaculangan",
+      "role": "front_desk"
+    },
+    {
+      "id": "ST-03",
+      "name": "Mark Katigbak",
+      "role": "front_desk"
+    },
+    {
+      "id": "ST-04",
+      "name": "Nene Recto",
+      "role": "housekeeping"
+    },
+    {
+      "id": "ST-05",
+      "name": "Paolo Mercado",
+      "role": "events"
+    }
+  ],
+  "poolSessions": [
+    {
+      "id": "daytour",
+      "label": "Day tour",
+      "start": "08:00",
+      "end": "16:00",
+      "adult": 150,
+      "kid": 100,
+      "capacity": 120
+    },
+    {
+      "id": "overnight",
+      "label": "Overnight",
+      "start": "18:00",
+      "end": "06:00",
+      "adult": 200,
+      "kid": 150,
+      "capacity": 120
+    }
+  ],
+  "units": [
+    {
+      "id": "suite",
+      "name": "Suite room",
+      "kind": "room",
+      "capacityMin": 1,
+      "capacityMax": 6,
+      "price": 2500,
+      "checkIn": "15:00",
+      "checkOut": "12:00",
+      "session": "overnight",
+      "addsEntrance": true,
+      "inclusions": [
+        "Air-conditioning",
+        "Smart TV",
+        "Hot and cold shower",
+        "Wi-Fi"
+      ]
+    },
+    {
+      "id": "deluxe",
+      "name": "Deluxe room",
+      "kind": "room",
+      "capacityMin": 1,
+      "capacityMax": 2,
+      "price": 2200,
+      "checkIn": "15:00",
+      "checkOut": "12:00",
+      "session": "overnight",
+      "addsEntrance": true,
+      "inclusions": [
+        "Air-conditioning",
+        "Smart TV",
+        "Hot and cold shower",
+        "Wi-Fi"
+      ]
+    },
+    {
+      "id": "cottageA",
+      "name": "Cottage A",
+      "kind": "cottage",
+      "capacityMin": 10,
+      "capacityMax": 15,
+      "price": 2000,
+      "checkIn": "18:00",
+      "checkOut": "06:00",
+      "session": "overnight",
+      "addsEntrance": true,
+      "inclusions": [
+        "Poolside table and benches"
+      ]
+    },
+    {
+      "id": "cottageB",
+      "name": "Cottage B",
+      "kind": "cottage",
+      "capacityMin": 8,
+      "capacityMax": 10,
+      "price": 1500,
+      "checkIn": "18:00",
+      "checkOut": "06:00",
+      "session": "overnight",
+      "addsEntrance": true,
+      "inclusions": [
+        "Poolside table and benches"
+      ]
+    },
+    {
+      "id": "cottageC",
+      "name": "Cottage C",
+      "kind": "cottage",
+      "capacityMin": 4,
+      "capacityMax": 6,
+      "price": 1000,
+      "checkIn": "18:00",
+      "checkOut": "06:00",
+      "session": "overnight",
+      "addsEntrance": true,
+      "inclusions": [
+        "Poolside table"
+      ]
+    },
+    {
+      "id": "villa",
+      "name": "Enclave Villa",
+      "kind": "villa",
+      "capacityMin": 1,
+      "capacityMax": 12,
+      "price": 6500,
+      "checkIn": "14:00",
+      "checkOut": "12:00",
+      "session": "overnight",
+      "addsEntrance": false,
+      "inclusions": [
+        "Private villa",
+        "Kitchen",
+        "Private pool access"
+      ],
+      "channel": "airbnb",
+      "priceNote": "Mock nightly rate; the real price is set on Airbnb"
+    }
+  ],
+  "promos": [
+    {
+      "id": "PR-RAINY",
+      "name": "Rainy season promo",
+      "percent": 15,
+      "validFrom": "2026-07-01",
+      "validTo": "2026-08-31",
+      "weekdays": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "minPax": 0,
+      "appliesTo": [
+        "daytour",
+        "overnight",
+        "suite",
+        "deluxe",
+        "cottageA",
+        "cottageB",
+        "cottageC"
+      ],
+      "active": false,
+      "source": "From the resort's Instagram, Jul–Aug"
+    },
+    {
+      "id": "PR-BTS",
+      "name": "Back-to-school weekday barkada",
+      "percent": 10,
+      "validFrom": "2026-09-01",
+      "validTo": "2026-09-30",
+      "weekdays": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "minPax": 10,
+      "appliesTo": [
+        "daytour",
+        "overnight",
+        "cottageA",
+        "cottageB"
+      ],
+      "active": true,
+      "source": "Mock promo for testing the rate engine"
+    }
+  ],
+  "eventPackages": [
+    {
+      "id": "PKG-DEBUT",
+      "name": "Debut package",
+      "price": 45000,
+      "maxGuests": 80,
+      "exclusive": true,
+      "hours": "14:00-06:00",
+      "inclusions": [
+        "Exclusive use of pool and garden",
+        "Suite room for the celebrant",
+        "Sound system hookup",
+        "Overnight for up to 20 family members"
+      ]
+    },
+    {
+      "id": "PKG-WEDDING",
+      "name": "Intimate wedding",
+      "price": 60000,
+      "maxGuests": 100,
+      "exclusive": true,
+      "hours": "10:00-22:00",
+      "inclusions": [
+        "Exclusive use of venue",
+        "Suite and Deluxe rooms",
+        "Garden ceremony area",
+        "Grilling station"
+      ]
+    },
+    {
+      "id": "PKG-BDAY",
+      "name": "Birthday pool party",
+      "price": 25000,
+      "maxGuests": 50,
+      "exclusive": true,
+      "hours": "10:00-22:00",
+      "inclusions": [
+        "Exclusive use of pool",
+        "Cottage A and B",
+        "Grilling station"
+      ]
+    },
+    {
+      "id": "PKG-PRENUP",
+      "name": "Prenup photoshoot",
+      "price": 8000,
+      "maxGuests": 10,
+      "exclusive": false,
+      "hours": "06:00-09:00",
+      "inclusions": [
+        "3-hour morning access to pool and garden",
+        "Suite room for styling"
+      ]
+    }
+  ],
+  "savedReplies": [
+    {
+      "id": "SR-RATES",
+      "title": "Rates",
+      "body": "Hola! Thanks for reaching V6M Resort.\n\nDay tour (8 AM–4 PM): ₱150 adults, ₱100 kids\nOvernight (6 PM–6 AM): ₱200 adults, ₱150 kids\nCottages: A ₱2,000 · B ₱1,500 · C ₱1,000\nRooms (3 PM–12 NN): Suite ₱2,500 · Deluxe ₱2,200, plus entrance\n\nSo, when's your next vacay?"
+    },
+    {
+      "id": "SR-PETS",
+      "title": "Pets",
+      "body": "Yes, we're pet-friendly! Dogs and cats are welcome as long as they wear diapers or stay in cages."
+    },
+    {
+      "id": "SR-DIRECTIONS",
+      "title": "Directions",
+      "body": "We're at Purok 3, Brgy. Munting Pulo, Lipa City, Batangas, about 10 minutes from SM Lipa. Message us when you're near and we'll guide you."
+    },
+    {
+      "id": "SR-DEPOSIT",
+      "title": "Down payment",
+      "body": "To lock in your date, send a 50% down payment via GCash or bank transfer and share the screenshot here. We'll confirm right away."
+    },
+    {
+      "id": "SR-EVENTS",
+      "title": "Events",
+      "body": "Congrats in advance! We'd love to host. Share your date, headcount and type of event, and we'll send packages and schedule an ocular visit."
+    }
+  ],
+  "guests": [
+    {
+      "id": "GU-0014",
+      "name": "Jerome Mendoza",
+      "mobile": "0900 861 8427",
+      "email": "jerome.mendoza@example.com",
+      "city": "Taguig",
+      "instagram": "@jeromemendoza47",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0017",
+      "name": "Hazel Ramos",
+      "mobile": "0900 697 8088",
+      "email": "hazel.ramos@example.com",
+      "city": "Lipa City",
+      "instagram": null,
+      "tags": [
+        "pet_owner"
+      ],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0019",
+      "name": "Jerome Lontoc",
+      "mobile": "0900 107 4612",
+      "email": "jerome.lontoc@example.com",
+      "city": "Taguig",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0022",
+      "name": "Kristine Castillo",
+      "mobile": "0900 500 4072",
+      "email": "kristine.castillo@example.com",
+      "city": "Batangas City",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0029",
+      "name": "Kevin Dela Cruz",
+      "mobile": "0900 980 5187",
+      "email": null,
+      "city": "Makati",
+      "instagram": "@kevindelacruz5",
+      "tags": [],
+      "firstVisit": "2026-09-16",
+      "visits": 1,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0030",
+      "name": "Kristine Perez",
+      "mobile": "0900 255 6824",
+      "email": null,
+      "city": "Lipa City",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0049",
+      "name": "Jasmine Cruz",
+      "mobile": "0900 619 1803",
+      "email": "jasmine.cruz@example.com",
+      "city": "San Jose",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0055",
+      "name": "Jose Ramos",
+      "mobile": "0900 937 4387",
+      "email": null,
+      "city": "Lipa City",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0062",
+      "name": "Trisha Tolentino",
+      "mobile": "0900 357 7100",
+      "email": "trisha.tolentino@example.com",
+      "city": "San Pablo",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0066",
+      "name": "Mark Bautista",
+      "mobile": "0900 382 5893",
+      "email": null,
+      "city": "Makati",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0067",
+      "name": "Camille De Leon",
+      "mobile": "0900 967 7005",
+      "email": null,
+      "city": "Lipa City",
+      "instagram": "@camilledeleon51",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0070",
+      "name": "Kristine Arellano",
+      "mobile": "0900 192 7395",
+      "email": "kristine.arellano@example.com",
+      "city": "Tanauan",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0071",
+      "name": "Nico Dela Cruz",
+      "mobile": "0900 667 7034",
+      "email": "nico.dela.cruz@example.com",
+      "city": "San Pablo",
+      "instagram": null,
+      "tags": [
+        "event_client"
+      ],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0072",
+      "name": "Rafael Ocampo",
+      "mobile": "0900 305 3660",
+      "email": null,
+      "city": "Quezon City",
+      "instagram": null,
+      "tags": [
+        "airbnb"
+      ],
+      "firstVisit": "2026-09-15",
+      "visits": 1,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0073",
+      "name": "Luis Arellano",
+      "mobile": "0900 352 0023",
+      "email": null,
+      "city": "Lipa City",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": "2026-09-15",
+      "visits": 1,
+      "marketingConsent": true,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0074",
+      "name": "Vince Aguilar",
+      "mobile": "0900 163 5655",
+      "email": null,
+      "city": "Lipa City",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": "2026-09-15",
+      "visits": 1,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0075",
+      "name": "Kath De Leon",
+      "mobile": "0900 619 9583",
+      "email": "kath.de.leon@example.com",
+      "city": "Lipa City",
+      "instagram": "@kathdeleon99",
+      "tags": [],
+      "firstVisit": "2026-09-15",
+      "visits": 1,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0076",
+      "name": "Mark Salazar",
+      "mobile": "0900 842 1919",
+      "email": "mark.salazar@example.com",
+      "city": "Makati",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": "2026-09-16",
+      "visits": 1,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0077",
+      "name": "Kevin Marasigan",
+      "mobile": "0900 428 0044",
+      "email": "kevin.marasigan@example.com",
+      "city": "Dasmariñas",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": "2026-09-16",
+      "visits": 1,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0078",
+      "name": "Nico Mendoza",
+      "mobile": "0900 513 5582",
+      "email": "nico.mendoza@example.com",
+      "city": "Santo Tomas",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0079",
+      "name": "Trisha Pascual",
+      "mobile": "0900 337 0813",
+      "email": null,
+      "city": "Rosario",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0080",
+      "name": "Kristine Torres",
+      "mobile": "0900 886 3012",
+      "email": null,
+      "city": "Tanauan",
+      "instagram": null,
+      "tags": [
+        "pet_owner"
+      ],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0081",
+      "name": "Paolo Perez",
+      "mobile": "0900 767 8591",
+      "email": null,
+      "city": "Rosario",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0082",
+      "name": "Paolo Lontoc",
+      "mobile": "0900 273 4051",
+      "email": "paolo.lontoc@example.com",
+      "city": "Tanauan",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0083",
+      "name": "Lea Navarro",
+      "mobile": "0900 137 1491",
+      "email": "lea.navarro@example.com",
+      "city": "Lipa City",
+      "instagram": "@leanavarro67",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0084",
+      "name": "Joshua Reyes",
+      "mobile": "0900 234 7867",
+      "email": null,
+      "city": "Dasmariñas",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0085",
+      "name": "Hazel Castillo",
+      "mobile": "0900 416 8033",
+      "email": null,
+      "city": "Makati",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0086",
+      "name": "Mark Aguilar",
+      "mobile": "0900 218 6509",
+      "email": null,
+      "city": "Tanauan",
+      "instagram": "@markaguilar88",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0087",
+      "name": "Vince Garcia",
+      "mobile": "0900 322 7024",
+      "email": "vince.garcia@example.com",
+      "city": "Lipa City",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0088",
+      "name": "Patricia Perez",
+      "mobile": "0900 138 5440",
+      "email": "patricia.perez@example.com",
+      "city": "Calamba",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0089",
+      "name": "Trisha Cruz",
+      "mobile": "0900 397 6413",
+      "email": "trisha.cruz@example.com",
+      "city": "Taguig",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0090",
+      "name": "Ramon Arellano",
+      "mobile": "0900 600 7992",
+      "email": "ramon.arellano@example.com",
+      "city": "Taguig",
+      "instagram": "@ramonarellano42",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0091",
+      "name": "Mae Marasigan",
+      "mobile": "0900 258 9009",
+      "email": null,
+      "city": "Quezon City",
+      "instagram": "@maemarasigan43",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0092",
+      "name": "Trisha Lontoc",
+      "mobile": "0900 327 3240",
+      "email": null,
+      "city": "Batangas City",
+      "instagram": "@trishalontoc35",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0093",
+      "name": "Kath Magpantay",
+      "mobile": "0900 962 8688",
+      "email": null,
+      "city": "Calamba",
+      "instagram": null,
+      "tags": [
+        "pet_owner"
+      ],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0094",
+      "name": "Vince Hernandez",
+      "mobile": "0900 967 7331",
+      "email": "vince.hernandez@example.com",
+      "city": "Rosario",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0095",
+      "name": "Maria Lontoc",
+      "mobile": "0900 542 4949",
+      "email": null,
+      "city": "Tanauan",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0096",
+      "name": "Patricia Marasigan",
+      "mobile": "0900 941 2670",
+      "email": "patricia.marasigan@example.com",
+      "city": "Quezon City",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0097",
+      "name": "Lovely Ocampo",
+      "mobile": "0900 318 5174",
+      "email": "lovely.ocampo@example.com",
+      "city": "Tanauan",
+      "instagram": "@lovelyocampo82",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0098",
+      "name": "Angelica Castillo",
+      "mobile": "0900 475 9755",
+      "email": "angelica.castillo@example.com",
+      "city": "Lipa City",
+      "instagram": "@angelicacastillo26",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0099",
+      "name": "Joshua Villanueva",
+      "mobile": "0900 217 6792",
+      "email": null,
+      "city": "San Jose",
+      "instagram": "@joshuavillanueva7",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0100",
+      "name": "Miguel Mendoza",
+      "mobile": "0900 934 1802",
+      "email": "miguel.mendoza@example.com",
+      "city": "Taguig",
+      "instagram": "@miguelmendoza44",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0101",
+      "name": "Arvin Castillo",
+      "mobile": "0900 300 0913",
+      "email": null,
+      "city": "Tanauan",
+      "instagram": "@arvincastillo32",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0102",
+      "name": "Ramon Hernandez",
+      "mobile": "0900 439 9562",
+      "email": "ramon.hernandez@example.com",
+      "city": "Lipa City",
+      "instagram": "@ramonhernandez5",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0103",
+      "name": "Mark Villanueva",
+      "mobile": "0900 135 2020",
+      "email": null,
+      "city": "Quezon City",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0104",
+      "name": "Ella Panganiban",
+      "mobile": "0900 506 4725",
+      "email": null,
+      "city": "Taguig",
+      "instagram": "@ellapanganiban42",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0105",
+      "name": "Camille Lontoc",
+      "mobile": "0900 743 4394",
+      "email": null,
+      "city": "Lipa City",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": true
+    },
+    {
+      "id": "GU-0106",
+      "name": "Carlo Lontoc",
+      "mobile": "0900 952 9817",
+      "email": null,
+      "city": "Quezon City",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0107",
+      "name": "Gino Cruz",
+      "mobile": "0900 498 7291",
+      "email": "gino.cruz@example.com",
+      "city": "Lipa City",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0108",
+      "name": "Nico Lontoc",
+      "mobile": "0900 664 0385",
+      "email": null,
+      "city": "Lipa City",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0109",
+      "name": "Renz Lontoc",
+      "mobile": "0900 359 1597",
+      "email": null,
+      "city": "Taguig",
+      "instagram": null,
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0110",
+      "name": "Ella Tolentino",
+      "mobile": "0900 719 5963",
+      "email": "ella.tolentino@example.com",
+      "city": "Calamba",
+      "instagram": "@ellatolentino91",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": true,
+      "photoRepostConsent": false
+    },
+    {
+      "id": "GU-0111",
+      "name": "Patricia Hernandez",
+      "mobile": "0900 487 8540",
+      "email": "patricia.hernandez@example.com",
+      "city": "Quezon City",
+      "instagram": "@patriciahernandez84",
+      "tags": [],
+      "firstVisit": null,
+      "visits": 0,
+      "marketingConsent": false,
+      "photoRepostConsent": false
+    }
+  ],
+  "bookings": [
+    {
+      "id": "BK-0915-004",
+      "guestId": "GU-0074",
+      "guestName": "Vince Aguilar",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-15",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-15T08:00:00+08:00",
+      "endsAt": "2026-09-15T16:00:00+08:00",
+      "adults": 2,
+      "kids": 0,
+      "pets": null,
+      "source": "messenger",
+      "status": "checked_out",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 2,
+            "unitPrice": 150,
+            "amount": 300
+          }
+        ],
+        "subtotal": 300,
+        "promoId": null,
+        "discount": 0,
+        "total": 300
+      },
+      "total": 300,
+      "depositRequired": 100,
+      "paid": 300,
+      "balance": 0,
+      "idVerified": true,
+      "eventId": null,
+      "createdAt": "2026-08-30T13:17:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": "2026-09-15T08:00:00+08:00",
+      "checkedOutAt": "2026-09-15T16:00:00+08:00",
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0915-005",
+      "guestId": "GU-0075",
+      "guestName": "Kath De Leon",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-15",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-15T08:00:00+08:00",
+      "endsAt": "2026-09-15T16:00:00+08:00",
+      "adults": 11,
+      "kids": 4,
+      "pets": null,
+      "source": "instagram",
+      "status": "checked_out",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 11,
+            "unitPrice": 150,
+            "amount": 1650
+          },
+          {
+            "label": "Kid entrance (Day tour)",
+            "qty": 4,
+            "unitPrice": 100,
+            "amount": 400
+          }
+        ],
+        "subtotal": 2050,
+        "promoId": "PR-BTS",
+        "discount": 205,
+        "total": 1845
+      },
+      "total": 1845,
+      "depositRequired": 600,
+      "paid": 1845,
+      "balance": 0,
+      "idVerified": true,
+      "eventId": null,
+      "createdAt": "2026-09-14T10:49:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": "2026-09-15T08:00:00+08:00",
+      "checkedOutAt": "2026-09-15T16:00:00+08:00",
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Arriving late, around 8 PM"
+    },
+    {
+      "id": "BK-0915-002",
+      "guestId": "GU-0072",
+      "guestName": "Rafael Ocampo",
+      "product": "villa",
+      "productType": "villa",
+      "date": "2026-09-15",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-15T14:00:00+08:00",
+      "endsAt": "2026-09-16T12:00:00+08:00",
+      "adults": 2,
+      "kids": 0,
+      "pets": null,
+      "source": "airbnb",
+      "status": "checked_out",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Enclave Villa",
+            "qty": 1,
+            "unitPrice": 6500,
+            "amount": 6500
+          }
+        ],
+        "subtotal": 6500,
+        "promoId": null,
+        "discount": 0,
+        "total": 6500
+      },
+      "total": 6500,
+      "depositRequired": 6500,
+      "paid": 6500,
+      "balance": 0,
+      "idVerified": true,
+      "eventId": null,
+      "createdAt": "2026-09-13T16:17:00+08:00",
+      "createdBy": "airbnb_sync",
+      "checkedInAt": "2026-09-15T14:00:00+08:00",
+      "checkedOutAt": "2026-09-16T12:00:00+08:00",
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Asked for extra towels"
+    },
+    {
+      "id": "BK-0915-003",
+      "guestId": "GU-0073",
+      "guestName": "Luis Arellano",
+      "product": "cottageB",
+      "productType": "cottage",
+      "date": "2026-09-15",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-15T18:00:00+08:00",
+      "endsAt": "2026-09-16T06:00:00+08:00",
+      "adults": 9,
+      "kids": 0,
+      "pets": null,
+      "source": "instagram",
+      "status": "checked_out",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 9,
+            "unitPrice": 200,
+            "amount": 1800
+          },
+          {
+            "label": "Cottage B",
+            "qty": 1,
+            "unitPrice": 1500,
+            "amount": 1500
+          }
+        ],
+        "subtotal": 3300,
+        "promoId": null,
+        "discount": 0,
+        "total": 3300
+      },
+      "total": 3300,
+      "depositRequired": 1700,
+      "paid": 3300,
+      "balance": 0,
+      "idVerified": true,
+      "eventId": null,
+      "createdAt": "2026-09-02T13:31:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": "2026-09-15T18:00:00+08:00",
+      "checkedOutAt": "2026-09-16T06:00:00+08:00",
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0916-006",
+      "guestId": "GU-0076",
+      "guestName": "Mark Salazar",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-16",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-16T08:00:00+08:00",
+      "endsAt": "2026-09-16T16:00:00+08:00",
+      "adults": 4,
+      "kids": 0,
+      "pets": null,
+      "source": "instagram",
+      "status": "checked_out",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 4,
+            "unitPrice": 150,
+            "amount": 600
+          }
+        ],
+        "subtotal": 600,
+        "promoId": null,
+        "discount": 0,
+        "total": 600
+      },
+      "total": 600,
+      "depositRequired": 200,
+      "paid": 600,
+      "balance": 0,
+      "idVerified": true,
+      "eventId": null,
+      "createdAt": "2026-09-01T11:59:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": "2026-09-16T08:00:00+08:00",
+      "checkedOutAt": "2026-09-16T16:00:00+08:00",
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0916-007",
+      "guestId": "GU-0077",
+      "guestName": "Kevin Marasigan",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-16",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-16T08:00:00+08:00",
+      "endsAt": "2026-09-16T16:00:00+08:00",
+      "adults": 9,
+      "kids": 4,
+      "pets": null,
+      "source": "website",
+      "status": "checked_out",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 9,
+            "unitPrice": 150,
+            "amount": 1350
+          },
+          {
+            "label": "Kid entrance (Day tour)",
+            "qty": 4,
+            "unitPrice": 100,
+            "amount": 400
+          }
+        ],
+        "subtotal": 1750,
+        "promoId": "PR-BTS",
+        "discount": 175,
+        "total": 1575
+      },
+      "total": 1575,
+      "depositRequired": 500,
+      "paid": 1575,
+      "balance": 0,
+      "idVerified": true,
+      "eventId": null,
+      "createdAt": "2026-08-30T20:36:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": "2026-09-16T08:00:00+08:00",
+      "checkedOutAt": "2026-09-16T16:00:00+08:00",
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Celebrating a birthday"
+    },
+    {
+      "id": "BK-0916-008",
+      "guestId": "GU-0029",
+      "guestName": "Kevin Dela Cruz",
+      "product": "overnight",
+      "productType": "entrance",
+      "date": "2026-09-16",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-16T18:00:00+08:00",
+      "endsAt": "2026-09-17T06:00:00+08:00",
+      "adults": 6,
+      "kids": 1,
+      "pets": null,
+      "source": "instagram",
+      "status": "checked_out",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 6,
+            "unitPrice": 200,
+            "amount": 1200
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 1,
+            "unitPrice": 150,
+            "amount": 150
+          }
+        ],
+        "subtotal": 1350,
+        "promoId": null,
+        "discount": 0,
+        "total": 1350
+      },
+      "total": 1350,
+      "depositRequired": 700,
+      "paid": 1350,
+      "balance": 0,
+      "idVerified": true,
+      "eventId": null,
+      "createdAt": "2026-09-04T10:27:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": "2026-09-16T18:00:00+08:00",
+      "checkedOutAt": "2026-09-17T06:00:00+08:00",
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Arriving late, around 8 PM"
+    },
+    {
+      "id": "BK-0917-009",
+      "guestId": "GU-0078",
+      "guestName": "Nico Mendoza",
+      "product": "overnight",
+      "productType": "entrance",
+      "date": "2026-09-17",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-17T18:00:00+08:00",
+      "endsAt": "2026-09-18T06:00:00+08:00",
+      "adults": 2,
+      "kids": 0,
+      "pets": null,
+      "source": "messenger",
+      "status": "hold",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 2,
+            "unitPrice": 200,
+            "amount": 400
+          }
+        ],
+        "subtotal": 400,
+        "promoId": null,
+        "discount": 0,
+        "total": 400
+      },
+      "total": 400,
+      "depositRequired": 200,
+      "paid": 0,
+      "balance": 400,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-06T15:49:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Requested table near the grill"
+    },
+    {
+      "id": "BK-0918-015",
+      "guestId": "GU-0081",
+      "guestName": "Paolo Perez",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-18T08:00:00+08:00",
+      "endsAt": "2026-09-18T16:00:00+08:00",
+      "adults": 18,
+      "kids": 0,
+      "pets": null,
+      "source": "messenger",
+      "status": "hold",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 18,
+            "unitPrice": 150,
+            "amount": 2700
+          }
+        ],
+        "subtotal": 2700,
+        "promoId": null,
+        "discount": 0,
+        "total": 2700
+      },
+      "total": 2700,
+      "depositRequired": 800,
+      "paid": 0,
+      "balance": 2700,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-07T14:04:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0918-016",
+      "guestId": "GU-0055",
+      "guestName": "Jose Ramos",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-18T08:00:00+08:00",
+      "endsAt": "2026-09-18T16:00:00+08:00",
+      "adults": 6,
+      "kids": 3,
+      "pets": null,
+      "source": "messenger",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 6,
+            "unitPrice": 150,
+            "amount": 900
+          },
+          {
+            "label": "Kid entrance (Day tour)",
+            "qty": 3,
+            "unitPrice": 100,
+            "amount": 300
+          }
+        ],
+        "subtotal": 1200,
+        "promoId": null,
+        "discount": 0,
+        "total": 1200
+      },
+      "total": 1200,
+      "depositRequired": 400,
+      "paid": 400,
+      "balance": 800,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-10T14:22:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Senior citizen in group"
+    },
+    {
+      "id": "BK-0918-017",
+      "guestId": "GU-0082",
+      "guestName": "Paolo Lontoc",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-18T08:00:00+08:00",
+      "endsAt": "2026-09-18T16:00:00+08:00",
+      "adults": 4,
+      "kids": 2,
+      "pets": null,
+      "source": "messenger",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 4,
+            "unitPrice": 150,
+            "amount": 600
+          },
+          {
+            "label": "Kid entrance (Day tour)",
+            "qty": 2,
+            "unitPrice": 100,
+            "amount": 200
+          }
+        ],
+        "subtotal": 800,
+        "promoId": null,
+        "discount": 0,
+        "total": 800
+      },
+      "total": 800,
+      "depositRequired": 200,
+      "paid": 200,
+      "balance": 600,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-08-29T21:51:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Celebrating a birthday"
+    },
+    {
+      "id": "BK-0918-018",
+      "guestId": "GU-0083",
+      "guestName": "Lea Navarro",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-18T08:00:00+08:00",
+      "endsAt": "2026-09-18T16:00:00+08:00",
+      "adults": 3,
+      "kids": 1,
+      "pets": null,
+      "source": "messenger",
+      "status": "hold",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 3,
+            "unitPrice": 150,
+            "amount": 450
+          },
+          {
+            "label": "Kid entrance (Day tour)",
+            "qty": 1,
+            "unitPrice": 100,
+            "amount": 100
+          }
+        ],
+        "subtotal": 550,
+        "promoId": null,
+        "discount": 0,
+        "total": 550
+      },
+      "total": 550,
+      "depositRequired": 200,
+      "paid": 0,
+      "balance": 550,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-17T08:15:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0918-019",
+      "guestId": "GU-0067",
+      "guestName": "Camille De Leon",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-18T08:00:00+08:00",
+      "endsAt": "2026-09-18T16:00:00+08:00",
+      "adults": 13,
+      "kids": 7,
+      "pets": null,
+      "source": "instagram",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 13,
+            "unitPrice": 150,
+            "amount": 1950
+          },
+          {
+            "label": "Kid entrance (Day tour)",
+            "qty": 7,
+            "unitPrice": 100,
+            "amount": 700
+          }
+        ],
+        "subtotal": 2650,
+        "promoId": null,
+        "discount": 0,
+        "total": 2650
+      },
+      "total": 2650,
+      "depositRequired": 800,
+      "paid": 800,
+      "balance": 1850,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-02T08:52:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Requested table near the grill"
+    },
+    {
+      "id": "BK-0918-010",
+      "guestId": "GU-0030",
+      "guestName": "Kristine Perez",
+      "product": "suite",
+      "productType": "room",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-18T15:00:00+08:00",
+      "endsAt": "2026-09-19T12:00:00+08:00",
+      "adults": 4,
+      "kids": 1,
+      "pets": null,
+      "source": "phone",
+      "status": "hold",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 4,
+            "unitPrice": 200,
+            "amount": 800
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 1,
+            "unitPrice": 150,
+            "amount": 150
+          },
+          {
+            "label": "Suite room",
+            "qty": 1,
+            "unitPrice": 2500,
+            "amount": 2500
+          }
+        ],
+        "subtotal": 3450,
+        "promoId": null,
+        "discount": 0,
+        "total": 3450
+      },
+      "total": 3450,
+      "depositRequired": 1700,
+      "paid": 0,
+      "balance": 3450,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-08-29T17:44:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0918-011",
+      "guestId": "GU-0079",
+      "guestName": "Trisha Pascual",
+      "product": "deluxe",
+      "productType": "room",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-18T15:00:00+08:00",
+      "endsAt": "2026-09-19T12:00:00+08:00",
+      "adults": 2,
+      "kids": 0,
+      "pets": null,
+      "source": "phone",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 2,
+            "unitPrice": 200,
+            "amount": 400
+          },
+          {
+            "label": "Deluxe room",
+            "qty": 1,
+            "unitPrice": 2200,
+            "amount": 2200
+          }
+        ],
+        "subtotal": 2600,
+        "promoId": null,
+        "discount": 0,
+        "total": 2600
+      },
+      "total": 2600,
+      "depositRequired": 1300,
+      "paid": 1300,
+      "balance": 1300,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-08-30T09:48:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0918-012",
+      "guestId": "GU-0066",
+      "guestName": "Mark Bautista",
+      "product": "cottageA",
+      "productType": "cottage",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-18T18:00:00+08:00",
+      "endsAt": "2026-09-19T06:00:00+08:00",
+      "adults": 8,
+      "kids": 2,
+      "pets": null,
+      "source": "phone",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 8,
+            "unitPrice": 200,
+            "amount": 1600
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 2,
+            "unitPrice": 150,
+            "amount": 300
+          },
+          {
+            "label": "Cottage A",
+            "qty": 1,
+            "unitPrice": 2000,
+            "amount": 2000
+          }
+        ],
+        "subtotal": 3900,
+        "promoId": null,
+        "discount": 0,
+        "total": 3900
+      },
+      "total": 3900,
+      "depositRequired": 2000,
+      "paid": 2000,
+      "balance": 1900,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-06T11:38:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0918-013",
+      "guestId": "GU-0080",
+      "guestName": "Kristine Torres",
+      "product": "cottageB",
+      "productType": "cottage",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-18T18:00:00+08:00",
+      "endsAt": "2026-09-19T06:00:00+08:00",
+      "adults": 8,
+      "kids": 2,
+      "pets": {
+        "count": 1,
+        "type": "cat",
+        "rulesAcknowledged": true
+      },
+      "source": "phone",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 8,
+            "unitPrice": 200,
+            "amount": 1600
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 2,
+            "unitPrice": 150,
+            "amount": 300
+          },
+          {
+            "label": "Cottage B",
+            "qty": 1,
+            "unitPrice": 1500,
+            "amount": 1500
+          }
+        ],
+        "subtotal": 3400,
+        "promoId": null,
+        "discount": 0,
+        "total": 3400
+      },
+      "total": 3400,
+      "depositRequired": 1700,
+      "paid": 1700,
+      "balance": 1700,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-17T08:15:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0918-014",
+      "guestId": "GU-0062",
+      "guestName": "Trisha Tolentino",
+      "product": "cottageC",
+      "productType": "cottage",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-18T18:00:00+08:00",
+      "endsAt": "2026-09-19T06:00:00+08:00",
+      "adults": 6,
+      "kids": 0,
+      "pets": null,
+      "source": "website",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 6,
+            "unitPrice": 200,
+            "amount": 1200
+          },
+          {
+            "label": "Cottage C",
+            "qty": 1,
+            "unitPrice": 1000,
+            "amount": 1000
+          }
+        ],
+        "subtotal": 2200,
+        "promoId": null,
+        "discount": 0,
+        "total": 2200
+      },
+      "total": 2200,
+      "depositRequired": 1100,
+      "paid": 1100,
+      "balance": 1100,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-05T20:56:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0918-020",
+      "guestId": "GU-0084",
+      "guestName": "Joshua Reyes",
+      "product": "overnight",
+      "productType": "entrance",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-18T18:00:00+08:00",
+      "endsAt": "2026-09-19T06:00:00+08:00",
+      "adults": 3,
+      "kids": 0,
+      "pets": null,
+      "source": "phone",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 3,
+            "unitPrice": 200,
+            "amount": 600
+          }
+        ],
+        "subtotal": 600,
+        "promoId": null,
+        "discount": 0,
+        "total": 600
+      },
+      "total": 600,
+      "depositRequired": 300,
+      "paid": 300,
+      "balance": 300,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-13T21:06:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0918-021",
+      "guestId": "GU-0085",
+      "guestName": "Hazel Castillo",
+      "product": "overnight",
+      "productType": "entrance",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-18T18:00:00+08:00",
+      "endsAt": "2026-09-19T06:00:00+08:00",
+      "adults": 7,
+      "kids": 3,
+      "pets": null,
+      "source": "messenger",
+      "status": "cancelled",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 7,
+            "unitPrice": 200,
+            "amount": 1400
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 3,
+            "unitPrice": 150,
+            "amount": 450
+          }
+        ],
+        "subtotal": 1850,
+        "promoId": null,
+        "discount": 0,
+        "total": 1850
+      },
+      "total": 1850,
+      "depositRequired": 900,
+      "paid": 0,
+      "balance": 1850,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-01T19:51:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": "2026-09-17T09:30:00+08:00",
+      "cancelReason": "Found another venue",
+      "notes": "Arriving late, around 8 PM"
+    },
+    {
+      "id": "BK-0918-022",
+      "guestId": "GU-0086",
+      "guestName": "Mark Aguilar",
+      "product": "overnight",
+      "productType": "entrance",
+      "date": "2026-09-18",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-18T18:00:00+08:00",
+      "endsAt": "2026-09-19T06:00:00+08:00",
+      "adults": 6,
+      "kids": 1,
+      "pets": null,
+      "source": "messenger",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 6,
+            "unitPrice": 200,
+            "amount": 1200
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 1,
+            "unitPrice": 150,
+            "amount": 150
+          }
+        ],
+        "subtotal": 1350,
+        "promoId": null,
+        "discount": 0,
+        "total": 1350
+      },
+      "total": 1350,
+      "depositRequired": 700,
+      "paid": 700,
+      "balance": 650,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-15T19:18:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0919-028",
+      "guestId": "GU-0083",
+      "guestName": "Lea Navarro",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-19",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-19T08:00:00+08:00",
+      "endsAt": "2026-09-19T16:00:00+08:00",
+      "adults": 9,
+      "kids": 0,
+      "pets": null,
+      "source": "instagram",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 9,
+            "unitPrice": 150,
+            "amount": 1350
+          }
+        ],
+        "subtotal": 1350,
+        "promoId": null,
+        "discount": 0,
+        "total": 1350
+      },
+      "total": 1350,
+      "depositRequired": 400,
+      "paid": 400,
+      "balance": 950,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-08-30T21:01:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Senior citizen in group"
+    },
+    {
+      "id": "BK-0919-029",
+      "guestId": "GU-0090",
+      "guestName": "Ramon Arellano",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-19",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-19T08:00:00+08:00",
+      "endsAt": "2026-09-19T16:00:00+08:00",
+      "adults": 16,
+      "kids": 4,
+      "pets": null,
+      "source": "phone",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 16,
+            "unitPrice": 150,
+            "amount": 2400
+          },
+          {
+            "label": "Kid entrance (Day tour)",
+            "qty": 4,
+            "unitPrice": 100,
+            "amount": 400
+          }
+        ],
+        "subtotal": 2800,
+        "promoId": null,
+        "discount": 0,
+        "total": 2800
+      },
+      "total": 2800,
+      "depositRequired": 800,
+      "paid": 800,
+      "balance": 2000,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-08-29T21:53:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0919-030",
+      "guestId": "GU-0091",
+      "guestName": "Mae Marasigan",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-19",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-19T08:00:00+08:00",
+      "endsAt": "2026-09-19T16:00:00+08:00",
+      "adults": 3,
+      "kids": 0,
+      "pets": null,
+      "source": "website",
+      "status": "cancelled",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 3,
+            "unitPrice": 150,
+            "amount": 450
+          }
+        ],
+        "subtotal": 450,
+        "promoId": null,
+        "discount": 0,
+        "total": 450
+      },
+      "total": 450,
+      "depositRequired": 100,
+      "paid": 0,
+      "balance": 450,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-17T08:15:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": "2026-09-17T09:30:00+08:00",
+      "cancelReason": "Found another venue",
+      "notes": null
+    },
+    {
+      "id": "BK-0919-023",
+      "guestId": "GU-0084",
+      "guestName": "Joshua Reyes",
+      "product": "suite",
+      "productType": "room",
+      "date": "2026-09-19",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-19T15:00:00+08:00",
+      "endsAt": "2026-09-20T12:00:00+08:00",
+      "adults": 2,
+      "kids": 0,
+      "pets": null,
+      "source": "instagram",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 2,
+            "unitPrice": 200,
+            "amount": 400
+          },
+          {
+            "label": "Suite room",
+            "qty": 1,
+            "unitPrice": 2500,
+            "amount": 2500
+          }
+        ],
+        "subtotal": 2900,
+        "promoId": null,
+        "discount": 0,
+        "total": 2900
+      },
+      "total": 2900,
+      "depositRequired": 1500,
+      "paid": 1500,
+      "balance": 1400,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-02T20:21:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Bringing own cake"
+    },
+    {
+      "id": "BK-0919-024",
+      "guestId": "GU-0087",
+      "guestName": "Vince Garcia",
+      "product": "deluxe",
+      "productType": "room",
+      "date": "2026-09-19",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-19T15:00:00+08:00",
+      "endsAt": "2026-09-20T12:00:00+08:00",
+      "adults": 2,
+      "kids": 0,
+      "pets": null,
+      "source": "messenger",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 2,
+            "unitPrice": 200,
+            "amount": 400
+          },
+          {
+            "label": "Deluxe room",
+            "qty": 1,
+            "unitPrice": 2200,
+            "amount": 2200
+          }
+        ],
+        "subtotal": 2600,
+        "promoId": null,
+        "discount": 0,
+        "total": 2600
+      },
+      "total": 2600,
+      "depositRequired": 1300,
+      "paid": 1300,
+      "balance": 1300,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-17T08:15:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Senior citizen in group"
+    },
+    {
+      "id": "BK-0919-025",
+      "guestId": "GU-0088",
+      "guestName": "Patricia Perez",
+      "product": "cottageA",
+      "productType": "cottage",
+      "date": "2026-09-19",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-19T18:00:00+08:00",
+      "endsAt": "2026-09-20T06:00:00+08:00",
+      "adults": 9,
+      "kids": 2,
+      "pets": null,
+      "source": "instagram",
+      "status": "hold",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 9,
+            "unitPrice": 200,
+            "amount": 1800
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 2,
+            "unitPrice": 150,
+            "amount": 300
+          },
+          {
+            "label": "Cottage A",
+            "qty": 1,
+            "unitPrice": 2000,
+            "amount": 2000
+          }
+        ],
+        "subtotal": 4100,
+        "promoId": null,
+        "discount": 0,
+        "total": 4100
+      },
+      "total": 4100,
+      "depositRequired": 2100,
+      "paid": 0,
+      "balance": 4100,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-10T08:15:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0919-026",
+      "guestId": "GU-0089",
+      "guestName": "Trisha Cruz",
+      "product": "cottageB",
+      "productType": "cottage",
+      "date": "2026-09-19",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-19T18:00:00+08:00",
+      "endsAt": "2026-09-20T06:00:00+08:00",
+      "adults": 8,
+      "kids": 2,
+      "pets": null,
+      "source": "phone",
+      "status": "hold",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 8,
+            "unitPrice": 200,
+            "amount": 1600
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 2,
+            "unitPrice": 150,
+            "amount": 300
+          },
+          {
+            "label": "Cottage B",
+            "qty": 1,
+            "unitPrice": 1500,
+            "amount": 1500
+          }
+        ],
+        "subtotal": 3400,
+        "promoId": null,
+        "discount": 0,
+        "total": 3400
+      },
+      "total": 3400,
+      "depositRequired": 1700,
+      "paid": 0,
+      "balance": 3400,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-15T20:00:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0919-027",
+      "guestId": "GU-0017",
+      "guestName": "Hazel Ramos",
+      "product": "cottageC",
+      "productType": "cottage",
+      "date": "2026-09-19",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-19T18:00:00+08:00",
+      "endsAt": "2026-09-20T06:00:00+08:00",
+      "adults": 5,
+      "kids": 1,
+      "pets": {
+        "count": 1,
+        "type": "dog",
+        "rulesAcknowledged": true
+      },
+      "source": "messenger",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 5,
+            "unitPrice": 200,
+            "amount": 1000
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 1,
+            "unitPrice": 150,
+            "amount": 150
+          },
+          {
+            "label": "Cottage C",
+            "qty": 1,
+            "unitPrice": 1000,
+            "amount": 1000
+          }
+        ],
+        "subtotal": 2150,
+        "promoId": null,
+        "discount": 0,
+        "total": 2150
+      },
+      "total": 2150,
+      "depositRequired": 1100,
+      "paid": 1100,
+      "balance": 1050,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-14T12:30:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Arriving late, around 8 PM"
+    },
+    {
+      "id": "BK-0919-031",
+      "guestId": "GU-0092",
+      "guestName": "Trisha Lontoc",
+      "product": "overnight",
+      "productType": "entrance",
+      "date": "2026-09-19",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-19T18:00:00+08:00",
+      "endsAt": "2026-09-20T06:00:00+08:00",
+      "adults": 10,
+      "kids": 1,
+      "pets": null,
+      "source": "instagram",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 10,
+            "unitPrice": 200,
+            "amount": 2000
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 1,
+            "unitPrice": 150,
+            "amount": 150
+          }
+        ],
+        "subtotal": 2150,
+        "promoId": null,
+        "discount": 0,
+        "total": 2150
+      },
+      "total": 2150,
+      "depositRequired": 1100,
+      "paid": 1100,
+      "balance": 1050,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-13T11:35:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0920-036",
+      "guestId": "GU-0097",
+      "guestName": "Lovely Ocampo",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-20",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-20T08:00:00+08:00",
+      "endsAt": "2026-09-20T16:00:00+08:00",
+      "adults": 11,
+      "kids": 8,
+      "pets": null,
+      "source": "instagram",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 11,
+            "unitPrice": 150,
+            "amount": 1650
+          },
+          {
+            "label": "Kid entrance (Day tour)",
+            "qty": 8,
+            "unitPrice": 100,
+            "amount": 800
+          }
+        ],
+        "subtotal": 2450,
+        "promoId": null,
+        "discount": 0,
+        "total": 2450
+      },
+      "total": 2450,
+      "depositRequired": 700,
+      "paid": 2450,
+      "balance": 0,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-08-31T13:40:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0920-037",
+      "guestId": "GU-0098",
+      "guestName": "Angelica Castillo",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-20",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-20T08:00:00+08:00",
+      "endsAt": "2026-09-20T16:00:00+08:00",
+      "adults": 7,
+      "kids": 0,
+      "pets": null,
+      "source": "phone",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 7,
+            "unitPrice": 150,
+            "amount": 1050
+          }
+        ],
+        "subtotal": 1050,
+        "promoId": null,
+        "discount": 0,
+        "total": 1050
+      },
+      "total": 1050,
+      "depositRequired": 300,
+      "paid": 300,
+      "balance": 750,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-02T12:48:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0920-038",
+      "guestId": "GU-0014",
+      "guestName": "Jerome Mendoza",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-20",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-20T08:00:00+08:00",
+      "endsAt": "2026-09-20T16:00:00+08:00",
+      "adults": 9,
+      "kids": 8,
+      "pets": null,
+      "source": "instagram",
+      "status": "hold",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 9,
+            "unitPrice": 150,
+            "amount": 1350
+          },
+          {
+            "label": "Kid entrance (Day tour)",
+            "qty": 8,
+            "unitPrice": 100,
+            "amount": 800
+          }
+        ],
+        "subtotal": 2150,
+        "promoId": null,
+        "discount": 0,
+        "total": 2150
+      },
+      "total": 2150,
+      "depositRequired": 600,
+      "paid": 0,
+      "balance": 2150,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-14T20:07:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Bringing own cake"
+    },
+    {
+      "id": "BK-0920-039",
+      "guestId": "GU-0099",
+      "guestName": "Joshua Villanueva",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-20",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-20T08:00:00+08:00",
+      "endsAt": "2026-09-20T16:00:00+08:00",
+      "adults": 6,
+      "kids": 2,
+      "pets": null,
+      "source": "phone",
+      "status": "hold",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 6,
+            "unitPrice": 150,
+            "amount": 900
+          },
+          {
+            "label": "Kid entrance (Day tour)",
+            "qty": 2,
+            "unitPrice": 100,
+            "amount": 200
+          }
+        ],
+        "subtotal": 1100,
+        "promoId": null,
+        "discount": 0,
+        "total": 1100
+      },
+      "total": 1100,
+      "depositRequired": 300,
+      "paid": 0,
+      "balance": 1100,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-06T09:32:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0920-040",
+      "guestId": "GU-0100",
+      "guestName": "Miguel Mendoza",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-20",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-20T08:00:00+08:00",
+      "endsAt": "2026-09-20T16:00:00+08:00",
+      "adults": 1,
+      "kids": 1,
+      "pets": null,
+      "source": "website",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 1,
+            "unitPrice": 150,
+            "amount": 150
+          },
+          {
+            "label": "Kid entrance (Day tour)",
+            "qty": 1,
+            "unitPrice": 100,
+            "amount": 100
+          }
+        ],
+        "subtotal": 250,
+        "promoId": null,
+        "discount": 0,
+        "total": 250
+      },
+      "total": 250,
+      "depositRequired": 100,
+      "paid": 250,
+      "balance": 0,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-07T12:34:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0920-041",
+      "guestId": "GU-0101",
+      "guestName": "Arvin Castillo",
+      "product": "daytour",
+      "productType": "entrance",
+      "date": "2026-09-20",
+      "nights": 1,
+      "session": "daytour",
+      "startsAt": "2026-09-20T08:00:00+08:00",
+      "endsAt": "2026-09-20T16:00:00+08:00",
+      "adults": 10,
+      "kids": 1,
+      "pets": null,
+      "source": "messenger",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Day tour)",
+            "qty": 10,
+            "unitPrice": 150,
+            "amount": 1500
+          },
+          {
+            "label": "Kid entrance (Day tour)",
+            "qty": 1,
+            "unitPrice": 100,
+            "amount": 100
+          }
+        ],
+        "subtotal": 1600,
+        "promoId": null,
+        "discount": 0,
+        "total": 1600
+      },
+      "total": 1600,
+      "depositRequired": 500,
+      "paid": 500,
+      "balance": 1100,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-07T10:40:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Requested table near the grill"
+    },
+    {
+      "id": "BK-0920-032",
+      "guestId": "GU-0093",
+      "guestName": "Kath Magpantay",
+      "product": "suite",
+      "productType": "room",
+      "date": "2026-09-20",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-20T15:00:00+08:00",
+      "endsAt": "2026-09-21T12:00:00+08:00",
+      "adults": 4,
+      "kids": 1,
+      "pets": {
+        "count": 1,
+        "type": "dog",
+        "rulesAcknowledged": true
+      },
+      "source": "website",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 4,
+            "unitPrice": 200,
+            "amount": 800
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 1,
+            "unitPrice": 150,
+            "amount": 150
+          },
+          {
+            "label": "Suite room",
+            "qty": 1,
+            "unitPrice": 2500,
+            "amount": 2500
+          }
+        ],
+        "subtotal": 3450,
+        "promoId": null,
+        "discount": 0,
+        "total": 3450
+      },
+      "total": 3450,
+      "depositRequired": 1700,
+      "paid": 1700,
+      "balance": 1750,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-07T13:30:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": null
+    },
+    {
+      "id": "BK-0920-033",
+      "guestId": "GU-0094",
+      "guestName": "Vince Hernandez",
+      "product": "cottageA",
+      "productType": "cottage",
+      "date": "2026-09-20",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-20T18:00:00+08:00",
+      "endsAt": "2026-09-21T06:00:00+08:00",
+      "adults": 10,
+      "kids": 3,
+      "pets": null,
+      "source": "instagram",
+      "status": "hold",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 10,
+            "unitPrice": 200,
+            "amount": 2000
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 3,
+            "unitPrice": 150,
+            "amount": 450
+          },
+          {
+            "label": "Cottage A",
+            "qty": 1,
+            "unitPrice": 2000,
+            "amount": 2000
+          }
+        ],
+        "subtotal": 4450,
+        "promoId": null,
+        "discount": 0,
+        "total": 4450
+      },
+      "total": 4450,
+      "depositRequired": 2200,
+      "paid": 0,
+      "balance": 4450,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-07T18:24:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Celebrating a birthday"
+    },
+    {
+      "id": "BK-0920-034",
+      "guestId": "GU-0095",
+      "guestName": "Maria Lontoc",
+      "product": "cottageB",
+      "productType": "cottage",
+      "date": "2026-09-20",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-20T18:00:00+08:00",
+      "endsAt": "2026-09-21T06:00:00+08:00",
+      "adults": 9,
+      "kids": 0,
+      "pets": null,
+      "source": "messenger",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 9,
+            "unitPrice": 200,
+            "amount": 1800
+          },
+          {
+            "label": "Cottage B",
+            "qty": 1,
+            "unitPrice": 1500,
+            "amount": 1500
+          }
+        ],
+        "subtotal": 3300,
+        "promoId": null,
+        "discount": 0,
+        "total": 3300
+      },
+      "total": 3300,
+      "depositRequired": 1700,
+      "paid": 1700,
+      "balance": 1600,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-01T12:36:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Asked for extra towels"
+    },
+    {
+      "id": "BK-0920-035",
+      "guestId": "GU-0096",
+      "guestName": "Patricia Marasigan",
+      "product": "cottageC",
+      "productType": "cottage",
+      "date": "2026-09-20",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-20T18:00:00+08:00",
+      "endsAt": "2026-09-21T06:00:00+08:00",
+      "adults": 4,
+      "kids": 2,
+      "pets": null,
+      "source": "phone",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 4,
+            "unitPrice": 200,
+            "amount": 800
+          },
+          {
+            "label": "Kid entrance (Overnight)",
+            "qty": 2,
+            "unitPrice": 150,
+            "amount": 300
+          },
+          {
+            "label": "Cottage C",
+            "qty": 1,
+            "unitPrice": 1000,
+            "amount": 1000
+          }
+        ],
+        "subtotal": 2100,
+        "promoId": null,
+        "discount": 0,
+        "total": 2100
+      },
+      "total": 2100,
+      "depositRequired": 1100,
+      "paid": 1100,
+      "balance": 1000,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-01T17:46:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Requested table near the grill"
+    },
+    {
+      "id": "BK-0920-042",
+      "guestId": "GU-0102",
+      "guestName": "Ramon Hernandez",
+      "product": "overnight",
+      "productType": "entrance",
+      "date": "2026-09-20",
+      "nights": 1,
+      "session": "overnight",
+      "startsAt": "2026-09-20T18:00:00+08:00",
+      "endsAt": "2026-09-21T06:00:00+08:00",
+      "adults": 3,
+      "kids": 0,
+      "pets": null,
+      "source": "messenger",
+      "status": "hold",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Adult entrance (Overnight)",
+            "qty": 3,
+            "unitPrice": 200,
+            "amount": 600
+          }
+        ],
+        "subtotal": 600,
+        "promoId": null,
+        "discount": 0,
+        "total": 600
+      },
+      "total": 600,
+      "depositRequired": 300,
+      "paid": 0,
+      "balance": 600,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-08T19:58:00+08:00",
+      "createdBy": "ST-03",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Arriving late, around 8 PM"
+    },
+    {
+      "id": "BK-0921-001",
+      "guestId": "GU-0071",
+      "guestName": "Nico Dela Cruz",
+      "product": "event",
+      "productType": "event",
+      "date": "2026-09-21",
+      "nights": 1,
+      "session": "exclusive",
+      "startsAt": "2026-09-21T14:00:00+08:00",
+      "endsAt": "2026-09-22T06:00:00+08:00",
+      "adults": 80,
+      "kids": 0,
+      "pets": null,
+      "source": "messenger",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Debut package",
+            "qty": 1,
+            "unitPrice": 45000,
+            "amount": 45000
+          },
+          {
+            "label": "Extra 10 guests",
+            "qty": 1,
+            "unitPrice": 3000,
+            "amount": 3000
+          }
+        ],
+        "subtotal": 48000,
+        "promoId": null,
+        "discount": 0,
+        "total": 48000
+      },
+      "total": 48000,
+      "depositRequired": 19200,
+      "paid": 19200,
+      "balance": 28800,
+      "idVerified": false,
+      "eventId": "EV-001",
+      "createdAt": "2026-07-26T10:00:00+08:00",
+      "createdBy": "ST-05",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Program starts 6 PM"
+    }
+  ],
+  "payments": [
+    {
+      "id": "PY-0001",
+      "bookingId": "BK-0921-001",
+      "amount": 19200,
+      "method": "bank_transfer",
+      "type": "deposit",
+      "reference": "BT-14936462",
+      "proofAttached": true,
+      "receivedAt": "2026-07-26T15:00:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0020",
+      "bookingId": "BK-0918-017",
+      "amount": 200,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "5357 714 993472",
+      "proofAttached": true,
+      "receivedAt": "2026-08-29T07:50:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0028",
+      "bookingId": "BK-0919-029",
+      "amount": 800,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "6238 902 917952",
+      "proofAttached": true,
+      "receivedAt": "2026-08-29T07:50:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0015",
+      "bookingId": "BK-0918-011",
+      "amount": 1300,
+      "method": "cash",
+      "type": "deposit",
+      "reference": null,
+      "proofAttached": false,
+      "receivedAt": "2026-08-30T07:50:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0027",
+      "bookingId": "BK-0919-028",
+      "amount": 400,
+      "method": "bank_transfer",
+      "type": "deposit",
+      "reference": "BT-55374156",
+      "proofAttached": true,
+      "receivedAt": "2026-08-30T07:50:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0005",
+      "bookingId": "BK-0915-004",
+      "amount": 100,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "9456 556 438152",
+      "proofAttached": true,
+      "receivedAt": "2026-08-30T12:30:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0011",
+      "bookingId": "BK-0916-007",
+      "amount": 500,
+      "method": "cash",
+      "type": "deposit",
+      "reference": null,
+      "proofAttached": false,
+      "receivedAt": "2026-08-30T12:30:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0033",
+      "bookingId": "BK-0920-036",
+      "amount": 2450,
+      "method": "gcash",
+      "type": "full",
+      "reference": "5651 162 831274",
+      "proofAttached": true,
+      "receivedAt": "2026-08-31T07:30:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0031",
+      "bookingId": "BK-0920-034",
+      "amount": 1700,
+      "method": "bank_transfer",
+      "type": "deposit",
+      "reference": "BT-29427030",
+      "proofAttached": true,
+      "receivedAt": "2026-09-01T07:50:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0032",
+      "bookingId": "BK-0920-035",
+      "amount": 1100,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "4425 130 947698",
+      "proofAttached": true,
+      "receivedAt": "2026-09-01T07:50:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0009",
+      "bookingId": "BK-0916-006",
+      "amount": 200,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "8278 419 225775",
+      "proofAttached": true,
+      "receivedAt": "2026-09-01T12:30:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0021",
+      "bookingId": "BK-0918-019",
+      "amount": 800,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "1147 289 275135",
+      "proofAttached": true,
+      "receivedAt": "2026-09-02T07:50:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0024",
+      "bookingId": "BK-0919-023",
+      "amount": 1500,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "8966 295 362457",
+      "proofAttached": true,
+      "receivedAt": "2026-09-02T07:50:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0034",
+      "bookingId": "BK-0920-037",
+      "amount": 300,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "9009 871 744348",
+      "proofAttached": true,
+      "receivedAt": "2026-09-02T07:50:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0003",
+      "bookingId": "BK-0915-003",
+      "amount": 1700,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "8617 573 409615",
+      "proofAttached": true,
+      "receivedAt": "2026-09-02T12:30:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0013",
+      "bookingId": "BK-0916-008",
+      "amount": 700,
+      "method": "cash",
+      "type": "deposit",
+      "reference": null,
+      "proofAttached": false,
+      "receivedAt": "2026-09-04T12:30:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0018",
+      "bookingId": "BK-0918-014",
+      "amount": 1100,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "5228 187 220344",
+      "proofAttached": true,
+      "receivedAt": "2026-09-05T07:50:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0016",
+      "bookingId": "BK-0918-012",
+      "amount": 2000,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "8271 557 136347",
+      "proofAttached": true,
+      "receivedAt": "2026-09-06T07:50:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0035",
+      "bookingId": "BK-0920-040",
+      "amount": 250,
+      "method": "cash",
+      "type": "full",
+      "reference": null,
+      "proofAttached": false,
+      "receivedAt": "2026-09-07T07:30:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0030",
+      "bookingId": "BK-0920-032",
+      "amount": 1700,
+      "method": "bank_transfer",
+      "type": "deposit",
+      "reference": "BT-58289925",
+      "proofAttached": true,
+      "receivedAt": "2026-09-07T07:50:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0036",
+      "bookingId": "BK-0920-041",
+      "amount": 500,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "6383 512 880260",
+      "proofAttached": true,
+      "receivedAt": "2026-09-07T07:50:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0019",
+      "bookingId": "BK-0918-016",
+      "amount": 400,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "7693 614 383812",
+      "proofAttached": true,
+      "receivedAt": "2026-09-10T07:50:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0022",
+      "bookingId": "BK-0918-020",
+      "amount": 300,
+      "method": "bank_transfer",
+      "type": "deposit",
+      "reference": "BT-37603626",
+      "proofAttached": true,
+      "receivedAt": "2026-09-13T07:50:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0029",
+      "bookingId": "BK-0919-031",
+      "amount": 1100,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "5099 686 328869",
+      "proofAttached": true,
+      "receivedAt": "2026-09-13T07:50:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0002",
+      "bookingId": "BK-0915-002",
+      "amount": 6500,
+      "method": "airbnb",
+      "type": "full",
+      "reference": "HM62418107",
+      "proofAttached": false,
+      "receivedAt": "2026-09-13T16:17:00+08:00",
+      "receivedBy": null
+    },
+    {
+      "id": "PY-0026",
+      "bookingId": "BK-0919-027",
+      "amount": 1100,
+      "method": "bank_transfer",
+      "type": "deposit",
+      "reference": "BT-73247801",
+      "proofAttached": true,
+      "receivedAt": "2026-09-14T07:50:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0007",
+      "bookingId": "BK-0915-005",
+      "amount": 600,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "5450 199 777297",
+      "proofAttached": true,
+      "receivedAt": "2026-09-14T12:30:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0023",
+      "bookingId": "BK-0918-022",
+      "amount": 700,
+      "method": "cash",
+      "type": "deposit",
+      "reference": null,
+      "proofAttached": false,
+      "receivedAt": "2026-09-15T07:50:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0006",
+      "bookingId": "BK-0915-004",
+      "amount": 200,
+      "method": "gcash",
+      "type": "balance",
+      "reference": "9913 962 196437",
+      "proofAttached": true,
+      "receivedAt": "2026-09-15T08:00:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0008",
+      "bookingId": "BK-0915-005",
+      "amount": 1245,
+      "method": "cash",
+      "type": "balance",
+      "reference": null,
+      "proofAttached": false,
+      "receivedAt": "2026-09-15T08:00:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0004",
+      "bookingId": "BK-0915-003",
+      "amount": 1600,
+      "method": "gcash",
+      "type": "balance",
+      "reference": "1408 933 306058",
+      "proofAttached": true,
+      "receivedAt": "2026-09-15T18:00:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0010",
+      "bookingId": "BK-0916-006",
+      "amount": 400,
+      "method": "gcash",
+      "type": "balance",
+      "reference": "7287 480 706381",
+      "proofAttached": true,
+      "receivedAt": "2026-09-16T08:00:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0012",
+      "bookingId": "BK-0916-007",
+      "amount": 1075,
+      "method": "cash",
+      "type": "balance",
+      "reference": null,
+      "proofAttached": false,
+      "receivedAt": "2026-09-16T08:00:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0014",
+      "bookingId": "BK-0916-008",
+      "amount": 650,
+      "method": "cash",
+      "type": "balance",
+      "reference": null,
+      "proofAttached": false,
+      "receivedAt": "2026-09-16T18:00:00+08:00",
+      "receivedBy": "ST-02"
+    },
+    {
+      "id": "PY-0017",
+      "bookingId": "BK-0918-013",
+      "amount": 1700,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "8341 508 500968",
+      "proofAttached": true,
+      "receivedAt": "2026-09-17T07:50:00+08:00",
+      "receivedBy": "ST-03"
+    },
+    {
+      "id": "PY-0025",
+      "bookingId": "BK-0919-024",
+      "amount": 1300,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "3897 761 190633",
+      "proofAttached": true,
+      "receivedAt": "2026-09-17T07:50:00+08:00",
+      "receivedBy": "ST-02"
+    }
+  ],
+  "events": [
+    {
+      "id": "EV-001",
+      "title": "Cruz 18th debut",
+      "type": "debut",
+      "date": "2026-09-21",
+      "packageId": "PKG-DEBUT",
+      "packagePrice": 45000,
+      "addOns": [
+        {
+          "item": "Extra 10 guests",
+          "amount": 3000
+        }
+      ],
+      "total": 48000,
+      "guests": 80,
+      "exclusive": true,
+      "blocksCalendar": true,
+      "stage": "reserved",
+      "contactGuestId": "GU-0071",
+      "coordinatorId": "ST-05",
+      "ocularDate": "2026-08-31",
+      "bookingId": "BK-0921-001",
+      "notes": "Program starts 6 PM"
+    }
+  ],
+  "inquiries": [
+    {
+      "id": "IQ-0029",
+      "channel": "website",
+      "guestId": "GU-0104",
+      "from": "Ella Panganiban",
+      "receivedAt": "2026-09-17T08:05:00+08:00",
+      "topic": "pets",
+      "message": "Pet friendly ba kayo? We have a shih tzu.",
+      "status": "replied",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 152,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0032",
+      "channel": "website",
+      "guestId": "GU-0071",
+      "from": "Nico Dela Cruz",
+      "receivedAt": "2026-09-17T07:26:00+08:00",
+      "topic": "parking",
+      "message": "Is there parking for 3 cars?",
+      "status": "replied",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 125,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0037",
+      "channel": "instagram",
+      "guestId": "GU-0108",
+      "from": "Nico Lontoc",
+      "receivedAt": "2026-09-17T07:23:00+08:00",
+      "topic": "deposit",
+      "message": "Hi, how much is the down payment?",
+      "status": "new",
+      "assignedTo": null,
+      "firstReplyMinutes": null,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0035",
+      "channel": "messenger",
+      "guestId": "GU-0070",
+      "from": "Kristine Arellano",
+      "receivedAt": "2026-09-17T07:23:00+08:00",
+      "topic": "parking",
+      "message": "Is there parking for 3 cars?",
+      "status": "new",
+      "assignedTo": null,
+      "firstReplyMinutes": null,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0012",
+      "channel": "website",
+      "guestId": "GU-0091",
+      "from": "Mae Marasigan",
+      "receivedAt": "2026-09-17T06:33:00+08:00",
+      "topic": "availability",
+      "message": "Open ba kayo Sep 19? Day tour for 3 people.",
+      "status": "booked",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 4,
+      "relatedBookingId": "BK-0919-030"
+    },
+    {
+      "id": "IQ-0036",
+      "channel": "phone",
+      "guestId": "GU-0022",
+      "from": "Kristine Castillo",
+      "receivedAt": "2026-09-17T06:29:00+08:00",
+      "topic": "events",
+      "message": "Do you have debut packages for December? Around 100 guests.",
+      "status": "new",
+      "assignedTo": null,
+      "firstReplyMinutes": null,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0008",
+      "channel": "phone",
+      "guestId": "GU-0080",
+      "from": "Kristine Torres",
+      "receivedAt": "2026-09-17T05:15:00+08:00",
+      "topic": "availability",
+      "message": "Hello! Cottage reservation for Sep 18, 10 persons. How much?",
+      "status": "booked",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 21,
+      "relatedBookingId": "BK-0918-013"
+    },
+    {
+      "id": "IQ-0030",
+      "channel": "website",
+      "guestId": "GU-0105",
+      "from": "Camille Lontoc",
+      "receivedAt": "2026-09-16T19:04:00+08:00",
+      "topic": "events",
+      "message": "Can we do a prenup shoot there? How much?",
+      "status": "new",
+      "assignedTo": null,
+      "firstReplyMinutes": null,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0027",
+      "channel": "messenger",
+      "guestId": "GU-0103",
+      "from": "Mark Villanueva",
+      "receivedAt": "2026-09-16T13:08:00+08:00",
+      "topic": "events",
+      "message": "Do you have debut packages for December? Around 100 guests.",
+      "status": "replied",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 18,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0028",
+      "channel": "instagram",
+      "guestId": "GU-0019",
+      "from": "Jerome Lontoc",
+      "receivedAt": "2026-09-16T08:55:00+08:00",
+      "topic": "parking",
+      "message": "Is there parking for 3 cars?",
+      "status": "new",
+      "assignedTo": null,
+      "firstReplyMinutes": null,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0033",
+      "channel": "instagram",
+      "guestId": "GU-0049",
+      "from": "Jasmine Cruz",
+      "receivedAt": "2026-09-16T07:24:00+08:00",
+      "topic": "promo",
+      "message": "Is the rainy season promo still valid?",
+      "status": "new",
+      "assignedTo": null,
+      "firstReplyMinutes": null,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0039",
+      "channel": "website",
+      "guestId": "GU-0110",
+      "from": "Ella Tolentino",
+      "receivedAt": "2026-09-15T22:53:00+08:00",
+      "topic": "events",
+      "message": "Do you have debut packages for December? Around 100 guests.",
+      "status": "replied",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 89,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0038",
+      "channel": "website",
+      "guestId": "GU-0109",
+      "from": "Renz Lontoc",
+      "receivedAt": "2026-09-15T18:15:00+08:00",
+      "topic": "deposit",
+      "message": "Hi, how much is the down payment?",
+      "status": "lost",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 19,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0022",
+      "channel": "phone",
+      "guestId": "GU-0089",
+      "from": "Trisha Cruz",
+      "receivedAt": "2026-09-15T17:38:00+08:00",
+      "topic": "availability",
+      "message": "Available ba Cottage B on Sep 19? We are 10 pax.",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 32,
+      "relatedBookingId": "BK-0919-026"
+    },
+    {
+      "id": "IQ-0009",
+      "channel": "messenger",
+      "guestId": "GU-0086",
+      "from": "Mark Aguilar",
+      "receivedAt": "2026-09-15T16:57:00+08:00",
+      "topic": "availability",
+      "message": "Available ba overnight on Sep 18? 7 pax.",
+      "status": "booked",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 36,
+      "relatedBookingId": "BK-0918-022"
+    },
+    {
+      "id": "IQ-0040",
+      "channel": "instagram",
+      "guestId": "GU-0111",
+      "from": "@patriciahernandez84",
+      "receivedAt": "2026-09-15T14:39:00+08:00",
+      "topic": "directions",
+      "message": "How do we get there from SM Lipa?",
+      "status": "replied",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 139,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0031",
+      "channel": "instagram",
+      "guestId": "GU-0106",
+      "from": "Carlo Lontoc",
+      "receivedAt": "2026-09-15T10:15:00+08:00",
+      "topic": "events",
+      "message": "Can we do a prenup shoot there? How much?",
+      "status": "replied",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 168,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0034",
+      "channel": "instagram",
+      "guestId": "GU-0107",
+      "from": "Gino Cruz",
+      "receivedAt": "2026-09-15T10:06:00+08:00",
+      "topic": "amenities",
+      "message": "Do you have videoke?",
+      "status": "replied",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 131,
+      "relatedBookingId": null
+    },
+    {
+      "id": "IQ-0014",
+      "channel": "instagram",
+      "guestId": "GU-0014",
+      "from": "@jeromemendoza47",
+      "receivedAt": "2026-09-14T19:43:00+08:00",
+      "topic": "availability",
+      "message": "Good day! Rates for day swimming please. We are 17.",
+      "status": "booked",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 43,
+      "relatedBookingId": "BK-0920-038"
+    },
+    {
+      "id": "IQ-0019",
+      "channel": "messenger",
+      "guestId": "GU-0017",
+      "from": "Hazel Ramos",
+      "receivedAt": "2026-09-14T10:52:00+08:00",
+      "topic": "availability",
+      "message": "Available ba Cottage C on Sep 19? We are 6 pax.",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 21,
+      "relatedBookingId": "BK-0919-027"
+    },
+    {
+      "id": "IQ-0004",
+      "channel": "instagram",
+      "guestId": "GU-0075",
+      "from": "@kathdeleon99",
+      "receivedAt": "2026-09-14T10:02:00+08:00",
+      "topic": "availability",
+      "message": "Open ba kayo Sep 15? Day tour for 15 people.",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 29,
+      "relatedBookingId": "BK-0915-005"
+    },
+    {
+      "id": "IQ-0024",
+      "channel": "messenger",
+      "guestId": "GU-0055",
+      "from": "Jose Ramos",
+      "receivedAt": "2026-09-10T12:53:00+08:00",
+      "topic": "availability",
+      "message": "Open ba kayo Sep 18? Day tour for 9 people.",
+      "status": "booked",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 15,
+      "relatedBookingId": "BK-0918-016"
+    },
+    {
+      "id": "IQ-0023",
+      "channel": "messenger",
+      "guestId": "GU-0102",
+      "from": "Ramon Hernandez",
+      "receivedAt": "2026-09-08T19:26:00+08:00",
+      "topic": "availability",
+      "message": "Hi, how much overnight swimming for 3 persons on Sep 20?",
+      "status": "booked",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 42,
+      "relatedBookingId": "BK-0920-042"
+    },
+    {
+      "id": "IQ-0001",
+      "channel": "instagram",
+      "guestId": "GU-0094",
+      "from": "Vince Hernandez",
+      "receivedAt": "2026-09-07T15:24:00+08:00",
+      "topic": "availability",
+      "message": "Hello! Cottage reservation for Sep 20, 13 persons. How much?",
+      "status": "booked",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 18,
+      "relatedBookingId": "BK-0920-033"
+    },
+    {
+      "id": "IQ-0003",
+      "channel": "website",
+      "guestId": "GU-0093",
+      "from": "Kath Magpantay",
+      "receivedAt": "2026-09-07T10:36:00+08:00",
+      "topic": "availability",
+      "message": "Good evening, how much for Suite room overnight on Sep 20?",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 20,
+      "relatedBookingId": "BK-0920-032"
+    },
+    {
+      "id": "IQ-0010",
+      "channel": "messenger",
+      "guestId": "GU-0101",
+      "from": "Arvin Castillo",
+      "receivedAt": "2026-09-07T10:27:00+08:00",
+      "topic": "availability",
+      "message": "Open ba kayo Sep 20? Day tour for 11 people.",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 7,
+      "relatedBookingId": "BK-0920-041"
+    },
+    {
+      "id": "IQ-0015",
+      "channel": "phone",
+      "guestId": "GU-0066",
+      "from": "Mark Bautista",
+      "receivedAt": "2026-09-06T11:01:00+08:00",
+      "topic": "availability",
+      "message": "Available ba Cottage A on Sep 18? We are 10 pax.",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 22,
+      "relatedBookingId": "BK-0918-012"
+    },
+    {
+      "id": "IQ-0026",
+      "channel": "website",
+      "guestId": "GU-0062",
+      "from": "Trisha Tolentino",
+      "receivedAt": "2026-09-05T19:27:00+08:00",
+      "topic": "availability",
+      "message": "Hello! Cottage reservation for Sep 18, 6 persons. How much?",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 34,
+      "relatedBookingId": "BK-0918-014"
+    },
+    {
+      "id": "IQ-0013",
+      "channel": "instagram",
+      "guestId": "GU-0084",
+      "from": "Joshua Reyes",
+      "receivedAt": "2026-09-02T19:10:00+08:00",
+      "topic": "availability",
+      "message": "Hi! Is the Suite room available Sep 19?",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 11,
+      "relatedBookingId": "BK-0919-023"
+    },
+    {
+      "id": "IQ-0011",
+      "channel": "instagram",
+      "guestId": "GU-0073",
+      "from": "Luis Arellano",
+      "receivedAt": "2026-09-02T12:07:00+08:00",
+      "topic": "availability",
+      "message": "Available ba Cottage B on Sep 15? We are 9 pax.",
+      "status": "booked",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 36,
+      "relatedBookingId": "BK-0915-003"
+    },
+    {
+      "id": "IQ-0005",
+      "channel": "phone",
+      "guestId": "GU-0098",
+      "from": "Angelica Castillo",
+      "receivedAt": "2026-09-02T09:47:00+08:00",
+      "topic": "availability",
+      "message": "Hi! How much for day tour on Sep 20? 7 pax, 0 of them kids.",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 31,
+      "relatedBookingId": "BK-0920-037"
+    },
+    {
+      "id": "IQ-0025",
+      "channel": "instagram",
+      "guestId": "GU-0067",
+      "from": "@camilledeleon51",
+      "receivedAt": "2026-09-02T05:51:00+08:00",
+      "topic": "availability",
+      "message": "Hi! How much for day tour on Sep 18? 20 pax, 7 of them kids.",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 15,
+      "relatedBookingId": "BK-0918-019"
+    },
+    {
+      "id": "IQ-0006",
+      "channel": "messenger",
+      "guestId": "GU-0085",
+      "from": "Hazel Castillo",
+      "receivedAt": "2026-09-01T17:34:00+08:00",
+      "topic": "availability",
+      "message": "Hi, how much overnight swimming for 10 persons on Sep 18?",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 7,
+      "relatedBookingId": "BK-0918-021"
+    },
+    {
+      "id": "IQ-0018",
+      "channel": "phone",
+      "guestId": "GU-0096",
+      "from": "Patricia Marasigan",
+      "receivedAt": "2026-09-01T16:38:00+08:00",
+      "topic": "availability",
+      "message": "Available ba Cottage C on Sep 20? We are 6 pax.",
+      "status": "booked",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 4,
+      "relatedBookingId": "BK-0920-035"
+    },
+    {
+      "id": "IQ-0016",
+      "channel": "instagram",
+      "guestId": "GU-0076",
+      "from": "Mark Salazar",
+      "receivedAt": "2026-09-01T10:46:00+08:00",
+      "topic": "availability",
+      "message": "Open ba kayo Sep 16? Day tour for 4 people.",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 22,
+      "relatedBookingId": "BK-0916-006"
+    },
+    {
+      "id": "IQ-0002",
+      "channel": "instagram",
+      "guestId": "GU-0083",
+      "from": "@leanavarro67",
+      "receivedAt": "2026-08-30T19:32:00+08:00",
+      "topic": "availability",
+      "message": "Open ba kayo Sep 19? Day tour for 9 people.",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 44,
+      "relatedBookingId": "BK-0919-028"
+    },
+    {
+      "id": "IQ-0007",
+      "channel": "messenger",
+      "guestId": "GU-0074",
+      "from": "Vince Aguilar",
+      "receivedAt": "2026-08-30T12:06:00+08:00",
+      "topic": "availability",
+      "message": "Hi! How much for day tour on Sep 15? 2 pax, 0 of them kids.",
+      "status": "booked",
+      "assignedTo": "ST-02",
+      "firstReplyMinutes": 45,
+      "relatedBookingId": "BK-0915-004"
+    },
+    {
+      "id": "IQ-0021",
+      "channel": "phone",
+      "guestId": "GU-0079",
+      "from": "Trisha Pascual",
+      "receivedAt": "2026-08-30T07:08:00+08:00",
+      "topic": "availability",
+      "message": "Can we book Deluxe room for Sep 18? Check-in is 3 PM right?",
+      "status": "booked",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 16,
+      "relatedBookingId": "BK-0918-011"
+    },
+    {
+      "id": "IQ-0020",
+      "channel": "phone",
+      "guestId": "GU-0090",
+      "from": "Ramon Arellano",
+      "receivedAt": "2026-08-29T21:08:00+08:00",
+      "topic": "availability",
+      "message": "Good day! Rates for day swimming please. We are 20.",
+      "status": "booked",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 9,
+      "relatedBookingId": "BK-0919-029"
+    },
+    {
+      "id": "IQ-0017",
+      "channel": "messenger",
+      "guestId": "GU-0082",
+      "from": "Paolo Lontoc",
+      "receivedAt": "2026-08-29T20:01:00+08:00",
+      "topic": "availability",
+      "message": "Hi! How much for day tour on Sep 18? 6 pax, 2 of them kids.",
+      "status": "booked",
+      "assignedTo": "ST-03",
+      "firstReplyMinutes": 36,
+      "relatedBookingId": "BK-0918-017"
+    }
+  ],
+  "housekeeping": [
+    {
+      "unitId": "suite",
+      "status": "ready",
+      "updatedAt": "2026-09-17T09:05:00+08:00",
+      "updatedBy": "ST-04",
+      "note": null,
+      "nextArrivalBookingId": null
+    },
+    {
+      "unitId": "deluxe",
+      "status": "ready",
+      "updatedAt": "2026-09-17T07:33:00+08:00",
+      "updatedBy": "ST-04",
+      "note": null,
+      "nextArrivalBookingId": null
+    },
+    {
+      "unitId": "cottageA",
+      "status": "ready",
+      "updatedAt": "2026-09-17T09:59:00+08:00",
+      "updatedBy": "ST-04",
+      "note": null,
+      "nextArrivalBookingId": null
+    },
+    {
+      "unitId": "cottageB",
+      "status": "maintenance",
+      "updatedAt": "2026-09-17T07:01:00+08:00",
+      "updatedBy": "ST-04",
+      "note": "Loose bench plank, carpenter scheduled Sep 18",
+      "nextArrivalBookingId": null
+    },
+    {
+      "unitId": "cottageC",
+      "status": "ready",
+      "updatedAt": "2026-09-17T07:13:00+08:00",
+      "updatedBy": "ST-04",
+      "note": null,
+      "nextArrivalBookingId": null
+    },
+    {
+      "unitId": "villa",
+      "status": "ready",
+      "updatedAt": "2026-09-17T08:14:00+08:00",
+      "updatedBy": "ST-04",
+      "note": null,
+      "nextArrivalBookingId": null
+    },
+    {
+      "unitId": "pool",
+      "status": "ready",
+      "updatedAt": "2026-09-17T07:05:00+08:00",
+      "updatedBy": "ST-04",
+      "note": "Chlorine checked, 1.5 ppm",
+      "nextArrivalBookingId": null
+    },
+    {
+      "unitId": "shower_rooms",
+      "status": "maintenance",
+      "updatedAt": "2026-09-17T07:40:00+08:00",
+      "updatedBy": "ST-04",
+      "note": "Water heater in shower 2 not working",
+      "nextArrivalBookingId": null
+    }
+  ],
+  "activityLog": [
+    {
+      "at": "2026-09-17T08:15:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0919-030",
+      "detail": "Mae Marasigan · daytour · 2026-09-19"
+    },
+    {
+      "at": "2026-09-17T08:15:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0919-024",
+      "detail": "Vince Garcia · deluxe · 2026-09-19"
+    },
+    {
+      "at": "2026-09-17T08:15:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0918-018",
+      "detail": "Lea Navarro · daytour · 2026-09-18"
+    },
+    {
+      "at": "2026-09-17T08:15:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0918-013",
+      "detail": "Kristine Torres · cottageB · 2026-09-18"
+    },
+    {
+      "at": "2026-09-17T07:50:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0919-024",
+      "detail": "PHP 1,300 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-17T07:50:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0918-013",
+      "detail": "PHP 1,700 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-17T06:00:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.checked_out",
+      "ref": "BK-0916-008",
+      "detail": null
+    },
+    {
+      "at": "2026-09-16T18:00:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.checked_in",
+      "ref": "BK-0916-008",
+      "detail": "Valid ID verified"
+    },
+    {
+      "at": "2026-09-16T18:00:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0916-008",
+      "detail": "PHP 650 cash (balance)"
+    },
+    {
+      "at": "2026-09-16T16:00:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.checked_out",
+      "ref": "BK-0916-007",
+      "detail": null
+    },
+    {
+      "at": "2026-09-16T16:00:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.checked_out",
+      "ref": "BK-0916-006",
+      "detail": null
+    },
+    {
+      "at": "2026-09-16T12:00:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.checked_out",
+      "ref": "BK-0915-002",
+      "detail": null
+    },
+    {
+      "at": "2026-09-16T08:00:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.checked_in",
+      "ref": "BK-0916-007",
+      "detail": "Valid ID verified"
+    },
+    {
+      "at": "2026-09-16T08:00:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0916-007",
+      "detail": "PHP 1,075 cash (balance)"
+    },
+    {
+      "at": "2026-09-16T08:00:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.checked_in",
+      "ref": "BK-0916-006",
+      "detail": "Valid ID verified"
+    },
+    {
+      "at": "2026-09-16T08:00:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0916-006",
+      "detail": "PHP 400 gcash (balance)"
+    },
+    {
+      "at": "2026-09-16T06:00:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.checked_out",
+      "ref": "BK-0915-003",
+      "detail": null
+    },
+    {
+      "at": "2026-09-15T20:00:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0919-026",
+      "detail": "Trisha Cruz · cottageB · 2026-09-19"
+    },
+    {
+      "at": "2026-09-15T19:18:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0918-022",
+      "detail": "Mark Aguilar · overnight · 2026-09-18"
+    },
+    {
+      "at": "2026-09-15T18:00:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.checked_in",
+      "ref": "BK-0915-003",
+      "detail": "Valid ID verified"
+    },
+    {
+      "at": "2026-09-15T18:00:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0915-003",
+      "detail": "PHP 1,600 gcash (balance)"
+    },
+    {
+      "at": "2026-09-15T16:00:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.checked_out",
+      "ref": "BK-0915-005",
+      "detail": null
+    },
+    {
+      "at": "2026-09-15T16:00:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.checked_out",
+      "ref": "BK-0915-004",
+      "detail": null
+    },
+    {
+      "at": "2026-09-15T08:00:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.checked_in",
+      "ref": "BK-0915-005",
+      "detail": "Valid ID verified"
+    },
+    {
+      "at": "2026-09-15T08:00:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0915-005",
+      "detail": "PHP 1,245 cash (balance)"
+    },
+    {
+      "at": "2026-09-15T08:00:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.checked_in",
+      "ref": "BK-0915-004",
+      "detail": "Valid ID verified"
+    },
+    {
+      "at": "2026-09-15T08:00:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0915-004",
+      "detail": "PHP 200 gcash (balance)"
+    },
+    {
+      "at": "2026-09-15T07:50:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0918-022",
+      "detail": "PHP 700 cash (deposit)"
+    },
+    {
+      "at": "2026-09-14T20:07:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0920-038",
+      "detail": "Jerome Mendoza · daytour · 2026-09-20"
+    },
+    {
+      "at": "2026-09-14T12:30:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0919-027",
+      "detail": "Hazel Ramos · cottageC · 2026-09-19"
+    },
+    {
+      "at": "2026-09-14T12:30:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0915-005",
+      "detail": "PHP 600 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-14T10:49:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0915-005",
+      "detail": "Kath De Leon · daytour · 2026-09-15"
+    },
+    {
+      "at": "2026-09-14T07:50:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0919-027",
+      "detail": "PHP 1,100 bank_transfer (deposit)"
+    },
+    {
+      "at": "2026-09-13T21:06:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0918-020",
+      "detail": "Joshua Reyes · overnight · 2026-09-18"
+    },
+    {
+      "at": "2026-09-13T16:17:00+08:00",
+      "staffId": null,
+      "action": "payment.recorded",
+      "ref": "BK-0915-002",
+      "detail": "PHP 6,500 airbnb (full)"
+    },
+    {
+      "at": "2026-09-13T16:17:00+08:00",
+      "staffId": null,
+      "action": "booking.created",
+      "ref": "BK-0915-002",
+      "detail": "Rafael Ocampo · villa · 2026-09-15"
+    },
+    {
+      "at": "2026-09-13T11:35:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0919-031",
+      "detail": "Trisha Lontoc · overnight · 2026-09-19"
+    },
+    {
+      "at": "2026-09-13T07:50:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0919-031",
+      "detail": "PHP 1,100 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-13T07:50:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0918-020",
+      "detail": "PHP 300 bank_transfer (deposit)"
+    },
+    {
+      "at": "2026-09-10T14:22:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0918-016",
+      "detail": "Jose Ramos · daytour · 2026-09-18"
+    },
+    {
+      "at": "2026-09-10T08:15:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0919-025",
+      "detail": "Patricia Perez · cottageA · 2026-09-19"
+    },
+    {
+      "at": "2026-09-10T07:50:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0918-016",
+      "detail": "PHP 400 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-08T19:58:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0920-042",
+      "detail": "Ramon Hernandez · overnight · 2026-09-20"
+    },
+    {
+      "at": "2026-09-07T18:24:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0920-033",
+      "detail": "Vince Hernandez · cottageA · 2026-09-20"
+    },
+    {
+      "at": "2026-09-07T14:04:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0918-015",
+      "detail": "Paolo Perez · daytour · 2026-09-18"
+    },
+    {
+      "at": "2026-09-07T13:30:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0920-032",
+      "detail": "Kath Magpantay · suite · 2026-09-20"
+    },
+    {
+      "at": "2026-09-07T12:34:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0920-040",
+      "detail": "Miguel Mendoza · daytour · 2026-09-20"
+    },
+    {
+      "at": "2026-09-07T10:40:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0920-041",
+      "detail": "Arvin Castillo · daytour · 2026-09-20"
+    },
+    {
+      "at": "2026-09-07T07:50:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0920-041",
+      "detail": "PHP 500 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-07T07:50:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0920-032",
+      "detail": "PHP 1,700 bank_transfer (deposit)"
+    },
+    {
+      "at": "2026-09-07T07:30:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0920-040",
+      "detail": "PHP 250 cash (full)"
+    },
+    {
+      "at": "2026-09-06T15:49:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0917-009",
+      "detail": "Nico Mendoza · overnight · 2026-09-17"
+    },
+    {
+      "at": "2026-09-06T11:38:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0918-012",
+      "detail": "Mark Bautista · cottageA · 2026-09-18"
+    },
+    {
+      "at": "2026-09-06T09:32:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0920-039",
+      "detail": "Joshua Villanueva · daytour · 2026-09-20"
+    },
+    {
+      "at": "2026-09-06T07:50:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0918-012",
+      "detail": "PHP 2,000 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-05T20:56:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0918-014",
+      "detail": "Trisha Tolentino · cottageC · 2026-09-18"
+    },
+    {
+      "at": "2026-09-05T07:50:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0918-014",
+      "detail": "PHP 1,100 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-04T12:30:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0916-008",
+      "detail": "PHP 700 cash (deposit)"
+    },
+    {
+      "at": "2026-09-04T10:27:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0916-008",
+      "detail": "Kevin Dela Cruz · overnight · 2026-09-16"
+    },
+    {
+      "at": "2026-09-02T20:21:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0919-023",
+      "detail": "Joshua Reyes · suite · 2026-09-19"
+    },
+    {
+      "at": "2026-09-02T13:31:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0915-003",
+      "detail": "Luis Arellano · cottageB · 2026-09-15"
+    },
+    {
+      "at": "2026-09-02T12:48:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0920-037",
+      "detail": "Angelica Castillo · daytour · 2026-09-20"
+    },
+    {
+      "at": "2026-09-02T12:30:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0915-003",
+      "detail": "PHP 1,700 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-02T08:52:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0918-019",
+      "detail": "Camille De Leon · daytour · 2026-09-18"
+    },
+    {
+      "at": "2026-09-02T07:50:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0920-037",
+      "detail": "PHP 300 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-02T07:50:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0919-023",
+      "detail": "PHP 1,500 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-02T07:50:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0918-019",
+      "detail": "PHP 800 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-01T19:51:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0918-021",
+      "detail": "Hazel Castillo · overnight · 2026-09-18"
+    },
+    {
+      "at": "2026-09-01T17:46:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0920-035",
+      "detail": "Patricia Marasigan · cottageC · 2026-09-20"
+    },
+    {
+      "at": "2026-09-01T12:36:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0920-034",
+      "detail": "Maria Lontoc · cottageB · 2026-09-20"
+    },
+    {
+      "at": "2026-09-01T12:30:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0916-006",
+      "detail": "PHP 200 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-01T11:59:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0916-006",
+      "detail": "Mark Salazar · daytour · 2026-09-16"
+    },
+    {
+      "at": "2026-09-01T07:50:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0920-035",
+      "detail": "PHP 1,100 gcash (deposit)"
+    },
+    {
+      "at": "2026-09-01T07:50:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0920-034",
+      "detail": "PHP 1,700 bank_transfer (deposit)"
+    },
+    {
+      "at": "2026-08-31T13:40:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0920-036",
+      "detail": "Lovely Ocampo · daytour · 2026-09-20"
+    },
+    {
+      "at": "2026-08-31T07:30:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0920-036",
+      "detail": "PHP 2,450 gcash (full)"
+    },
+    {
+      "at": "2026-08-30T21:01:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0919-028",
+      "detail": "Lea Navarro · daytour · 2026-09-19"
+    },
+    {
+      "at": "2026-08-30T20:36:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0916-007",
+      "detail": "Kevin Marasigan · daytour · 2026-09-16"
+    },
+    {
+      "at": "2026-08-30T13:17:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0915-004",
+      "detail": "Vince Aguilar · daytour · 2026-09-15"
+    },
+    {
+      "at": "2026-08-30T12:30:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0916-007",
+      "detail": "PHP 500 cash (deposit)"
+    },
+    {
+      "at": "2026-08-30T12:30:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0915-004",
+      "detail": "PHP 100 gcash (deposit)"
+    },
+    {
+      "at": "2026-08-30T09:48:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0918-011",
+      "detail": "Trisha Pascual · deluxe · 2026-09-18"
+    },
+    {
+      "at": "2026-08-30T07:50:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0919-028",
+      "detail": "PHP 400 bank_transfer (deposit)"
+    },
+    {
+      "at": "2026-08-30T07:50:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0918-011",
+      "detail": "PHP 1,300 cash (deposit)"
+    },
+    {
+      "at": "2026-08-29T21:53:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0919-029",
+      "detail": "Ramon Arellano · daytour · 2026-09-19"
+    },
+    {
+      "at": "2026-08-29T21:51:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0918-017",
+      "detail": "Paolo Lontoc · daytour · 2026-09-18"
+    },
+    {
+      "at": "2026-08-29T17:44:00+08:00",
+      "staffId": "ST-03",
+      "action": "booking.created",
+      "ref": "BK-0918-010",
+      "detail": "Kristine Perez · suite · 2026-09-18"
+    },
+    {
+      "at": "2026-08-29T07:50:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0919-029",
+      "detail": "PHP 800 gcash (deposit)"
+    },
+    {
+      "at": "2026-08-29T07:50:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0918-017",
+      "detail": "PHP 200 gcash (deposit)"
+    },
+    {
+      "at": "2026-07-26T15:00:00+08:00",
+      "staffId": "ST-03",
+      "action": "payment.recorded",
+      "ref": "BK-0921-001",
+      "detail": "PHP 19,200 bank_transfer (deposit)"
+    },
+    {
+      "at": "2026-07-26T10:00:00+08:00",
+      "staffId": "ST-05",
+      "action": "booking.created",
+      "ref": "BK-0921-001",
+      "detail": "Cruz 18th debut · event · 2026-09-21"
+    }
+  ]
+}

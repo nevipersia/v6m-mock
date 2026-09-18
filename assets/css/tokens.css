@@ -1,0 +1,53 @@
+/*
+ * Design tokens shared by the guest website and V6M Desk.
+ * Colors are sampled from the V6M logo and Instagram feed.
+ */
+:root {
+  /* Brand */
+  --orange: #F2782B;
+  --orange-strong: #D35F17;
+  --orange-soft: #FCE3D0;
+  --navy: #1F2D5C;
+  --navy-strong: #16214A;
+  --navy-soft: #E3E6F0;
+  --lime: #B5C93A;
+
+  /* Supporting hues */
+  --blue: #2E86C1;
+  --blue-soft: #DCEBF6;
+  --blue-ink: #1B5A86;
+  --green: #3E7D3A;
+  --green-soft: #DDEBD8;
+  --green-ink: #2A5A27;
+  --terra: #B8452E;
+  --terra-soft: #F7E1DA;
+  --terra-ink: #8A2F1E;
+  --pink: #F29BB0;
+  --pink-soft: #FBE3EA;
+  --pink-ink: #8E2F4C;
+  --amber-ink: #9A4510;
+  --sand: #EDEAE2;
+  --sand-ink: #6B6452;
+
+  /* Surfaces and text */
+  --cream: #FBF5EA;
+  --cream-deep: #F3EAD8;
+  --surface: #FFFFFF;
+  --line: #E6DCC8;
+  --line-strong: #D6C9AE;
+  --ink: #1F2D5C;
+  --ink-muted: #5E6788;
+
+  /* Type */
+  --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-script: 'Caveat', 'Segoe Print', cursive;
+  --font-sans: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
+
+  /* Shape and depth */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+  --shadow-float: 0 18px 48px rgba(31, 45, 92, 0.14);
+  --focus-ring: 0 0 0 3px rgba(46, 134, 193, 0.35);
+}

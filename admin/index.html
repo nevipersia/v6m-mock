@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>V6M Desk</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../assets/img/logo.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap">
+
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/admin.css">
+
+  <script type="module" src="../assets/js/admin/main.js"></script>
+</head>
+<body>
+  <div id="app" class="app">
+    <p class="app-status">Loading V6M Desk…</p>
+  </div>
+
+  <div class="drawer" id="drawer" hidden>
+    <div class="drawer__backdrop" data-slot="backdrop"></div>
+    <section class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title" tabindex="-1">
+      <header class="drawer__head">
+        <h2 class="drawer__title" id="drawer-title" data-slot="title"></h2>
+        <button class="btn btn--quiet btn--icon" type="button" data-action="close-drawer" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+      <div class="drawer__body" data-slot="body"></div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <noscript><p class="app-status">V6M Desk needs JavaScript.</p></noscript>
+</body>
+</html>
