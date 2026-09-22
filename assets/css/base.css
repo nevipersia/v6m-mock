@@ -208,6 +208,23 @@ textarea.input {
   box-shadow: var(--focus-ring);
 }
 
+/*
+ * Dropdowns draw their own arrow so it can sit in from the edge; the browser's
+ * built-in one hugs the border and ignores padding. Move it with
+ * --select-arrow-inset (distance from the right edge).
+ */
+select.input {
+  --select-arrow-inset: 14px;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: calc(var(--select-arrow-inset) + 22px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235E6788' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--select-arrow-inset) center;
+  background-size: 12px 8px;
+  text-overflow: ellipsis;
+}
+
 .checkbox {
   display: flex;
   align-items: center;
