@@ -12,8 +12,8 @@ import type { Booking, Companion, State } from '../../core/types.js';
 
 const MARGIN = 44;
 const RIGHT = pdfPage.width - MARGIN;
-const FOREST: RGB = [0.17, 0.19, 0.17];
-const GOLD: RGB = [0.55, 0.45, 0.27];
+const NAVY: RGB = [0.12, 0.18, 0.36];
+const ORANGE: RGB = [0.82, 0.37, 0.09];
 const ROW = 19;
 
 /** "DAY TOUR (8AM-4PM)", the way the paper sheet titles each session. */
@@ -46,13 +46,13 @@ function field(pen: Pen, label: string, value: string, x: number, width: number)
 }
 
 function header(pen: Pen, booking: Booking, title: string, page: number, pages: number) {
-  pen.items.push({ type: 'rect', x: 0, y: pdfPage.height - 78, width: pdfPage.width, height: 78, color: FOREST });
+  pen.items.push({ type: 'rect', x: 0, y: pdfPage.height - 78, width: pdfPage.width, height: 78, color: NAVY });
   text(pen, 'V6M RESORT', MARGIN, { y: pdfPage.height - 40, size: 20, bold: true, gray: 1 });
   text(pen, 'Purok 3, Brgy. Munting Pulo, Lipa City  |  (043) 756 4547  |  0927-823-3678', MARGIN, { y: pdfPage.height - 58, size: 8.5, gray: 0.85 });
   text(pen, 'GUEST REGISTRATION', RIGHT - 128, { y: pdfPage.height - 40, size: 11, bold: true, gray: 1 });
   text(pen, `${booking.id}${pages > 1 ? `  ·  page ${page} of ${pages}` : ''}`, RIGHT - 128, { y: pdfPage.height - 58, size: 8.5, gray: 0.85 });
   pen.y = pdfPage.height - 106;
-  text(pen, title, MARGIN, { size: 12.5, bold: true, color: GOLD });
+  text(pen, title, MARGIN, { size: 12.5, bold: true, color: ORANGE });
   pen.y -= 22;
 }
 
@@ -119,7 +119,7 @@ export function bookingPdfBlob(state: State, booking: Booking): Blob {
   field(first, 'DOWNPAYMENT:', `${peso(booking.paid)}${downpaymentDue(booking) ? ` (${DOWNPAYMENT_PERCENT}% is ${peso(booking.depositRequired)})` : ''}`, MARGIN + half, half);
   first.y -= 28;
 
-  text(first, 'GUEST LIST', MARGIN, { size: 9.5, bold: true, color: GOLD });
+  text(first, 'GUEST LIST', MARGIN, { size: 9.5, bold: true, color: ORANGE });
   first.y -= 14;
   guestTableHead(first);
   const firstCount = Math.min(rows, firstPageRows);
@@ -128,7 +128,7 @@ export function bookingPdfBlob(state: State, booking: Booking): Blob {
   first.y -= 18;
 
   // Charges: the price lines, any discount, then totals.
-  text(first, 'CHARGES AND ADDITIONAL', MARGIN, { size: 9.5, bold: true, color: GOLD });
+  text(first, 'CHARGES AND ADDITIONAL', MARGIN, { size: 9.5, bold: true, color: ORANGE });
   first.y -= 16;
   const amountX = RIGHT - 80;
   booking.pricing.lines.forEach((item) => {

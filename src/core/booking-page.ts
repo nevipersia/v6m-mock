@@ -31,8 +31,8 @@ export const DEFAULT_BOOKING_PAGE: BookingPageSettings = {
     problemHelp: 'Message V6M Resort on Facebook or Instagram and they will send a fresh link.',
   },
   theme: {
-    accent: '#8C7446',
-    background: '#2B312C',
+    accent: '#F2782B',
+    background: '#1F2D5C',
   },
   fields: {
     notes: true,
@@ -107,8 +107,7 @@ export async function loadBookingPage(): Promise<BookingPageSettings> {
 
 /** Dark text on light backgrounds, white text on dark ones. */
 export function readableInk(hex: string): string {
-  // Dark text is the brochure's forest green.
-  const DARK = '#2B312C';
+  const DARK = '#1F2D5C';
   const [r = 0, g = 0, b = 0] = [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16) / 255);
   const linear = (channel: number) => (channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
   const luminance = 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);

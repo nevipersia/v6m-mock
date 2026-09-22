@@ -47,7 +47,7 @@ export function renderLogin(state: State): SafeHTML {
     <main class="login">
       <div class="login__card">
         <div class="login__brand">
-          <img src="../assets/img/logo.jpg" alt="" width="52" height="52">
+          <img src="../assets/img/logo.svg" alt="" width="52" height="52">
           <div>
             <p class="script login__eyebrow">Welcome back</p>
             <h1 class="login__title">V6M Desk</h1>

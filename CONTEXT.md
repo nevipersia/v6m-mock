@@ -51,15 +51,16 @@ promo ran for 15% off in July–August, Monday to Thursday.
 
 ## Brand aesthetic
 
-Follows the resort's own "Exclusive Rental Rates" brochure and logo.
+Warm Filipino tropical with a poster-like edge, taken from their Instagram.
 
-- Logo: `assets/img/logo.jpg` (the real one: orange sun, palms, navy "V6M", blue wave).
-- Photos: cropped from the brochure into `assets/img/` (pool, villas, kubo, rooms, package thumbnails).
-- Colors: charcoal green `#2B312C` (was navy), gold `#8C7446` / `#A48B5E` (accent, was orange),
-  cream `#FAF6EF`; logo sun orange `#F2782B` stays for rooms. Token names in `tokens.css` kept their
-  old names (`--navy`, `--orange`) so the CSS did not need rewriting.
-- Type: Anton (bold condensed caps for headings), Cinzel (engraved caps for small labels), Poppins (text).
-- Voice: warm and direct, Taglish-friendly. "100% Exclusive. No Sharing. No Strangers."
+- Logo: orange sun with a palm, navy serif "V6M", blue wave.
+- Colors: orange `#F2782B`, navy `#1F2D5C`, pool blue `#2E86C1`, leaf green `#3E7D3A`,
+  lime `#B5C93A`, terracotta `#B8452E`, flamingo pink `#F29BB0`, cream `#FBF5EA`.
+- Type: Fraunces (display serif), Caveat (script, used sparingly), Plus Jakarta Sans (UI).
+- Voice: warm and playful, Taglish-friendly. "Hola! Thanks for reaching V6M Resort."
+
+The resort's brochure look (charcoal green and gold, Anton headings) was tried and reverted on
+request; photos cropped from the brochure stay in `assets/img/` for the booking page's package card.
 
 ## What exists
 

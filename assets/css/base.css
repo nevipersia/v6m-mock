@@ -22,10 +22,9 @@ h3,
 h4 {
   margin: 0;
   font-family: var(--font-serif);
-  font-weight: 400;
-  line-height: 1.1;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
 p {
@@ -71,8 +70,7 @@ textarea {
   font-family: var(--font-script);
   font-weight: 600;
   color: var(--orange);
-  line-height: 1.1;
-  letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 .muted {
@@ -267,7 +265,7 @@ textarea.input {
 
 .dot--daytour { background: var(--blue); }
 .dot--overnight { background: var(--navy); }
-.dot--room { background: var(--sun); }
+.dot--room { background: var(--orange); }
 .dot--nighttour { background: var(--plum); }
 .dot--overnightstay { background: var(--teal); }
 .dot--exclusive { background: var(--gold); box-shadow: 0 0 0 2px var(--navy); }

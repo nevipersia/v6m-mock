@@ -728,7 +728,7 @@ span.cal-chip {
 
 .cal-chip--room { background: var(--orange-soft); color: var(--amber-ink); }
 .cal-chip--cottage { background: var(--green-soft); color: var(--green-ink); }
-.cal-chip--exclusive { background: var(--navy); color: #F1E4C6; }
+.cal-chip--exclusive { background: var(--navy); color: #fff; }
 .cal-chip--event { background: var(--pink-soft); color: var(--pink-ink); }
 
 .cal-chip--hold {
@@ -1874,17 +1874,9 @@ body.has-drawer {
 
 /* Brochure refresh: exclusive rentals, guest list, additional charges */
 
-.sidebar__brand img,
-.login__brand img {
-  background: #fff;
-  border-radius: 50%;
-  object-fit: contain;
-  padding: 2px;
-}
-
 .notice--exclusive {
   background: var(--navy);
-  color: #F1E4C6;
+  color: #fff;
   border-color: var(--navy);
 }
 
@@ -1951,11 +1943,3 @@ body.has-drawer {
   box-shadow: inset 0 0 0 1.5px var(--navy);
 }
 
-/* Names read better in their own case, even in display headings */
-.drawer__title,
-.thread__from,
-.event-card__title,
-.user-card__who strong {
-  text-transform: none;
-  letter-spacing: 0.005em;
-}

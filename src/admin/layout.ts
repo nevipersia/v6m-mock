@@ -34,7 +34,7 @@ export function renderShell(ctx: DeskContext, route: Route, content: TemplateVal
     <div class="desk">
       <aside class="sidebar">
         <a class="sidebar__brand" href="#/">
-          <img src="../assets/img/logo.jpg" alt="" width="34" height="34">
+          <img src="../assets/img/logo.svg" alt="" width="34" height="34">
           <span>V6M Desk</span>
         </a>
         <nav class="sidebar__nav" aria-label="Sections">${navLinks(ctx, route.id, 'nav-link')}</nav>

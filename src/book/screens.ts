@@ -1,6 +1,6 @@
 // Markup for the booking page's screens: the form, the downpayment QR, the
 // thank-you and the "this link can't be used" message. Wording comes from
-// booking-page.json; the look follows the V6M brochure.
+// booking-page.json.
 
 import { productGroups, productInfo, type ProductGroup } from '../core/catalog.js';
 import { html, type SafeHTML, type TemplateValue } from '../core/dom.js';
@@ -34,7 +34,7 @@ const panel = (content: TemplateValue): SafeHTML => html`<section class="book__c
 function header(page: BookingPageSettings): SafeHTML {
   return html`
     <header class="book__head">
-      <img class="book__logo" src="${IMG}logo.jpg" alt="V6M Resort" width="56" height="56">
+      <img src="${IMG}logo.svg" alt="" width="44" height="44">
       <div>
         ${page.copy.eyebrow ? html`<p class="script book__eyebrow">${page.copy.eyebrow}</p>` : ''}
         <h1 class="book__title">${page.copy.title}</h1>

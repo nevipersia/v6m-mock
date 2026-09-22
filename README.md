@@ -166,7 +166,7 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     components/             drawer, booking-detail, booking-form, booking-link, booking-pdf, badges, icons, toast
     views/                  login, dashboard, calendar, bookings, inbox, events, users
 assets/
-  img/                      Logo and photos cropped from the V6M brochure
+  img/                      Logo, and photos cropped from the V6M brochure for the booking page
   css/                      tokens.css, base.css (shared) · admin.css · book.css
   js/                       Build output of src/ (git-ignored)
 tsconfig.json               Strict TypeScript, ES modules, no bundler
