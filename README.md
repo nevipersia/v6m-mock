@@ -24,6 +24,12 @@ Then open http://localhost:4789/admin/. `npm start` compiles once and serves. Wh
 `npm run watch` in a second terminal so `assets/js/` stays current, and `npm run typecheck` to check
 types without writing files.
 
+## Deploying
+
+`npm run build` compiles the TypeScript and copies the static site (`index.html`, `admin/`, `book/`,
+`data/`, `assets/`) into `dist/`. `vercel.json` tells Vercel to run that build and serve `dist/`; any
+static host works the same way.
+
 ## Signing in
 
 Sign in with an email and password. Two demo accounts sit on the sign-in page so anyone can open the
@@ -101,6 +107,8 @@ assets/
   css/                      tokens.css, base.css (shared) · admin.css · book.css
   js/                       Build output of src/ (git-ignored)
 tsconfig.json               Strict TypeScript, ES modules, no bundler
+scripts/build-site.mjs      Copies the built site into dist/ for hosting
+vercel.json                 Vercel build command and output folder
 ```
 
 The guest-facing website was removed; the inquiries in the sample data are kept as history for the

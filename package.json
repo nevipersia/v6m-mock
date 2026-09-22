@@ -5,7 +5,7 @@
   "type": "module",
   "description": "V6M Desk, the V6M Resort staff tool, and its single-use guest booking page. TypeScript, no framework, driven by local mock data.",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/build-site.mjs",
     "watch": "tsc --watch --preserveWatchOutput",
     "typecheck": "tsc --noEmit",
     "serve": "serve -l 4789 .",

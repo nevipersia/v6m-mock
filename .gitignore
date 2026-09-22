@@ -1,3 +1,4 @@
 node_modules/
 # Compiled from src/ by `npm run build`
 assets/js/
+dist/
