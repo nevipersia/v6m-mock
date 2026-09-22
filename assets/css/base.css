@@ -22,9 +22,10 @@ h3,
 h4 {
   margin: 0;
   font-family: var(--font-serif);
-  font-weight: 600;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 
 p {
@@ -70,7 +71,8 @@ textarea {
   font-family: var(--font-script);
   font-weight: 600;
   color: var(--orange);
-  line-height: 1;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
 }
 
 .muted {
@@ -265,9 +267,11 @@ textarea.input {
 
 .dot--daytour { background: var(--blue); }
 .dot--overnight { background: var(--navy); }
-.dot--room { background: var(--orange); }
+.dot--room { background: var(--sun); }
+.dot--nighttour { background: var(--plum); }
+.dot--overnightstay { background: var(--teal); }
+.dot--exclusive { background: var(--gold); box-shadow: 0 0 0 2px var(--navy); }
 .dot--cottage { background: var(--green); }
-.dot--villa { background: var(--lime); }
 .dot--event { background: var(--pink); }
 
 /* GCash QR payment card (booking page and V6M Desk) */
@@ -377,4 +381,70 @@ textarea.input {
 .pay-qr .mono,
 .pay-qr input.mono {
   font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+
+/* Guest list rows (booking page and V6M Desk) */
+
+.guest-rows {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guest-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 2fr) minmax(88px, 1fr) 64px minmax(0, 1.5fr) 32px;
+  gap: 6px;
+  align-items: center;
+}
+
+.guest-row--short {
+  grid-template-columns: 22px minmax(0, 2fr) minmax(88px, 1fr) 64px 32px;
+}
+
+.guest-row__number {
+  font-size: 12px;
+  color: var(--ink-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.guest-row__remove {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.guest-row__remove:hover {
+  background: var(--terra-soft);
+  color: var(--terra-ink);
+}
+
+@media (max-width: 560px) {
+  .guest-row,
+  .guest-row--short {
+    grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1fr) 32px;
+    grid-template-areas:
+      "num name name remove"
+      ". gender age ."
+      ". remarks remarks .";
+    row-gap: 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--line);
+  }
+
+  .guest-row__number { grid-area: num; }
+  .guest-row [name="companionName"] { grid-area: name; }
+  .guest-row [name="companionGender"] { grid-area: gender; }
+  .guest-row [name="companionAge"] { grid-area: age; }
+  .guest-row [name="companionRemarks"] { grid-area: remarks; }
+  .guest-row__remove { grid-area: remove; }
 }

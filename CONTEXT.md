@@ -6,16 +6,21 @@ Paste this file into a new chat to bring it up to speed. Everything here is curr
 ## The business
 
 **V6M Resort and Events Place** — Purok 3, Brgy. Munting Pulo, Lipa City, Batangas, about 10 minutes
-from SM Lipa. A small family-and-barkada resort that sells four things against the same pool, rooms
-and calendar:
+from SM Lipa. A small family-and-barkada resort that sells these against the same pools, rooms and
+calendar:
 
-- Pool entrance: day tour (8 AM–4 PM) and overnight swim (6 PM–6 AM)
-- Rooms and cottages (Suite, Deluxe, Cottage A/B/C)
-- A private villa let through Airbnb ("Enclave Villa")
+- Pool entrance per head, in four sessions (from the resort's guest registration template):
+  day tour 8 AM–4 PM, night tour 2 PM–10 PM, overnight 3 PM–12 NN, overnight tour 6 PM–6 AM
+- Rooms and cottages (Suite, Deluxe, Cottage A/B/C), plus entrance
+- Exclusive rental packages (from the "Exclusive Rental Rates" brochure): while one is booked, no
+  other guests are booked for that time. Up to 120 guests. 3 pools, 7 kubo cottages, 7 air-conditioned
+  villas, free Wi-Fi, grilling area, ample parking.
 - Exclusive events: debuts, weddings, prenups, birthdays
 
+There is no Airbnb listing in the tool (removed on request).
+
 Guests reach them on Facebook Messenger, Instagram DMs and two phone lines. Contact: 0927-823-3678,
-(043) 774-5903, v6mresortandeventsplace@gmail.com. Socials: facebook.com/v6mresort and
+(043) 756 4547 (brochure), v6mresortandeventsplace@gmail.com. Socials: facebook.com/v6mresort and
 instagram.com/v6m_resort.
 
 ### Rates (from public third-party listings — the owner has NOT confirmed these)
@@ -29,6 +34,16 @@ instagram.com/v6m_resort.
 | Cottage A | 6 PM – 6 AM | 10–15 | ₱2,000 + entrance |
 | Cottage B | 6 PM – 6 AM | 8–10 | ₱1,500 + entrance |
 | Cottage C | 6 PM – 6 AM | 4–6 | ₱1,000 + entrance |
+| Night tour entrance | 2 PM – 10 PM | per head | ₱180 / ₱130 **placeholder** |
+| Overnight entrance (rooms) | 3 PM – 12 NN | per head | ₱200 / ₱150 **placeholder** |
+
+Exclusive rental rates, from the V6M brochure:
+
+| Package | Day tour 8 AM – 4 PM | Overnight |
+| --- | --- | --- |
+| Full resort use (all rooms + amenities) | ₱40,000 | ₱50,000 (3 PM – 12 NN) |
+| Partial room use (3 rooms + amenities) | ₱35,000 | ₱45,000 (3 PM – 12 NN) |
+| Cottages only (all kubo cottages + amenities) | ₱30,000 | ₱40,000 (6 PM – 6 AM) |
 
 Other real facts: rooms include air-con, smart TV, hot and cold shower and Wi-Fi; there is a grilling
 station, parking and gardens; pets are allowed in diapers or cages; guests bring valid IDs; a real
@@ -36,13 +51,15 @@ promo ran for 15% off in July–August, Monday to Thursday.
 
 ## Brand aesthetic
 
-Warm Filipino tropical with a poster-like edge, taken from their Instagram.
+Follows the resort's own "Exclusive Rental Rates" brochure and logo.
 
-- Logo: orange sun with a palm, navy serif "V6M", blue wave.
-- Colors: orange `#F2782B`, navy `#1F2D5C`, pool blue `#2E86C1`, leaf green `#3E7D3A`,
-  lime `#B5C93A`, terracotta `#B8452E`, flamingo pink `#F29BB0`, cream `#FBF5EA`.
-- Type: Fraunces (display serif), Caveat (script, used sparingly), Plus Jakarta Sans (UI).
-- Voice: warm and playful, Taglish-friendly. "Hola! Thanks for reaching V6M Resort."
+- Logo: `assets/img/logo.jpg` (the real one: orange sun, palms, navy "V6M", blue wave).
+- Photos: cropped from the brochure into `assets/img/` (pool, villas, kubo, rooms, package thumbnails).
+- Colors: charcoal green `#2B312C` (was navy), gold `#8C7446` / `#A48B5E` (accent, was orange),
+  cream `#FAF6EF`; logo sun orange `#F2782B` stays for rooms. Token names in `tokens.css` kept their
+  old names (`--navy`, `--orange`) so the CSS did not need rewriting.
+- Type: Anton (bold condensed caps for headings), Cinzel (engraved caps for small labels), Poppins (text).
+- Voice: warm and direct, Taglish-friendly. "100% Exclusive. No Sharing. No Strangers."
 
 ## What exists
 
@@ -124,11 +141,21 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 - One booking per unit per night. An exclusive event that is reserved, paid or done closes the whole
   resort that day.
 - Each pool session caps at 120 guests — a placeholder until the owner confirms.
-- Rooms and cottages add per-head overnight entrance; the Airbnb villa does not.
-- Every booking needs a 50% downpayment (`depositRequired`, rounded up to the peso; Airbnb in full)
+- Rooms (3 PM–12 NN, `overnightstay` session) and cottages (6 PM–6 AM, `overnight`) add per-head
+  entrance for their session.
+- Exclusive rentals (`state.exclusivePackages`, product ids `EX-DAY-FULL` … `EX-NIGHT-COTTAGES`,
+  `productType: 'exclusive'`): a booking needs its whole time window free of every other active
+  booking, and while it exists no regular booking whose window overlaps it can be made
+  (`bookingWindow`, `bookingsOverlapping`, `exclusiveOverlapping` in `core/rules.ts`). Up to 120 guests.
+- Guest details from the registration template: complete address, email, SC/PWD count, a guest list
+  (`booking.guestList`: name, gender, age, remarks), additional charges (`booking.extras`, typed
+  amounts, part of the price) and payment details (`payment.sentAt`, `payment.senderName`).
+- The booking PDF is the guest registration sheet (companions template): details, guest list with
+  signature column, charges, total / downpayment / overall amount, "Received by". Multi-page.
+- Every booking needs a 50% downpayment (`depositRequired`, rounded up to the peso)
   before it is confirmed; less stays on hold. `applyPayment` in `core/actions.ts` enforces it.
 - Editing (`updateBooking` in `core/actions.ts`, form `booking-form.ts` with `editId`): hold or
-  confirmed bookings only (`isEditable`), not events or Airbnb. Re-checks availability excluding the
+  confirmed bookings only (`isEditable`), not events. Re-checks availability excluding the
   booking itself, re-quotes, keeps payments, re-prices. An unchanged discount is kept as is, so a
   manager can edit a booking an owner discounted without a note.
 - Manual discounts (`applyDiscount` / `removeDiscount`, rules in `core/rules.ts`): permission
@@ -149,8 +176,10 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 ## Mock data
 
 `data/mock-data.json` holds one week, **Sep 15–21 2026**, and the apps treat **Sep 17 2026** as today.
-It contains 42 bookings, 36 payments, 53 guests, 40 inquiries, one event (Cruz 18th debut on Sep 21,
-reserved, ₱48,000, closes the resort), saved replies, an activity log and the 2 staff accounts. The
+It contains about 43 bookings (two exclusive rentals: Sep 23 full resort day tour, Sep 26 cottages-only
+overnight), their payments, guests with addresses, two sample guest lists, one booking with videoke and
+corkage charges, 40 inquiries, one event (Cruz 18th debut on Sep 21, reserved, ₱48,000, closes the
+resort), saved replies (including exclusive rental rates), an activity log and the 2 staff accounts. The
 calendar is not limited to that week: staff can page back or forward to any date.
 
 Two demo accounts are ready on the sign-in page (one-click Sign in, or Fill in to see the
@@ -178,7 +207,8 @@ Everything except the rates and the resort's own details is fictional: guests, s
 
 ## Open questions for the owner
 
-1. Are the 2026 rates above still correct?
+1. Are the 2026 rates above still correct? What are the night tour (2 PM–10 PM) and 3 PM overnight
+   entrance rates? (placeholders now)
 2. Real maximum pool capacity per session?
 3. Confirm the 50% downpayment for every booking type, and the cancellation or rebooking policy?
 4. What do the event packages include and cost?
@@ -193,5 +223,5 @@ Everything except the rates and the resort's own details is fictional: guests, s
 - Confirm the open questions and update `data/mock-data.json` plus the rate tables.
 - Wire a real backend (the PRD suggests a hosted Postgres such as Supabase) behind `core/store.js` and
   `core/actions.js`, which are the only places that touch data.
-- Airbnb iCal import and export, Meta inbox integration, SMS reminders, reports and CSV export.
+- Meta inbox integration, SMS reminders, reports and CSV export.
 - A public booking flow with real payments; the current site only records inquiries.

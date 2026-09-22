@@ -51,9 +51,26 @@ single-use code and picks their own password.
 The owner can invite more accounts, tick or untick individual permissions, suspend someone, or revoke
 an invite before it is used. Each invite code works once.
 
+## What can be booked
+
+- **Entrance per head**, in four sessions from the resort's guest registration template: day tour
+  8 AM–4 PM, night tour 2 PM–10 PM, overnight 3 PM–12 NN and overnight tour 6 PM–6 AM. Night tour and
+  3 PM overnight rates are placeholders until the owner confirms them.
+- **Cottages and rooms**, plus entrance.
+- **Exclusive rental**, from the brochure: full resort use (₱40,000 day / ₱50,000 overnight), partial
+  room use (₱35,000 / ₱45,000) or cottages only (₱30,000 / ₱40,000), up to 120 guests. While one is
+  booked, no other guests are booked for that time, and the calendar marks those cells "Exclusive".
+  An exclusive rental can only be booked when its whole time window is free.
+
+Each booking keeps the details from the guest information form: complete address, contact number,
+email, SC/PWD count, a **guest list** (name, gender, age, remarks), **additional charges** (videoke,
+corkage, extra heads… with amounts staff type) and payment details (mode, time sent, GCash sender).
+Guests can fill in their own list on the booking link. **Registration sheet** in the booking drawer
+downloads the companions sheet as a PDF with signature lines and "Received by".
+
 ## The 50% downpayment
 
-Every booking needs 50% of its total paid (rounded up to the peso; Airbnb stays paid in full) before
+Every booking needs 50% of its total paid (rounded up to the peso) before
 it counts as confirmed. Anything less keeps it **on hold**, and the desk shows how much is still
 short ("₱750 to confirm"). Staff can record the downpayment in the new booking form or on the booking,
 or collect it by **GCash QR** from the booking drawer.
@@ -62,7 +79,7 @@ or collect it by **GCash QR** from the booking drawer.
 
 Open a booking and click **Edit booking** to change the guest, mobile, source, booking type, date,
 guests, notes or discount. It works for bookings on hold or confirmed (not checked in, checked out,
-cancelled, events or Airbnb stays). Payments stay; the availability, price and 50% downpayment are
+cancelled or events). Payments stay; the availability, price and 50% downpayment are
 worked out again, so an edit can confirm a booking or put it back on hold, and the total can't drop
 below what was already paid. Each edit is written to the booking's activity log.
 
@@ -72,7 +89,7 @@ Owners and managers can give a discount by hand, as pesos off or a percentage: w
 booking, when editing one (**Edit booking** in the booking drawer), or with **Give a discount** in the
 drawer. Managers must write a reason; owners
 may leave it blank. The reason, who gave it and when show on the booking, in its activity log and on
-the confirmation PDF.
+the registration sheet PDF.
 
 - The permission is **Give discounts** on the Users page. Owners and managers have it by default; the
   owner can grant it to anyone else, and every non-owner must write a reason.
@@ -134,7 +151,9 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     qr.ts                   Draws the QR-style code as SVG (not scannable)
     payment-card.ts         The QR payment card shared by both pages
     format.ts               Pesos, dates, times, digit grouping, PH mobile check
-    pdf.ts                  Minimal PDF writer, no dependencies
+    pdf.ts                  Minimal multi-page PDF writer, no dependencies
+    catalog.ts              What can be booked, grouped for pickers and the booking page
+    guest-list.ts           Guest list rows shared by both pages
     dom.ts                  Safe html`` templates and event delegation
   book/
     main.ts                 Booking page: load, validate, submit
@@ -147,7 +166,7 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     components/             drawer, booking-detail, booking-form, booking-link, booking-pdf, badges, icons, toast
     views/                  login, dashboard, calendar, bookings, inbox, events, users
 assets/
-  img/                      Logo
+  img/                      Logo and photos cropped from the V6M brochure
   css/                      tokens.css, base.css (shared) · admin.css · book.css
   js/                       Build output of src/ (git-ignored)
 tsconfig.json               Strict TypeScript, ES modules, no bundler

@@ -3,12 +3,13 @@
 
 import { createBooking, updateBooking, type NewBooking } from '../../core/actions.js';
 import { $, $maybe, html, render, type SafeHTML } from '../../core/dom.js';
+import { allProductIds, productGroups } from '../../core/catalog.js';
 import { formatDigits, isPHMobile, parseDigits, peso } from '../../core/format.js';
 import {
   DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, checkAvailability, closingEvent, depositRequired, discountAmount,
-  discountProblem, findBooking, findGuest, findUnit, quote,
+  discountProblem, findBooking, findExclusive, findGuest, findUnit, quote,
 } from '../../core/rules.js';
-import type { Booking, BookingSource, PaymentMethod, State } from '../../core/types.js';
+import type { Booking, BookingSource, ExtraCharge, PaymentMethod, State } from '../../core/types.js';
 import { asField, type BookingPrefill, type DrawerContent } from '../types.js';
 import { blankDiscount, discountFields, readDiscountField, type DiscountDraft } from './discount-fields.js';
 
@@ -16,27 +17,27 @@ const SOURCES: BookingSource[] = ['walk_in', 'phone', 'messenger', 'instagram', 
 const NEW_SOURCES: BookingSource[] = ['walk_in', 'phone', 'messenger', 'instagram', 'website'];
 const METHODS: PaymentMethod[] = ['gcash', 'cash', 'bank_transfer'];
 
-type NumberField = 'adults' | 'kids' | 'deposit';
-type TextField = 'guestName' | 'mobile' | 'product' | 'date' | 'reference' | 'notes';
+type NumberField = 'adults' | 'kids' | 'deposit' | 'scPwd';
+type TextField = 'guestName' | 'mobile' | 'product' | 'date' | 'reference' | 'notes' | 'address' | 'email' | 'sentTime' | 'senderName';
 
-const NUMBER_FIELDS: readonly string[] = ['adults', 'kids', 'deposit'] satisfies NumberField[];
-const TEXT_FIELDS: readonly string[] = ['guestName', 'mobile', 'product', 'date', 'reference', 'notes'] satisfies TextField[];
+const NUMBER_FIELDS: readonly string[] = ['adults', 'kids', 'deposit', 'scPwd'] satisfies NumberField[];
+const TEXT_FIELDS: readonly string[] = [
+  'guestName', 'mobile', 'product', 'date', 'reference', 'notes', 'address', 'email', 'sentTime', 'senderName',
+] satisfies TextField[];
 
-/** The form keeps every field as a plain value; mobile, reference and notes are never undefined here. */
-type Draft = NewBooking & { mobile: string; reference: string; notes: string; inquiryId: string | null };
+/** Charges from the registration sheet. Staff type the amount; none of these have set prices. */
+const EXTRA_PRESETS = ['Videoke', 'Corkage', 'Extra adult', 'Extra kid', 'Extra cottage', 'Extra room', 'Grill use'];
 
-function bookableProducts(state: State): { value: string; label: string }[] {
-  return [
-    ...state.poolSessions.map((session) => ({ value: session.id, label: `${session.label} entrance` })),
-    ...state.units.filter((unit) => unit.channel !== 'airbnb').map((unit) => ({
-      value: unit.id,
-      label: `${unit.name} (${unit.capacityMin > 1 ? `${unit.capacityMin}–` : 'up to '}${unit.capacityMax})`,
-    })),
-  ];
-}
+/** The form keeps every field as a plain value; optional text fields are never undefined here. */
+type Draft = NewBooking & {
+  mobile: string; reference: string; notes: string; inquiryId: string | null;
+  address: string; email: string; scPwd: number; extras: ExtraCharge[]; sentTime: string; senderName: string;
+};
+
+const isEmail = (value: string): boolean => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
 
 function initialDraft(state: State, prefill: BookingPrefill): Draft {
-  const products = bookableProducts(state).map((option) => option.value);
+  const products = allProductIds(state);
   const product = prefill.product && products.includes(prefill.product) ? prefill.product : 'daytour';
   const unit = findUnit(state, product);
   return {
@@ -52,13 +53,26 @@ function initialDraft(state: State, prefill: BookingPrefill): Draft {
     reference: '',
     notes: '',
     inquiryId: prefill.inquiryId ?? null,
+    address: '',
+    email: '',
+    scPwd: 0,
+    extras: [],
+    sentTime: '',
+    senderName: '',
   };
 }
 
 function draftFromBooking(state: State, booking: Booking): Draft {
+  const guest = findGuest(state, booking.guestId);
   return {
+    address: guest?.address ?? '',
+    email: guest?.email ?? '',
+    scPwd: booking.scPwd ?? 0,
+    extras: (booking.extras ?? []).map((extra) => ({ ...extra })),
+    sentTime: '',
+    senderName: '',
     guestName: booking.guestName,
-    mobile: findGuest(state, booking.guestId)?.mobile ?? '',
+    mobile: guest?.mobile ?? '',
     source: booking.source,
     product: booking.product,
     date: booking.date,
@@ -165,6 +179,27 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
     $('[data-slot="error"]', root).textContent = error;
   };
 
+  function extrasSection(form: Draft): SafeHTML {
+    return html`
+      <fieldset class="form-section">
+        <legend class="form-section__title">Additional charges</legend>
+        ${form.extras.length ? html`
+          <ul class="extra-rows">
+            ${form.extras.map((extra, index) => html`
+              <li class="extra-row">
+                <input class="input" data-input="extra" data-row="${index}" name="extraLabel" value="${extra.label}"
+                  list="extra-presets" placeholder="Videoke, corkage…" aria-label="Charge ${index + 1}" autocomplete="off">
+                <input class="input input--amount" data-input="extra" data-row="${index}" name="extraAmount" value="${formatDigits(extra.amount)}"
+                  inputmode="numeric" placeholder="₱0" aria-label="Charge ${index + 1} amount" autocomplete="off">
+                <button class="guest-row__remove" type="button" data-action="remove-extra" data-row="${index}" aria-label="Remove charge ${index + 1}">×</button>
+              </li>`)}
+          </ul>` : ''}
+        <datalist id="extra-presets">${EXTRA_PRESETS.map((preset) => html`<option value="${preset}"></option>`)}</datalist>
+        <button class="btn btn--quiet btn--sm" type="button" data-action="add-extra">+ Add a charge</button>
+        <p class="small muted">From the registration sheet: videoke, corkage, extra heads, extra cottage or room. Type the amount.</p>
+      </fieldset>`;
+  }
+
   function discountSection(ctx: Parameters<DrawerContent['render']>[0], form: Draft, editing: Booking | null): SafeHTML | '' {
     if (canDiscount) {
       return html`
@@ -213,16 +248,24 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
             </label>
             <div class="form-grid">
               <label class="field">
-                <span class="field__label">Mobile (optional)</span>
+                <span class="field__label">Contact number</span>
                 <input class="input" name="mobile" data-input="field" type="tel" value="${form.mobile}" placeholder="0917 123 4567">
               </label>
               <label class="field">
-                <span class="field__label">Booked via</span>
-                <select class="input" name="source" data-input="field">
-                  ${sources.map((source) => option(source, SOURCE_LABELS[source], form.source))}
-                </select>
+                <span class="field__label">Email (optional)</span>
+                <input class="input" name="email" data-input="field" type="email" value="${form.email}" placeholder="maria@example.com" autocomplete="off">
               </label>
             </div>
+            <label class="field">
+              <span class="field__label">Complete address</span>
+              <input class="input" name="address" data-input="field" value="${form.address}" placeholder="House no., street, barangay, city" autocomplete="off">
+            </label>
+            <label class="field">
+              <span class="field__label">Booked via</span>
+              <select class="input" name="source" data-input="field">
+                ${sources.map((source) => option(source, SOURCE_LABELS[source], form.source))}
+              </select>
+            </label>
           </fieldset>
 
           <fieldset class="form-section">
@@ -231,7 +274,8 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
               <label class="field">
                 <span class="field__label">Booking</span>
                 <select class="input" name="product" data-input="field">
-                  ${bookableProducts(state).map((item) => option(item.value, item.label, form.product))}
+                  ${productGroups(state).map((group) => html`
+                    <optgroup label="${group.label}">${group.options.map((item) => option(item.value, item.label, form.product))}</optgroup>`)}
                 </select>
               </label>
               <label class="field">
@@ -247,12 +291,20 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
                 <span class="field__label">Kids</span>
                 <input class="input" name="kids" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${form.kids || ''}">
               </label>
+              <label class="field">
+                <span class="field__label">SC / PWD</span>
+                <input class="input" name="scPwd" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${form.scPwd || ''}">
+              </label>
             </div>
+            ${findExclusive(state, form.product) ? html`
+              <p class="notice notice--exclusive">Exclusive rental: no other guests are booked while this group is here. ${findExclusive(state, form.product)?.includes}.</p>` : ''}
             <label class="field">
               <span class="field__label">Notes (optional)</span>
               <input class="input" name="notes" data-input="field" value="${form.notes}" placeholder="Celebrating a birthday">
             </label>
           </fieldset>
+
+          ${extrasSection(form)}
 
           ${discountSection(ctx, form, editing)}
 
@@ -277,6 +329,16 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
                 <span class="field__label">Reference (optional)</span>
                 <input class="input" name="reference" data-input="field" value="${form.reference}" placeholder="GCash or bank reference number">
               </label>
+              <div class="form-grid">
+                <label class="field">
+                  <span class="field__label">Time sent</span>
+                  <input class="input" name="sentTime" data-input="field" type="time" value="${form.sentTime}">
+                </label>
+                <label class="field">
+                  <span class="field__label">${form.method === 'gcash' ? 'GCash sender' : 'Sent by'}</span>
+                  <input class="input" name="senderName" data-input="field" value="${form.senderName}" placeholder="Name on the account" autocomplete="off">
+                </label>
+              </div>
               <p class="small muted">A booking is confirmed once ${DOWNPAYMENT_PERCENT}% is paid. Leave the amount blank to hold the slot; the guest can pay later by GCash QR from the booking.</p>
             </fieldset>`}
 
@@ -292,6 +354,21 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
     },
 
     inputs: {
+      extra: ({ el, ctx, root }) => {
+        if (!draft) return;
+        const field = el as HTMLInputElement;
+        const row = draft.extras[Number(field.dataset.row)];
+        if (!row) return;
+        if (field.name === 'extraLabel') row.label = field.value;
+        else {
+          row.amount = parseDigits(field.value);
+          const formatted = formatDigits(field.value);
+          if (formatted !== field.value) field.value = formatted;
+        }
+        error = '';
+        refreshSummary(root, ctx.state);
+      },
+
       discount: ({ el, ctx, root }) => {
         const field = asField(el) as HTMLInputElement | HTMLSelectElement;
         const kindBefore = discount.kind;
@@ -322,6 +399,8 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
           draft.source = field.value as BookingSource;
         } else if (field.name === 'method') {
           draft.method = field.value as PaymentMethod;
+          const senderLabel = $maybe('[name="senderName"]', root)?.closest('.field')?.querySelector('.field__label');
+          if (senderLabel) senderLabel.textContent = draft.method === 'gcash' ? 'GCash sender' : 'Sent by';
         } else if (TEXT_FIELDS.includes(field.name)) {
           draft[field.name as TextField] = field.value;
         }
@@ -331,6 +410,18 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
     },
 
     actions: {
+      'add-extra': ({ redraw }) => {
+        if (!draft) return;
+        draft.extras.push({ label: '', amount: 0 });
+        redraw();
+      },
+
+      'remove-extra': ({ el, redraw }) => {
+        if (!draft) return;
+        draft.extras.splice(Number(el.dataset.row), 1);
+        redraw();
+      },
+
       'use-suggested-deposit': ({ el, ctx, root }) => {
         if (!draft) return;
         draft.deposit = Number(el.dataset.amount);
@@ -359,6 +450,9 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         if (!draft.guestName.trim()) error = 'Enter the guest name.';
         else if (!draft.date) error = 'Pick a date.';
         else if (draft.mobile.trim() && !isPHMobile(draft.mobile)) error = 'Enter a PH mobile number, like 0917 123 4567, or leave it blank.';
+        else if (draft.email.trim() && !isEmail(draft.email)) error = 'Enter an email address like maria@example.com, or leave it blank.';
+        else if (draft.scPwd > guests) error = 'SC / PWD can\'t be more than the number of guests.';
+        else if (draft.extras.some((extra) => extra.amount > 0 && !extra.label.trim())) error = 'Name each additional charge.';
         else if (guests === 0) error = 'Add at least one guest.';
         else if (!availability.ok) error = availability.reason ?? 'Not available.';
         else if (unit && guests > unit.capacityMax) error = `${unit.name} fits up to ${unit.capacityMax} guests.`;
@@ -383,6 +477,10 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
             adults: draft.adults,
             kids: draft.kids,
             notes: draft.notes,
+            address: draft.address,
+            email: draft.email,
+            scPwd: draft.scPwd,
+            extras: draft.extras,
             discount: canDiscount && discountChanged ? chosen : 'keep',
           }, ctx.staff.id);
           if (result.error !== undefined) {

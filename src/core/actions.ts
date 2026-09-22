@@ -4,12 +4,12 @@
 import { update } from './store.js';
 import { addDays, peso } from './format.js';
 import {
-  METHOD_LABELS, checkAvailability, depositRequired, discountAmount, discountProblem, downpaymentDue, findBooking,
-  findStaff, findUnit, isEditable, productLabel, quote, sessionFor, type DiscountInput,
+  METHOD_LABELS, bookingWindow, checkAvailability, depositRequired, discountAmount, discountProblem, downpaymentDue,
+  findBooking, findExclusive, findStaff, findUnit, isEditable, productLabel, quote, sessionFor, type DiscountInput,
 } from './rules.js';
 import { formatReference, referenceProblem } from './qr-payment.js';
 import type {
-  Booking, BookingLink, BookingSource, Guest, ISODate, Inquiry, Invite, Payment, PaymentMethod, Permission, Role,
+  Booking, BookingLink, BookingSource, Companion, ExtraCharge, Guest, ISODate, Inquiry, Invite, Payment, PaymentMethod, Permission, Role,
   Staff, StaffStatus, State, Timestamp,
 } from './types.js';
 
@@ -37,30 +37,55 @@ function must<T>(value: T | undefined | null, what: string): T {
   return value;
 }
 
-function findOrCreateGuest(state: State, { name, mobile }: { name: string; mobile?: string | null }): Guest {
+interface GuestDetails {
+  name: string;
+  mobile?: string | null;
+  address?: string | null;
+  email?: string | null;
+}
+
+/** Finds the guest by name or adds them; any details given fill in or update the record. */
+function findOrCreateGuest(state: State, { name, mobile, address, email }: GuestDetails): Guest {
   const cleanName = name.trim();
   let guest = state.guests.find((g) => g.name.toLowerCase() === cleanName.toLowerCase());
   if (!guest) {
-    guest = { id: nextId(state.guests, 'GU'), name: cleanName, mobile: mobile || null };
+    guest = { id: nextId(state.guests, 'GU'), name: cleanName, mobile: mobile || null, address: null, email: null };
     state.guests.push(guest);
-  } else if (mobile && !guest.mobile) {
-    guest.mobile = mobile;
   }
+  if (mobile?.trim()) guest.mobile = mobile.trim();
+  if (address?.trim()) guest.address = address.trim();
+  if (email?.trim()) guest.email = email.trim();
   return guest;
 }
+
+/** Keeps rows that have a name; trims text and clamps ages. */
+export const cleanGuestList = (list: Companion[] = []): Companion[] => list
+  .filter((row) => row.name.trim())
+  .map((row) => ({
+    name: row.name.trim(),
+    gender: row.gender === 'Female' || row.gender === 'Male' ? row.gender : '',
+    age: row.age == null || Number.isNaN(row.age) ? null : Math.max(0, Math.min(120, Math.round(row.age))),
+    remarks: row.remarks.trim(),
+  }));
+
+const cleanExtras = (extras: ExtraCharge[] = []): ExtraCharge[] =>
+  extras.filter((extra) => extra.label.trim() && extra.amount > 0).map((extra) => ({ label: extra.label.trim(), amount: Math.round(extra.amount) }));
 
 interface PaymentInput {
   amount: number;
   method: PaymentMethod;
   reference?: string | null;
   via?: 'desk' | 'qr';
+  /** "Time sent" on the guest's receipt, as HH:MM on the demo date. */
+  sentTime?: string | null;
+  senderName?: string | null;
 }
 
 /**
  * Records a payment. A booking on hold only becomes confirmed once the 50%
  * downpayment is met; anything less stays on hold as a partial payment.
  */
-function applyPayment(state: State, booking: Booking, { amount, method, reference, via = 'desk' }: PaymentInput, staffId: string | null): Payment {
+function applyPayment(state: State, booking: Booking, { amount, method, reference, via = 'desk', sentTime, senderName }: PaymentInput, staffId: string | null): Payment {
   const type = booking.paid === 0 && amount >= booking.total ? 'full' : booking.paid < booking.depositRequired ? 'deposit' : 'balance';
   const payment: Payment = {
     id: nextId(state.payments, 'PY'),
@@ -73,6 +98,8 @@ function applyPayment(state: State, booking: Booking, { amount, method, referenc
     receivedAt: demoNow(state),
     receivedBy: staffId,
     via,
+    sentAt: sentTime && /^\d\d:\d\d$/.test(sentTime) ? `${state.meta.asOf}T${sentTime}:00+08:00` : via === 'qr' ? demoNow(state) : null,
+    senderName: senderName?.trim() || null,
   };
   state.payments.push(payment);
   booking.paid += amount;
@@ -111,6 +138,14 @@ export interface NewBooking {
   inquiryId?: string | null;
   /** Optional manual discount; checked against the staff member's role. */
   discount?: DiscountInput | null;
+  address?: string;
+  email?: string;
+  scPwd?: number;
+  extras?: ExtraCharge[];
+  guestList?: Companion[];
+  /** Payment details for the downpayment, from the guest's receipt. */
+  sentTime?: string;
+  senderName?: string;
 }
 
 export function createBooking(input: NewBooking, staffId: string): Booking {
@@ -177,19 +212,11 @@ export function removeDiscount(bookingId: string, staffId: string): DiscountResu
 }
 
 /** Times, session and type for a product on a date. */
-function schedule(state: State, product: string, date: ISODate) {
+function schedule(state: State, product: string, date: ISODate): Pick<Booking, 'session' | 'productType' | 'startsAt' | 'endsAt'> {
+  const window = bookingWindow(state, product, date);
+  if (findExclusive(state, product)) return { session: 'exclusive', productType: 'exclusive', ...window };
   const unit = findUnit(state, product);
-  const session = sessionFor(state, product);
-  const startTime = unit ? unit.checkIn : session.start;
-  const endTime = unit ? unit.checkOut : session.end;
-  const endsNextDay = Boolean(unit) || endTime < startTime;
-  const endDate = endsNextDay ? addDays(date, 1) : date;
-  return {
-    session: session.id,
-    productType: unit ? unit.kind : 'entrance' as const,
-    startsAt: `${date}T${startTime}:00+08:00`,
-    endsAt: `${endDate}T${endTime}:00+08:00`,
-  };
+  return { session: sessionFor(state, product).id, productType: unit ? unit.kind : 'entrance', ...window };
 }
 
 const sortBookings = (state: State): void => {
@@ -197,8 +224,9 @@ const sortBookings = (state: State): void => {
 };
 
 function createBookingInState(state: State, input: NewBooking, staffId: string): Booking {
-  const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, input);
-  const guest = findOrCreateGuest(state, { name: input.guestName, mobile: input.mobile ?? null });
+  const extras = cleanExtras(input.extras);
+  const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, { ...input, extras });
+  const guest = findOrCreateGuest(state, { name: input.guestName, mobile: input.mobile ?? null, address: input.address ?? null, email: input.email ?? null });
   const when = schedule(state, input.product, input.date);
 
   const booking: Booking = {
@@ -232,6 +260,9 @@ function createBookingInState(state: State, input: NewBooking, staffId: string):
     cancelReason: null,
     notes: input.notes?.trim() || null,
     discount: null,
+    scPwd: Math.max(0, Math.round(input.scPwd ?? 0)),
+    extras,
+    guestList: cleanGuestList(input.guestList),
   };
 
   const staff = findStaff(state, staffId);
@@ -244,7 +275,10 @@ function createBookingInState(state: State, input: NewBooking, staffId: string):
   logActivity(state, staffId, 'booking.created', booking.id, `${booking.guestName} · ${booking.product} · ${booking.date}`);
 
   if (input.deposit > 0) {
-    applyPayment(state, booking, { amount: input.deposit, method: input.method, reference: input.reference ?? null }, staffId);
+    applyPayment(state, booking, {
+      amount: input.deposit, method: input.method, reference: input.reference ?? null,
+      sentTime: input.sentTime ?? null, senderName: input.senderName ?? null,
+    }, staffId);
   }
 
   const inquiry = input.inquiryId ? state.inquiries.find((item) => item.id === input.inquiryId) : undefined;
@@ -256,6 +290,10 @@ function createBookingInState(state: State, input: NewBooking, staffId: string):
 export interface BookingEdit {
   guestName: string;
   mobile: string;
+  address: string;
+  email: string;
+  scPwd: number;
+  extras: ExtraCharge[];
   source: BookingSource;
   product: string;
   date: ISODate;
@@ -289,7 +327,8 @@ export function updateBooking(bookingId: string, input: BookingEdit, staffId: st
     if (!availability.ok) return { error: availability.reason ?? 'Not available.' };
     if (unit && guests > unit.capacityMax) return { error: `${unit.name} fits up to ${unit.capacityMax} guests.` };
 
-    const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, input);
+    const extras = cleanExtras(input.extras);
+    const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, { ...input, extras });
     const current = booking.discount ?? null;
     let discount: DiscountInput | null;
     if (input.discount === 'keep') {
@@ -310,8 +349,7 @@ export function updateBooking(bookingId: string, input: BookingEdit, staffId: st
     const changes: string[] = [];
     const before = { product: booking.product, date: booking.date, guests: booking.adults + booking.kids, total: booking.total };
 
-    const guest = findOrCreateGuest(state, { name: input.guestName, mobile: input.mobile.trim() || null });
-    if (input.mobile.trim()) guest.mobile = input.mobile.trim();
+    const guest = findOrCreateGuest(state, { name: input.guestName, mobile: input.mobile, address: input.address, email: input.email });
     if (guest.id !== booking.guestId) changes.push(`guest ${booking.guestName} → ${guest.name}`);
 
     Object.assign(booking, {
@@ -323,6 +361,8 @@ export function updateBooking(bookingId: string, input: BookingEdit, staffId: st
       adults: input.adults,
       kids: input.kids,
       notes: input.notes.trim() || null,
+      scPwd: Math.max(0, Math.round(input.scPwd)),
+      extras,
       pricing,
       ...schedule(state, input.product, input.date),
     } satisfies Partial<Booking>);
@@ -355,6 +395,16 @@ export function updateBooking(bookingId: string, input: BookingEdit, staffId: st
   });
 }
 
+/** Saves the guest list (the companions sheet). */
+export function setGuestList(bookingId: string, list: Companion[], staffId: string): Booking {
+  return update((state) => {
+    const booking = must(findBooking(state, bookingId), `Booking ${bookingId}`);
+    booking.guestList = cleanGuestList(list);
+    logActivity(state, staffId, 'booking.guest_list', booking.id, `${booking.guestList.length} on the guest list`);
+    return booking;
+  });
+}
+
 export function recordPayment(bookingId: string, payment: PaymentInput, staffId: string): Booking {
   return update((state) => {
     const booking = must(findBooking(state, bookingId), `Booking ${bookingId}`);
@@ -371,7 +421,7 @@ export type QrPaymentResult = { error: string } | { error?: undefined; booking: 
  * simulated (see referenceProblem); nothing is charged.
  * @param staffId the desk account that showed the QR, or null when the guest paid from a booking link
  */
-export function payByQr(bookingId: string, reference: string, staffId: string | null): QrPaymentResult {
+export function payByQr(bookingId: string, reference: string, staffId: string | null, senderName?: string | null): QrPaymentResult {
   return update((state): QrPaymentResult => {
     const booking = findBooking(state, bookingId);
     if (!booking) return { error: 'This booking no longer exists.' };
@@ -379,7 +429,8 @@ export function payByQr(bookingId: string, reference: string, staffId: string | 
     if (amount === 0) return { error: 'The downpayment for this booking is already paid.' };
     const problem = referenceProblem(state, reference);
     if (problem) return { error: problem };
-    const payment = applyPayment(state, booking, { amount, method: 'gcash', reference: formatReference(reference), via: 'qr' }, staffId);
+    if (senderName !== undefined && !senderName?.trim()) return { error: 'Enter the name on the GCash account that sent the payment.' };
+    const payment = applyPayment(state, booking, { amount, method: 'gcash', reference: formatReference(reference), via: 'qr', senderName }, staffId);
     return { booking, payment };
   });
 }
@@ -579,7 +630,7 @@ export function bookingLinkStage(state: State, code: string | null | undefined):
   return { stage: 'form', link };
 }
 
-export type GuestBooking = Pick<NewBooking, 'guestName' | 'mobile' | 'product' | 'date' | 'adults' | 'kids' | 'notes'>;
+export type GuestBooking = Pick<NewBooking, 'guestName' | 'mobile' | 'product' | 'date' | 'adults' | 'kids' | 'notes' | 'address' | 'email' | 'scPwd' | 'guestList'>;
 
 export type BookingLinkResult = { error: string } | { error?: undefined; booking: Booking; link: BookingLink };
 

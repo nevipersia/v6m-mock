@@ -2,7 +2,7 @@
 
 import { addDays, formatDate, parseDate } from './format.js';
 import type {
-  Booking, BookingSource, DiscountKind, ManualDiscount, Staff, BookingStatus, EventStage, ISODate, PaymentMethod, PoolSession, PriceLine,
+  Booking, BookingSource, DiscountKind, ExclusivePackage, ExtraCharge, ManualDiscount, Staff, Timestamp, BookingStatus, EventStage, ISODate, PaymentMethod, PoolSession, PriceLine,
   Pricing, Promo, ResortEvent, State, Unit,
 } from './types.js';
 
@@ -21,7 +21,6 @@ export const SOURCE_LABELS: Record<BookingSource, string> = {
   phone: 'Phone',
   website: 'Website',
   walk_in: 'Walk-in',
-  airbnb: 'Airbnb',
   booking_link: 'Booking link',
 };
 
@@ -29,7 +28,6 @@ export const METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: 'Cash',
   gcash: 'GCash',
   bank_transfer: 'Bank transfer',
-  airbnb: 'Airbnb',
 };
 
 export const STAGE_LABELS: Record<EventStage, string> = {
@@ -52,8 +50,12 @@ export const findBooking = (state: State, id: string | null | undefined) => stat
 export const findGuest = (state: State, id: string | null | undefined) => state.guests.find((guest) => guest.id === id);
 export const findStaff = (state: State, id: string | null | undefined) => state.staff.find((person) => person.id === id);
 export const findPackage = (state: State, id: string | null | undefined) => state.eventPackages.find((pkg) => pkg.id === id);
+export const findExclusive = (state: State, id: string | null | undefined): ExclusivePackage | undefined =>
+  (state.exclusivePackages ?? []).find((pkg) => pkg.id === id);
 
-/** The pool session a product runs in: its own id for entrance, or the unit's session. */
+export const isExclusiveProduct = (state: State, product: string): boolean => Boolean(findExclusive(state, product));
+
+/** The pool session a regular product runs in: its own id for entrance, or the unit's session. */
 export function sessionFor(state: State, product: string): PoolSession {
   const unit = findUnit(state, product);
   const session = findSession(state, unit ? unit.session : product);
@@ -61,16 +63,47 @@ export function sessionFor(state: State, product: string): PoolSession {
   return session;
 }
 
+export const exclusiveSessionLabel = (pkg: ExclusivePackage): string => (pkg.session === 'day' ? 'Day tour' : 'Overnight');
+
 export function productLabel(state: State, product: string): string {
   if (product === 'event') return 'Private event';
+  const pkg = findExclusive(state, product);
+  if (pkg) return `Exclusive ${exclusiveSessionLabel(pkg).toLowerCase()} · ${pkg.name}`;
   return findUnit(state, product)?.name ?? findSession(state, product)?.label ?? product;
 }
 
-/** Category used for colors: daytour, overnight, room, cottage, villa or event. */
+/** Category used for colors: a session id, room, cottage, exclusive or event. */
 export function productKind(state: State, product: string): string {
   if (product === 'event') return 'event';
+  if (findExclusive(state, product)) return 'exclusive';
   return findUnit(state, product)?.kind ?? product;
 }
+
+/** Start and end of a product's time window on a date. */
+export function bookingWindow(state: State, product: string, date: ISODate): { startsAt: Timestamp; endsAt: Timestamp } {
+  const pkg = findExclusive(state, product);
+  const unit = findUnit(state, product);
+  const session = pkg ? null : sessionFor(state, product);
+  const start = pkg ? pkg.start : unit ? unit.checkIn : session!.start;
+  const end = pkg ? pkg.end : unit ? unit.checkOut : session!.end;
+  const endDate = end <= start ? addDays(date, 1) : date;
+  return { startsAt: `${date}T${start}:00+08:00`, endsAt: `${endDate}T${end}:00+08:00` };
+}
+
+const overlapsWindow = (booking: Booking, window: { startsAt: Timestamp; endsAt: Timestamp }): boolean =>
+  booking.startsAt < window.endsAt && window.startsAt < booking.endsAt;
+
+/** Active bookings whose time overlaps the window. */
+export const bookingsOverlapping = (state: State, window: { startsAt: Timestamp; endsAt: Timestamp }, excludeId?: string): Booking[] =>
+  state.bookings.filter((b) => b.id !== excludeId && isActive(b) && b.product !== 'event' && overlapsWindow(b, window));
+
+/** The exclusive rental holding the resort during this window, if any. */
+export const exclusiveOverlapping = (state: State, window: { startsAt: Timestamp; endsAt: Timestamp }, excludeId?: string): Booking | undefined =>
+  bookingsOverlapping(state, window, excludeId).find((b) => b.productType === 'exclusive');
+
+/** The exclusive rental that touches this date, if any. */
+export const exclusiveOn = (state: State, date: ISODate): Booking | undefined =>
+  state.bookings.find((b) => isActive(b) && b.productType === 'exclusive' && b.date === date);
 
 export function periodDays(state: State): ISODate[] {
   const days: ISODate[] = [];
@@ -90,10 +123,10 @@ export const closingEvent = (state: State, date: ISODate): ResortEvent | undefin
 export const unitBookingOn = (state: State, unitId: string, date: ISODate, excludeId?: string): Booking | undefined =>
   state.bookings.find((b) => b.id !== excludeId && isActive(b) && b.product === unitId && nightsOf(b).includes(date));
 
-/** Guests counted against a pool session's capacity. The private villa has its own pool. */
+/** Guests counted against a pool session's capacity. Exclusive rentals are not a shared session. */
 export const poolGuests = (state: State, date: ISODate, sessionId: string, excludeId?: string): number =>
   state.bookings
-    .filter((b) => b.id !== excludeId && isActive(b) && b.date === date && b.session === sessionId && b.productType !== 'villa')
+    .filter((b) => b.id !== excludeId && isActive(b) && b.date === date && b.session === sessionId && b.productType !== 'exclusive')
     .reduce((sum, b) => sum + b.adults + b.kids, 0);
 
 export function poolSlotsLeft(state: State, date: ISODate, sessionId: string): number {
@@ -114,7 +147,6 @@ export interface Availability {
   ok: boolean;
   reason?: string;
   slotsLeft?: number;
-  viaAirbnb?: boolean;
 }
 
 export function checkAvailability(state: State, { product, date, adults = 0, kids = 0, excludeId }: BookingRequest): Availability {
@@ -122,13 +154,25 @@ export function checkAvailability(state: State, { product, date, adults = 0, kid
     return { ok: false, reason: `V6M is closed on ${formatDate(date)} for a private event.` };
   }
 
-  const unit = findUnit(state, product);
-  if (unit) {
-    if (unitBookingOn(state, product, date, excludeId)) {
-      const where = unit.channel === 'airbnb' ? 'on Airbnb ' : '';
-      return { ok: false, reason: `${unit.name} is already booked ${where}for ${formatDate(date)}.` };
+  const window = bookingWindow(state, product, date);
+  const pkg = findExclusive(state, product);
+  if (pkg) {
+    const clash = bookingsOverlapping(state, window, excludeId)[0];
+    if (clash) {
+      return { ok: false, reason: `Another group is booked then (${clash.guestName}, ${productLabel(state, clash.product)}). An exclusive rental needs the whole time free.` };
     }
-    if (unit.channel === 'airbnb') return { ok: true, viaAirbnb: true };
+    if (adults + kids > pkg.maxGuests) return { ok: false, reason: `Exclusive rentals take up to ${pkg.maxGuests} guests.` };
+    return { ok: true };
+  }
+
+  const exclusive = exclusiveOverlapping(state, window, excludeId);
+  if (exclusive) {
+    return { ok: false, reason: `V6M is booked for an exclusive rental then (${exclusive.guestName}). No other guests that time.` };
+  }
+
+  const unit = findUnit(state, product);
+  if (unit && unitBookingOn(state, product, date, excludeId)) {
+    return { ok: false, reason: `${unit.name} is already booked for ${formatDate(date)}.` };
   }
 
   const session = sessionFor(state, product);
@@ -162,8 +206,20 @@ export interface Quote extends Pricing {
   warnings: string[];
 }
 
+const extraLines = (extras: ExtraCharge[] = []): PriceLine[] =>
+  extras.filter((extra) => extra.amount > 0 && extra.label.trim())
+    .map((extra) => ({ label: extra.label.trim(), qty: 1, unitPrice: extra.amount, amount: extra.amount }));
+
 /** Price breakdown in the same shape as booking.pricing, plus the promo and warnings. */
-export function quote(state: State, { product, date, adults = 0, kids = 0, nights = 1 }: BookingRequest): Quote {
+export function quote(state: State, request: BookingRequest & { extras?: ExtraCharge[] }): Quote {
+  const { product, date, adults = 0, kids = 0, nights = 1 } = request;
+  const pkg = findExclusive(state, product);
+  if (pkg) {
+    const lines = [{ label: `Exclusive · ${pkg.name} (${exclusiveSessionLabel(pkg)})`, qty: 1, unitPrice: pkg.price, amount: pkg.price }, ...extraLines(request.extras)];
+    const subtotal = lines.reduce((sum, line) => sum + line.amount, 0);
+    const warnings = adults + kids > pkg.maxGuests ? [`Exclusive rentals take up to ${pkg.maxGuests} guests.`] : [];
+    return { lines, subtotal, promoId: null, promo: null, discount: 0, total: subtotal, warnings };
+  }
   const unit: Unit | undefined = findUnit(state, product);
   const session = sessionFor(state, product);
   const guests = adults + kids;
@@ -174,6 +230,7 @@ export function quote(state: State, { product, date, adults = 0, kids = 0, night
     if (kids) lines.push({ label: `Kid entrance (${session.label})`, qty: kids, unitPrice: session.kid, amount: kids * session.kid });
   }
   if (unit) lines.push({ label: unit.name, qty: nights, unitPrice: unit.price, amount: unit.price * nights });
+  lines.push(...extraLines(request.extras));
 
   const subtotal = lines.reduce((sum, line) => sum + line.amount, 0);
   const promo = findPromo(state, { product, date, guests });
@@ -230,11 +287,10 @@ export function discountProblem(staff: Staff, input: DiscountInput, base: number
 export const discountLabel = (discount: ManualDiscount): string =>
   discount.kind === 'percent' ? `Discount (${discount.value}%)` : 'Discount';
 
-/** Bookings the desk can edit: not yet arrived, and not an event or an Airbnb stay. */
-export function isEditable(state: State, booking: Booking): boolean {
+/** Bookings the desk can edit: not yet arrived, and not an event. */
+export function isEditable(_state: State, booking: Booking): boolean {
   if (!['hold', 'confirmed'].includes(booking.status)) return false;
-  if (booking.productType === 'event' || booking.eventId) return false;
-  return findUnit(state, booking.product)?.channel !== 'airbnb';
+  return booking.productType !== 'event' && !booking.eventId;
 }
 
 // ---------- Downpayment ----------
@@ -243,9 +299,8 @@ export function isEditable(state: State, booking: Booking): boolean {
 export const DOWNPAYMENT_RATE = 0.5;
 export const DOWNPAYMENT_PERCENT = Math.round(DOWNPAYMENT_RATE * 100);
 
-/** The required downpayment: 50% of the total rounded up to the peso, or the full total for Airbnb. */
-export function depositRequired(state: State, product: string, total: number): number {
-  if (findUnit(state, product)?.channel === 'airbnb') return total;
+/** The required downpayment: 50% of the total rounded up to the peso. */
+export function depositRequired(_state: State, _product: string, total: number): number {
   return Math.ceil(total * DOWNPAYMENT_RATE);
 }
 

@@ -9,6 +9,8 @@ import { DOWNPAYMENT_PERCENT } from './rules.js';
 
 export interface PaymentCardState {
   reference: string;
+  /** Name on the GCash account that sent it ("GCash sender" on the guest information form). */
+  senderName: string;
   error: string;
   /** True while the mock verification is "checking with GCash". */
   checking: boolean;
@@ -39,6 +41,11 @@ export function paymentCard(request: QrPaymentRequest, card: PaymentCardState, {
         <li>Type the 13-digit reference number from your receipt below.</li>
       </ol>
 
+      <label class="field">
+        <span class="field__label">Name on the GCash account</span>
+        <input class="input" name="senderName" data-input="senderName" value="${card.senderName}" autocomplete="name"
+          placeholder="Who sent the payment" ${card.checking ? 'disabled' : ''}>
+      </label>
       <label class="field">
         <span class="field__label">GCash reference number</span>
         <input class="input mono" name="reference" data-input="reference" value="${card.reference}" inputmode="numeric"

@@ -8,15 +8,17 @@
     },
     "timezone": "Asia/Manila",
     "currency": "PHP",
-    "seed": 665709762,
+    "seed": 665709763,
     "rules": [
       "A unit holds one booking per night; exclusive events that are reserved, paid or done close the resort for the day.",
-      "Each pool session caps at 120 guests (placeholder until the owner confirms).",
-      "Rooms and cottages add per-head overnight entrance; the Airbnb villa does not.",
+      "Regular bookings: per-head entrance for a session (day tour 8 AM–4 PM, night tour 2 PM–10 PM, overnight 3 PM–12 NN, overnight tour 6 PM–6 AM), plus cottages or rooms. Each session caps at 120 guests.",
+      "Night tour and 3 PM overnight entrance rates are placeholders until the owner confirms them.",
+      "Exclusive rental packages (from the brochure) close the resort to other bookings for their whole time window, and need that window to be free. Up to 120 guests.",
+      "Rooms (3 PM–12 NN) and cottages (6 PM–6 AM) add per-head entrance for their session.",
       "A booking stays on hold until at least 50% of the total is paid; checked-out bookings have zero balance.",
-      "Downpayment: 50% of the total for every booking, rounded up to the peso; Airbnb is paid in full. Guests on a booking link pay it by GCash QR.",
+      "Downpayment: 50% of the total for every booking, rounded up to the peso. Guests on a booking link pay it by GCash QR.",
       "Booking links are single use: a staff member sends one, the guest fills it in, and the booking lands on the calendar.",
-      "Rates come from public listings; promo PR-BTS and all event packages are invented for testing.",
+      "Rates come from public listings and the V6M brochure; promo PR-BTS and all event packages are invented for testing.",
       "V6M Desk signs in with an email and password. Demo passwords sit in this file in plain text because it is a mock; a real build would never store them this way.",
       "New accounts are invite only: the owner creates the account, the invite code is used once, and the person sets their own password.",
       "Owners and managers can give a manual discount (amount or percent). Managers must write a note saying why; owners may skip it. The 50% downpayment follows the discounted total."
@@ -77,16 +79,40 @@
       "end": "16:00",
       "adult": 150,
       "kid": 100,
-      "capacity": 120
+      "capacity": 120,
+      "photo": "pool.jpg"
+    },
+    {
+      "id": "nighttour",
+      "label": "Night tour",
+      "start": "14:00",
+      "end": "22:00",
+      "adult": 180,
+      "kid": 130,
+      "capacity": 120,
+      "photo": "garden.jpg",
+      "ratesToConfirm": true
+    },
+    {
+      "id": "overnightstay",
+      "label": "Overnight",
+      "start": "15:00",
+      "end": "12:00",
+      "adult": 200,
+      "kid": 150,
+      "capacity": 120,
+      "photo": "villas.jpg",
+      "ratesToConfirm": true
     },
     {
       "id": "overnight",
-      "label": "Overnight",
+      "label": "Overnight tour",
       "start": "18:00",
       "end": "06:00",
       "adult": 200,
       "kid": 150,
-      "capacity": 120
+      "capacity": 120,
+      "photo": "garden.jpg"
     }
   ],
   "units": [
@@ -99,14 +125,15 @@
       "price": 2500,
       "checkIn": "15:00",
       "checkOut": "12:00",
-      "session": "overnight",
+      "session": "overnightstay",
       "addsEntrance": true,
       "inclusions": [
         "Air-conditioning",
         "Smart TV",
         "Hot and cold shower",
         "Wi-Fi"
-      ]
+      ],
+      "photo": "room-orange.jpg"
     },
     {
       "id": "deluxe",
@@ -117,14 +144,15 @@
       "price": 2200,
       "checkIn": "15:00",
       "checkOut": "12:00",
-      "session": "overnight",
+      "session": "overnightstay",
       "addsEntrance": true,
       "inclusions": [
         "Air-conditioning",
         "Smart TV",
         "Hot and cold shower",
         "Wi-Fi"
-      ]
+      ],
+      "photo": "room-bunk.jpg"
     },
     {
       "id": "cottageA",
@@ -139,7 +167,8 @@
       "addsEntrance": true,
       "inclusions": [
         "Poolside table and benches"
-      ]
+      ],
+      "photo": "kubo.jpg"
     },
     {
       "id": "cottageB",
@@ -154,7 +183,8 @@
       "addsEntrance": true,
       "inclusions": [
         "Poolside table and benches"
-      ]
+      ],
+      "photo": "kubo.jpg"
     },
     {
       "id": "cottageC",
@@ -169,26 +199,8 @@
       "addsEntrance": true,
       "inclusions": [
         "Poolside table"
-      ]
-    },
-    {
-      "id": "villa",
-      "name": "Enclave Villa",
-      "kind": "villa",
-      "capacityMin": 1,
-      "capacityMax": 12,
-      "price": 6500,
-      "checkIn": "14:00",
-      "checkOut": "12:00",
-      "session": "overnight",
-      "addsEntrance": false,
-      "inclusions": [
-        "Private villa",
-        "Kitchen",
-        "Private pool access"
       ],
-      "channel": "airbnb",
-      "priceNote": "Mock nightly rate; the real price is set on Airbnb"
+      "photo": "kubo.jpg"
     }
   ],
   "promos": [
@@ -299,7 +311,7 @@
     {
       "id": "SR-RATES",
       "title": "Rates",
-      "body": "Hola! Thanks for reaching V6M Resort.\n\nDay tour (8 AM–4 PM): ₱150 adults, ₱100 kids\nOvernight (6 PM–6 AM): ₱200 adults, ₱150 kids\nCottages: A ₱2,000 · B ₱1,500 · C ₱1,000\nRooms (3 PM–12 NN): Suite ₱2,500 · Deluxe ₱2,200, plus entrance\n\nSo, when's your next vacay?"
+      "body": "Hola! Thanks for reaching V6M Resort.\n\nDay tour (8 AM–4 PM): ₱150 adults, ₱100 kids\nOvernight tour (6 PM–6 AM): ₱200 adults, ₱150 kids\nCottages: A ₱2,000 · B ₱1,500 · C ₱1,000\nRooms (3 PM–12 NN): Suite ₱2,500 · Deluxe ₱2,200, plus entrance\n\nWant the place to yourselves? Exclusive rental, up to 120 guests:\nDay tour: Full resort ₱40,000 · Partial room use ₱35,000 · Cottages only ₱30,000\nOvernight: Full resort ₱50,000 · Partial room use ₱45,000 (3 PM–12 NN) · Cottages only ₱40,000 (6 PM–6 AM)\n\nSo, when's your next vacay?"
     },
     {
       "id": "SR-PETS",
@@ -320,273 +332,398 @@
       "id": "SR-EVENTS",
       "title": "Events",
       "body": "Congrats in advance! We'd love to host. Share your date, headcount and type of event, and we'll send packages and schedule an ocular visit."
+    },
+    {
+      "id": "SR-EXCLUSIVE",
+      "title": "Exclusive rental",
+      "body": "100% exclusive. No sharing, no strangers. The whole resort is yours: 3 pools, 7 kubo cottages, 7 air-conditioned villas, free Wi-Fi, a grilling area and ample parking, for up to 120 guests.\n\nDay tour (8 AM–4 PM): Full resort ₱40,000 · Partial room use (3 rooms) ₱35,000 · Cottages only ₱30,000\nOvernight: Full resort ₱50,000 · Partial room use ₱45,000 (3 PM–12 NN) · Cottages only ₱40,000 (6 PM–6 AM)\n\nA 50% downpayment locks your date."
     }
   ],
   "guests": [
     {
       "id": "GU-0014",
       "name": "Jerome Mendoza",
-      "mobile": "0900 861 8427"
+      "mobile": "0900 861 8427",
+      "address": "Purok 2, Lipa City, Batangas",
+      "email": null
     },
     {
       "id": "GU-0017",
       "name": "Hazel Ramos",
-      "mobile": "0900 697 8088"
+      "mobile": "0900 697 8088",
+      "address": "Blk 4 Lot 12, Sto. Tomas, Batangas",
+      "email": "hazel.ramos@example.com"
     },
     {
       "id": "GU-0019",
       "name": "Jerome Lontoc",
-      "mobile": "0900 107 4612"
+      "mobile": "0900 107 4612",
+      "address": "Purok 5, Malvar, Batangas",
+      "email": "jerome.lontoc@example.com"
     },
     {
       "id": "GU-0022",
       "name": "Kristine Castillo",
-      "mobile": "0900 500 4072"
+      "mobile": "0900 500 4072",
+      "address": "Zone 3, Batangas City",
+      "email": null
     },
     {
       "id": "GU-0029",
       "name": "Kevin Dela Cruz",
-      "mobile": "0900 980 5187"
+      "mobile": "0900 980 5187",
+      "address": "118 P. Burgos St., San Pablo City, Laguna",
+      "email": "kevin.delacruz@example.com"
     },
     {
       "id": "GU-0030",
       "name": "Kristine Perez",
-      "mobile": "0900 255 6824"
+      "mobile": "0900 255 6824",
+      "address": "Sitio Ilaya, Rosario, Batangas",
+      "email": "kristine.perez@example.com"
     },
     {
       "id": "GU-0049",
       "name": "Jasmine Cruz",
-      "mobile": "0900 619 1803"
+      "mobile": "0900 619 1803",
+      "address": "Phase 2 Blk 7, Tanauan City, Batangas",
+      "email": null
     },
     {
       "id": "GU-0055",
       "name": "Jose Ramos",
-      "mobile": "0900 937 4387"
+      "mobile": "0900 937 4387",
+      "address": "Purok 2, Calamba, Laguna",
+      "email": "jose.ramos@example.com"
     },
     {
       "id": "GU-0062",
       "name": "Trisha Tolentino",
-      "mobile": "0900 357 7100"
+      "mobile": "0900 357 7100",
+      "address": "Blk 4 Lot 12, Lipa City, Batangas",
+      "email": "trisha.tolentino@example.com"
     },
     {
       "id": "GU-0066",
       "name": "Mark Bautista",
-      "mobile": "0900 382 5893"
+      "mobile": "0900 382 5893",
+      "address": "Purok 5, Sto. Tomas, Batangas",
+      "email": null
     },
     {
       "id": "GU-0067",
       "name": "Camille De Leon",
-      "mobile": "0900 967 7005"
+      "mobile": "0900 967 7005",
+      "address": "Zone 3, Malvar, Batangas",
+      "email": "camille.deleon@example.com"
     },
     {
       "id": "GU-0070",
       "name": "Kristine Arellano",
-      "mobile": "0900 192 7395"
+      "mobile": "0900 192 7395",
+      "address": "118 P. Burgos St., Batangas City",
+      "email": "kristine.arellano@example.com"
     },
     {
       "id": "GU-0071",
       "name": "Nico Dela Cruz",
-      "mobile": "0900 667 7034"
+      "mobile": "0900 667 7034",
+      "address": "Sitio Ilaya, San Pablo City, Laguna",
+      "email": null
     },
     {
       "id": "GU-0072",
       "name": "Rafael Ocampo",
-      "mobile": "0900 305 3660"
+      "mobile": "0900 305 3660",
+      "address": "Phase 2 Blk 7, Rosario, Batangas",
+      "email": "rafael.ocampo@example.com"
     },
     {
       "id": "GU-0073",
       "name": "Luis Arellano",
-      "mobile": "0900 352 0023"
+      "mobile": "0900 352 0023",
+      "address": "Purok 2, Tanauan City, Batangas",
+      "email": "luis.arellano@example.com"
     },
     {
       "id": "GU-0074",
       "name": "Vince Aguilar",
-      "mobile": "0900 163 5655"
+      "mobile": "0900 163 5655",
+      "address": "Blk 4 Lot 12, Calamba, Laguna",
+      "email": null
     },
     {
       "id": "GU-0075",
       "name": "Kath De Leon",
-      "mobile": "0900 619 9583"
+      "mobile": "0900 619 9583",
+      "address": "Purok 5, Lipa City, Batangas",
+      "email": "kath.deleon@example.com"
     },
     {
       "id": "GU-0076",
       "name": "Mark Salazar",
-      "mobile": "0900 842 1919"
+      "mobile": "0900 842 1919",
+      "address": "Zone 3, Sto. Tomas, Batangas",
+      "email": "mark.salazar@example.com"
     },
     {
       "id": "GU-0077",
       "name": "Kevin Marasigan",
-      "mobile": "0900 428 0044"
+      "mobile": "0900 428 0044",
+      "address": "118 P. Burgos St., Malvar, Batangas",
+      "email": null
     },
     {
       "id": "GU-0078",
       "name": "Nico Mendoza",
-      "mobile": "0900 513 5582"
+      "mobile": "0900 513 5582",
+      "address": "Sitio Ilaya, Batangas City",
+      "email": "nico.mendoza@example.com"
     },
     {
       "id": "GU-0079",
       "name": "Trisha Pascual",
-      "mobile": "0900 337 0813"
+      "mobile": "0900 337 0813",
+      "address": "Phase 2 Blk 7, San Pablo City, Laguna",
+      "email": "trisha.pascual@example.com"
     },
     {
       "id": "GU-0080",
       "name": "Kristine Torres",
-      "mobile": "0900 886 3012"
+      "mobile": "0900 886 3012",
+      "address": "Purok 2, Rosario, Batangas",
+      "email": null
     },
     {
       "id": "GU-0081",
       "name": "Paolo Perez",
-      "mobile": "0900 767 8591"
+      "mobile": "0900 767 8591",
+      "address": "Blk 4 Lot 12, Tanauan City, Batangas",
+      "email": "paolo.perez@example.com"
     },
     {
       "id": "GU-0082",
       "name": "Paolo Lontoc",
-      "mobile": "0900 273 4051"
+      "mobile": "0900 273 4051",
+      "address": "Purok 5, Calamba, Laguna",
+      "email": "paolo.lontoc@example.com"
     },
     {
       "id": "GU-0083",
       "name": "Lea Navarro",
-      "mobile": "0900 137 1491"
+      "mobile": "0900 137 1491",
+      "address": "Zone 3, Lipa City, Batangas",
+      "email": null
     },
     {
       "id": "GU-0084",
       "name": "Joshua Reyes",
-      "mobile": "0900 234 7867"
+      "mobile": "0900 234 7867",
+      "address": "118 P. Burgos St., Sto. Tomas, Batangas",
+      "email": "joshua.reyes@example.com"
     },
     {
       "id": "GU-0085",
       "name": "Hazel Castillo",
-      "mobile": "0900 416 8033"
+      "mobile": "0900 416 8033",
+      "address": "Sitio Ilaya, Malvar, Batangas",
+      "email": "hazel.castillo@example.com"
     },
     {
       "id": "GU-0086",
       "name": "Mark Aguilar",
-      "mobile": "0900 218 6509"
+      "mobile": "0900 218 6509",
+      "address": "Phase 2 Blk 7, Batangas City",
+      "email": null
     },
     {
       "id": "GU-0087",
       "name": "Vince Garcia",
-      "mobile": "0900 322 7024"
+      "mobile": "0900 322 7024",
+      "address": "Purok 2, San Pablo City, Laguna",
+      "email": "vince.garcia@example.com"
     },
     {
       "id": "GU-0088",
       "name": "Patricia Perez",
-      "mobile": "0900 138 5440"
+      "mobile": "0900 138 5440",
+      "address": "Blk 4 Lot 12, Rosario, Batangas",
+      "email": "patricia.perez@example.com"
     },
     {
       "id": "GU-0089",
       "name": "Trisha Cruz",
-      "mobile": "0900 397 6413"
+      "mobile": "0900 397 6413",
+      "address": "Purok 5, Tanauan City, Batangas",
+      "email": null
     },
     {
       "id": "GU-0090",
       "name": "Ramon Arellano",
-      "mobile": "0900 600 7992"
+      "mobile": "0900 600 7992",
+      "address": "Zone 3, Calamba, Laguna",
+      "email": "ramon.arellano@example.com"
     },
     {
       "id": "GU-0091",
       "name": "Mae Marasigan",
-      "mobile": "0900 258 9009"
+      "mobile": "0900 258 9009",
+      "address": "118 P. Burgos St., Lipa City, Batangas",
+      "email": "mae.marasigan@example.com"
     },
     {
       "id": "GU-0092",
       "name": "Trisha Lontoc",
-      "mobile": "0900 327 3240"
+      "mobile": "0900 327 3240",
+      "address": "Sitio Ilaya, Sto. Tomas, Batangas",
+      "email": null
     },
     {
       "id": "GU-0093",
       "name": "Kath Magpantay",
-      "mobile": "0900 962 8688"
+      "mobile": "0900 962 8688",
+      "address": "Phase 2 Blk 7, Malvar, Batangas",
+      "email": "kath.magpantay@example.com"
     },
     {
       "id": "GU-0094",
       "name": "Vince Hernandez",
-      "mobile": "0900 967 7331"
+      "mobile": "0900 967 7331",
+      "address": "Purok 2, Batangas City",
+      "email": "vince.hernandez@example.com"
     },
     {
       "id": "GU-0095",
       "name": "Maria Lontoc",
-      "mobile": "0900 542 4949"
+      "mobile": "0900 542 4949",
+      "address": "Blk 4 Lot 12, San Pablo City, Laguna",
+      "email": null
     },
     {
       "id": "GU-0096",
       "name": "Patricia Marasigan",
-      "mobile": "0900 941 2670"
+      "mobile": "0900 941 2670",
+      "address": "Purok 5, Rosario, Batangas",
+      "email": "patricia.marasigan@example.com"
     },
     {
       "id": "GU-0097",
       "name": "Lovely Ocampo",
-      "mobile": "0900 318 5174"
+      "mobile": "0900 318 5174",
+      "address": "Zone 3, Tanauan City, Batangas",
+      "email": "lovely.ocampo@example.com"
     },
     {
       "id": "GU-0098",
       "name": "Angelica Castillo",
-      "mobile": "0900 475 9755"
+      "mobile": "0900 475 9755",
+      "address": "118 P. Burgos St., Calamba, Laguna",
+      "email": null
     },
     {
       "id": "GU-0099",
       "name": "Joshua Villanueva",
-      "mobile": "0900 217 6792"
+      "mobile": "0900 217 6792",
+      "address": "Sitio Ilaya, Lipa City, Batangas",
+      "email": "joshua.villanueva@example.com"
     },
     {
       "id": "GU-0100",
       "name": "Miguel Mendoza",
-      "mobile": "0900 934 1802"
+      "mobile": "0900 934 1802",
+      "address": "Phase 2 Blk 7, Sto. Tomas, Batangas",
+      "email": "miguel.mendoza@example.com"
     },
     {
       "id": "GU-0101",
       "name": "Arvin Castillo",
-      "mobile": "0900 300 0913"
+      "mobile": "0900 300 0913",
+      "address": "Purok 2, Malvar, Batangas",
+      "email": null
     },
     {
       "id": "GU-0102",
       "name": "Ramon Hernandez",
-      "mobile": "0900 439 9562"
+      "mobile": "0900 439 9562",
+      "address": "Blk 4 Lot 12, Batangas City",
+      "email": "ramon.hernandez@example.com"
     },
     {
       "id": "GU-0103",
       "name": "Mark Villanueva",
-      "mobile": "0900 135 2020"
+      "mobile": "0900 135 2020",
+      "address": "Purok 5, San Pablo City, Laguna",
+      "email": "mark.villanueva@example.com"
     },
     {
       "id": "GU-0104",
       "name": "Ella Panganiban",
-      "mobile": "0900 506 4725"
+      "mobile": "0900 506 4725",
+      "address": "Zone 3, Rosario, Batangas",
+      "email": null
     },
     {
       "id": "GU-0105",
       "name": "Camille Lontoc",
-      "mobile": "0900 743 4394"
+      "mobile": "0900 743 4394",
+      "address": "118 P. Burgos St., Tanauan City, Batangas",
+      "email": "camille.lontoc@example.com"
     },
     {
       "id": "GU-0106",
       "name": "Carlo Lontoc",
-      "mobile": "0900 952 9817"
+      "mobile": "0900 952 9817",
+      "address": "Sitio Ilaya, Calamba, Laguna",
+      "email": "carlo.lontoc@example.com"
     },
     {
       "id": "GU-0107",
       "name": "Gino Cruz",
-      "mobile": "0900 498 7291"
+      "mobile": "0900 498 7291",
+      "address": "Phase 2 Blk 7, Lipa City, Batangas",
+      "email": null
     },
     {
       "id": "GU-0108",
       "name": "Nico Lontoc",
-      "mobile": "0900 664 0385"
+      "mobile": "0900 664 0385",
+      "address": "Purok 2, Sto. Tomas, Batangas",
+      "email": "nico.lontoc@example.com"
     },
     {
       "id": "GU-0109",
       "name": "Renz Lontoc",
-      "mobile": "0900 359 1597"
+      "mobile": "0900 359 1597",
+      "address": "Blk 4 Lot 12, Malvar, Batangas",
+      "email": "renz.lontoc@example.com"
     },
     {
       "id": "GU-0110",
       "name": "Ella Tolentino",
-      "mobile": "0900 719 5963"
+      "mobile": "0900 719 5963",
+      "address": "Purok 5, Batangas City",
+      "email": null
     },
     {
       "id": "GU-0111",
       "name": "Patricia Hernandez",
-      "mobile": "0900 487 8540"
+      "mobile": "0900 487 8540",
+      "address": "Zone 3, San Pablo City, Laguna",
+      "email": "patricia.hernandez@example.com"
+    },
+    {
+      "id": "GU-0112",
+      "name": "Carmela Villareal",
+      "mobile": "0917 034 0517",
+      "address": "Blk 9 Lot 3, Lipa City, Batangas",
+      "email": "carmela@example.com"
+    },
+    {
+      "id": "GU-0113",
+      "name": "Dennis Macaraig",
+      "mobile": "0917 034 8436",
+      "address": "Blk 9 Lot 3, Lipa City, Batangas",
+      "email": "dennis@example.com"
     }
   ],
   "bookings": [
@@ -633,7 +770,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0915-005",
@@ -684,52 +824,47 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Arriving late, around 8 PM",
-      "discount": null
-    },
-    {
-      "id": "BK-0915-002",
-      "guestId": "GU-0072",
-      "guestName": "Rafael Ocampo",
-      "product": "villa",
-      "productType": "villa",
-      "date": "2026-09-15",
-      "nights": 1,
-      "session": "overnight",
-      "startsAt": "2026-09-15T14:00:00+08:00",
-      "endsAt": "2026-09-16T12:00:00+08:00",
-      "adults": 2,
-      "kids": 0,
-      "pets": null,
-      "source": "airbnb",
-      "status": "checked_out",
-      "pricing": {
-        "lines": [
-          {
-            "label": "Enclave Villa",
-            "qty": 1,
-            "unitPrice": 6500,
-            "amount": 6500
-          }
-        ],
-        "subtotal": 6500,
-        "promoId": null,
-        "discount": 0,
-        "total": 6500
-      },
-      "total": 6500,
-      "depositRequired": 6500,
-      "paid": 6500,
-      "balance": 0,
-      "idVerified": true,
-      "eventId": null,
-      "createdAt": "2026-09-13T16:17:00+08:00",
-      "createdBy": "airbnb_sync",
-      "checkedInAt": "2026-09-15T14:00:00+08:00",
-      "checkedOutAt": "2026-09-16T12:00:00+08:00",
-      "cancelledAt": null,
-      "cancelReason": null,
-      "notes": "Asked for extra towels",
-      "discount": null
+      "discount": null,
+      "scPwd": 2,
+      "extras": [],
+      "guestList": [
+        {
+          "name": "Maricel Aguilar",
+          "gender": "Female",
+          "age": 34,
+          "remarks": ""
+        },
+        {
+          "name": "Rodel Aguilar",
+          "gender": "Male",
+          "age": 36,
+          "remarks": ""
+        },
+        {
+          "name": "Kyla Aguilar",
+          "gender": "Female",
+          "age": 9,
+          "remarks": ""
+        },
+        {
+          "name": "Jomar Aguilar",
+          "gender": "Male",
+          "age": 6,
+          "remarks": ""
+        },
+        {
+          "name": "Lorna Mercado",
+          "gender": "Female",
+          "age": 62,
+          "remarks": "Senior citizen"
+        },
+        {
+          "name": "Ben Mercado",
+          "gender": "Male",
+          "age": 65,
+          "remarks": "Senior citizen"
+        }
+      ]
     },
     {
       "id": "BK-0915-003",
@@ -750,7 +885,7 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 9,
             "unitPrice": 200,
             "amount": 1800
@@ -780,7 +915,47 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 2,
+      "extras": [],
+      "guestList": [
+        {
+          "name": "Maricel Dizon",
+          "gender": "Female",
+          "age": 34,
+          "remarks": ""
+        },
+        {
+          "name": "Rodel Dizon",
+          "gender": "Male",
+          "age": 36,
+          "remarks": ""
+        },
+        {
+          "name": "Kyla Dizon",
+          "gender": "Female",
+          "age": 9,
+          "remarks": ""
+        },
+        {
+          "name": "Jomar Dizon",
+          "gender": "Male",
+          "age": 6,
+          "remarks": ""
+        },
+        {
+          "name": "Lorna Lim",
+          "gender": "Female",
+          "age": 62,
+          "remarks": "Senior citizen"
+        },
+        {
+          "name": "Ben Lim",
+          "gender": "Male",
+          "age": 65,
+          "remarks": "Senior citizen"
+        }
+      ]
     },
     {
       "id": "BK-0916-006",
@@ -825,7 +1000,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0916-007",
@@ -876,7 +1054,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Celebrating a birthday",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0916-008",
@@ -897,13 +1078,13 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 6,
             "unitPrice": 200,
             "amount": 1200
           },
           {
-            "label": "Kid entrance (Overnight)",
+            "label": "Kid entrance (Overnight tour)",
             "qty": 1,
             "unitPrice": 150,
             "amount": 150
@@ -927,7 +1108,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Arriving late, around 8 PM",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0917-009",
@@ -948,7 +1132,7 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 2,
             "unitPrice": 200,
             "amount": 400
@@ -972,7 +1156,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Requested table near the grill",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0918-015",
@@ -1017,7 +1204,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0918-016",
@@ -1068,7 +1258,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Senior citizen in group",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0918-017",
@@ -1119,7 +1312,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Celebrating a birthday",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0918-018",
@@ -1170,7 +1366,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0918-019",
@@ -1221,7 +1420,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Requested table near the grill",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0918-010",
@@ -1231,7 +1433,7 @@
       "productType": "room",
       "date": "2026-09-18",
       "nights": 1,
-      "session": "overnight",
+      "session": "overnightstay",
       "startsAt": "2026-09-18T15:00:00+08:00",
       "endsAt": "2026-09-19T12:00:00+08:00",
       "adults": 4,
@@ -1278,7 +1480,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0918-011",
@@ -1288,7 +1493,7 @@
       "productType": "room",
       "date": "2026-09-18",
       "nights": 1,
-      "session": "overnight",
+      "session": "overnightstay",
       "startsAt": "2026-09-18T15:00:00+08:00",
       "endsAt": "2026-09-19T12:00:00+08:00",
       "adults": 2,
@@ -1329,7 +1534,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0918-012",
@@ -1346,17 +1554,17 @@
       "kids": 2,
       "pets": null,
       "source": "phone",
-      "status": "confirmed",
+      "status": "hold",
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 8,
             "unitPrice": 200,
             "amount": 1600
           },
           {
-            "label": "Kid entrance (Overnight)",
+            "label": "Kid entrance (Overnight tour)",
             "qty": 2,
             "unitPrice": 150,
             "amount": 300
@@ -1366,17 +1574,29 @@
             "qty": 1,
             "unitPrice": 2000,
             "amount": 2000
+          },
+          {
+            "label": "Videoke",
+            "qty": 1,
+            "unitPrice": 500,
+            "amount": 500
+          },
+          {
+            "label": "Corkage",
+            "qty": 1,
+            "unitPrice": 300,
+            "amount": 300
           }
         ],
-        "subtotal": 3900,
+        "subtotal": 4700,
         "promoId": null,
         "discount": 0,
-        "total": 3900
+        "total": 4700
       },
-      "total": 3900,
-      "depositRequired": 1950,
+      "total": 4700,
+      "depositRequired": 2350,
       "paid": 2000,
-      "balance": 1900,
+      "balance": 2700,
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-06T11:38:00+08:00",
@@ -1386,7 +1606,19 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [
+        {
+          "label": "Videoke",
+          "amount": 500
+        },
+        {
+          "label": "Corkage",
+          "amount": 300
+        }
+      ],
+      "guestList": []
     },
     {
       "id": "BK-0918-013",
@@ -1411,13 +1643,13 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 8,
             "unitPrice": 200,
             "amount": 1600
           },
           {
-            "label": "Kid entrance (Overnight)",
+            "label": "Kid entrance (Overnight tour)",
             "qty": 2,
             "unitPrice": 150,
             "amount": 300
@@ -1447,7 +1679,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0918-014",
@@ -1468,7 +1703,7 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 6,
             "unitPrice": 200,
             "amount": 1200
@@ -1498,7 +1733,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0918-020",
@@ -1519,7 +1757,7 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 3,
             "unitPrice": 200,
             "amount": 600
@@ -1543,7 +1781,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0918-021",
@@ -1564,13 +1805,13 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 7,
             "unitPrice": 200,
             "amount": 1400
           },
           {
-            "label": "Kid entrance (Overnight)",
+            "label": "Kid entrance (Overnight tour)",
             "qty": 3,
             "unitPrice": 150,
             "amount": 450
@@ -1594,7 +1835,10 @@
       "cancelledAt": "2026-09-17T09:30:00+08:00",
       "cancelReason": "Found another venue",
       "notes": "Arriving late, around 8 PM",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0918-022",
@@ -1615,13 +1859,13 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 6,
             "unitPrice": 200,
             "amount": 1200
           },
           {
-            "label": "Kid entrance (Overnight)",
+            "label": "Kid entrance (Overnight tour)",
             "qty": 1,
             "unitPrice": 150,
             "amount": 150
@@ -1645,7 +1889,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0919-028",
@@ -1690,7 +1937,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Senior citizen in group",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0919-029",
@@ -1741,7 +1991,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0919-030",
@@ -1786,7 +2039,10 @@
       "cancelledAt": "2026-09-17T09:30:00+08:00",
       "cancelReason": "Found another venue",
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0919-023",
@@ -1796,7 +2052,7 @@
       "productType": "room",
       "date": "2026-09-19",
       "nights": 1,
-      "session": "overnight",
+      "session": "overnightstay",
       "startsAt": "2026-09-19T15:00:00+08:00",
       "endsAt": "2026-09-20T12:00:00+08:00",
       "adults": 2,
@@ -1837,7 +2093,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Bringing own cake",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0919-024",
@@ -1847,7 +2106,7 @@
       "productType": "room",
       "date": "2026-09-19",
       "nights": 1,
-      "session": "overnight",
+      "session": "overnightstay",
       "startsAt": "2026-09-19T15:00:00+08:00",
       "endsAt": "2026-09-20T12:00:00+08:00",
       "adults": 2,
@@ -1888,7 +2147,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Senior citizen in group",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0919-025",
@@ -1909,13 +2171,13 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 9,
             "unitPrice": 200,
             "amount": 1800
           },
           {
-            "label": "Kid entrance (Overnight)",
+            "label": "Kid entrance (Overnight tour)",
             "qty": 2,
             "unitPrice": 150,
             "amount": 300
@@ -1945,7 +2207,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0919-026",
@@ -1966,13 +2231,13 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 8,
             "unitPrice": 200,
             "amount": 1600
           },
           {
-            "label": "Kid entrance (Overnight)",
+            "label": "Kid entrance (Overnight tour)",
             "qty": 2,
             "unitPrice": 150,
             "amount": 300
@@ -2002,7 +2267,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0919-027",
@@ -2027,13 +2295,13 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 5,
             "unitPrice": 200,
             "amount": 1000
           },
           {
-            "label": "Kid entrance (Overnight)",
+            "label": "Kid entrance (Overnight tour)",
             "qty": 1,
             "unitPrice": 150,
             "amount": 150
@@ -2063,7 +2331,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Arriving late, around 8 PM",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0919-031",
@@ -2084,13 +2355,13 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 10,
             "unitPrice": 200,
             "amount": 2000
           },
           {
-            "label": "Kid entrance (Overnight)",
+            "label": "Kid entrance (Overnight tour)",
             "qty": 1,
             "unitPrice": 150,
             "amount": 150
@@ -2114,7 +2385,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0920-036",
@@ -2165,7 +2439,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0920-037",
@@ -2210,7 +2487,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0920-038",
@@ -2261,7 +2541,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Bringing own cake",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0920-039",
@@ -2312,7 +2595,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0920-040",
@@ -2363,7 +2649,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0920-041",
@@ -2414,7 +2703,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Requested table near the grill",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0920-032",
@@ -2424,7 +2716,7 @@
       "productType": "room",
       "date": "2026-09-20",
       "nights": 1,
-      "session": "overnight",
+      "session": "overnightstay",
       "startsAt": "2026-09-20T15:00:00+08:00",
       "endsAt": "2026-09-21T12:00:00+08:00",
       "adults": 4,
@@ -2475,7 +2767,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": null,
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0920-033",
@@ -2496,13 +2791,13 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 10,
             "unitPrice": 200,
             "amount": 2000
           },
           {
-            "label": "Kid entrance (Overnight)",
+            "label": "Kid entrance (Overnight tour)",
             "qty": 3,
             "unitPrice": 150,
             "amount": 450
@@ -2532,7 +2827,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Celebrating a birthday",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0920-034",
@@ -2553,7 +2851,7 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 9,
             "unitPrice": 200,
             "amount": 1800
@@ -2583,7 +2881,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Asked for extra towels",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0920-035",
@@ -2604,13 +2905,13 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 4,
             "unitPrice": 200,
             "amount": 800
           },
           {
-            "label": "Kid entrance (Overnight)",
+            "label": "Kid entrance (Overnight tour)",
             "qty": 2,
             "unitPrice": 150,
             "amount": 300
@@ -2640,7 +2941,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Requested table near the grill",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0920-042",
@@ -2661,7 +2965,7 @@
       "pricing": {
         "lines": [
           {
-            "label": "Adult entrance (Overnight)",
+            "label": "Adult entrance (Overnight tour)",
             "qty": 3,
             "unitPrice": 200,
             "amount": 600
@@ -2685,7 +2989,10 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Arriving late, around 8 PM",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     },
     {
       "id": "BK-0921-001",
@@ -2736,7 +3043,106 @@
       "cancelledAt": null,
       "cancelReason": null,
       "notes": "Program starts 6 PM",
-      "discount": null
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
+    },
+    {
+      "id": "BK-0923-043",
+      "guestId": "GU-0112",
+      "guestName": "Carmela Villareal",
+      "product": "EX-DAY-FULL",
+      "productType": "exclusive",
+      "date": "2026-09-23",
+      "nights": 1,
+      "session": "exclusive",
+      "startsAt": "2026-09-23T08:00:00+08:00",
+      "endsAt": "2026-09-23T16:00:00+08:00",
+      "adults": 80,
+      "kids": 25,
+      "pets": null,
+      "source": "messenger",
+      "status": "confirmed",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Exclusive · Full resort use (Day tour)",
+            "qty": 1,
+            "unitPrice": 40000,
+            "amount": 40000
+          }
+        ],
+        "subtotal": 40000,
+        "promoId": null,
+        "discount": 0,
+        "total": 40000
+      },
+      "total": 40000,
+      "depositRequired": 20000,
+      "paid": 20000,
+      "balance": 20000,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-10T18:05:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Company outing, 105 guests",
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
+    },
+    {
+      "id": "BK-0926-044",
+      "guestId": "GU-0113",
+      "guestName": "Dennis Macaraig",
+      "product": "EX-NIGHT-COTTAGES",
+      "productType": "exclusive",
+      "date": "2026-09-26",
+      "nights": 1,
+      "session": "exclusive",
+      "startsAt": "2026-09-26T18:00:00+08:00",
+      "endsAt": "2026-09-27T06:00:00+08:00",
+      "adults": 45,
+      "kids": 15,
+      "pets": null,
+      "source": "phone",
+      "status": "hold",
+      "pricing": {
+        "lines": [
+          {
+            "label": "Exclusive · Cottages only (Overnight)",
+            "qty": 1,
+            "unitPrice": 40000,
+            "amount": 40000
+          }
+        ],
+        "subtotal": 40000,
+        "promoId": null,
+        "discount": 0,
+        "total": 40000
+      },
+      "total": 40000,
+      "depositRequired": 20000,
+      "paid": 0,
+      "balance": 40000,
+      "idVerified": false,
+      "eventId": null,
+      "createdAt": "2026-09-16T10:20:00+08:00",
+      "createdBy": "ST-02",
+      "checkedInAt": null,
+      "checkedOutAt": null,
+      "cancelledAt": null,
+      "cancelReason": null,
+      "notes": "Barkada reunion",
+      "discount": null,
+      "scPwd": 0,
+      "extras": [],
+      "guestList": []
     }
   ],
   "payments": [
@@ -2749,7 +3155,9 @@
       "reference": "BT-14936462",
       "proofAttached": true,
       "receivedAt": "2026-07-26T15:00:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0020",
@@ -2760,7 +3168,9 @@
       "reference": "5357 714 993472",
       "proofAttached": true,
       "receivedAt": "2026-08-29T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-08-29T07:44:00+08:00",
+      "senderName": "Paolo Lontoc"
     },
     {
       "id": "PY-0028",
@@ -2771,7 +3181,9 @@
       "reference": "6238 902 917952",
       "proofAttached": true,
       "receivedAt": "2026-08-29T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-08-29T07:44:00+08:00",
+      "senderName": "Ramon Arellano"
     },
     {
       "id": "PY-0015",
@@ -2782,7 +3194,9 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-08-30T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0027",
@@ -2793,7 +3207,9 @@
       "reference": "BT-55374156",
       "proofAttached": true,
       "receivedAt": "2026-08-30T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0005",
@@ -2804,7 +3220,9 @@
       "reference": "9456 556 438152",
       "proofAttached": true,
       "receivedAt": "2026-08-30T12:30:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-08-30T12:24:00+08:00",
+      "senderName": "Vince Aguilar"
     },
     {
       "id": "PY-0011",
@@ -2815,7 +3233,9 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-08-30T12:30:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0033",
@@ -2826,7 +3246,9 @@
       "reference": "5651 162 831274",
       "proofAttached": true,
       "receivedAt": "2026-08-31T07:30:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-08-31T07:24:00+08:00",
+      "senderName": "Lovely Ocampo"
     },
     {
       "id": "PY-0031",
@@ -2837,7 +3259,9 @@
       "reference": "BT-29427030",
       "proofAttached": true,
       "receivedAt": "2026-09-01T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0032",
@@ -2848,7 +3272,9 @@
       "reference": "4425 130 947698",
       "proofAttached": true,
       "receivedAt": "2026-09-01T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-01T07:44:00+08:00",
+      "senderName": "Patricia Marasigan"
     },
     {
       "id": "PY-0009",
@@ -2859,7 +3285,9 @@
       "reference": "8278 419 225775",
       "proofAttached": true,
       "receivedAt": "2026-09-01T12:30:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-01T12:24:00+08:00",
+      "senderName": "Mark Salazar"
     },
     {
       "id": "PY-0021",
@@ -2870,7 +3298,9 @@
       "reference": "1147 289 275135",
       "proofAttached": true,
       "receivedAt": "2026-09-02T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-02T07:44:00+08:00",
+      "senderName": "Camille De Leon"
     },
     {
       "id": "PY-0024",
@@ -2881,7 +3311,9 @@
       "reference": "8966 295 362457",
       "proofAttached": true,
       "receivedAt": "2026-09-02T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-02T07:44:00+08:00",
+      "senderName": "Joshua Reyes"
     },
     {
       "id": "PY-0034",
@@ -2892,7 +3324,9 @@
       "reference": "9009 871 744348",
       "proofAttached": true,
       "receivedAt": "2026-09-02T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-02T07:44:00+08:00",
+      "senderName": "Angelica Castillo"
     },
     {
       "id": "PY-0003",
@@ -2903,7 +3337,9 @@
       "reference": "8617 573 409615",
       "proofAttached": true,
       "receivedAt": "2026-09-02T12:30:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-02T12:24:00+08:00",
+      "senderName": "Luis Arellano"
     },
     {
       "id": "PY-0013",
@@ -2914,7 +3350,9 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-09-04T12:30:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0018",
@@ -2925,7 +3363,9 @@
       "reference": "5228 187 220344",
       "proofAttached": true,
       "receivedAt": "2026-09-05T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-05T07:44:00+08:00",
+      "senderName": "Trisha Tolentino"
     },
     {
       "id": "PY-0016",
@@ -2936,7 +3376,9 @@
       "reference": "8271 557 136347",
       "proofAttached": true,
       "receivedAt": "2026-09-06T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-06T07:44:00+08:00",
+      "senderName": "Mark Bautista"
     },
     {
       "id": "PY-0035",
@@ -2947,7 +3389,9 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-09-07T07:30:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0030",
@@ -2958,7 +3402,9 @@
       "reference": "BT-58289925",
       "proofAttached": true,
       "receivedAt": "2026-09-07T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0036",
@@ -2969,7 +3415,9 @@
       "reference": "6383 512 880260",
       "proofAttached": true,
       "receivedAt": "2026-09-07T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-07T07:44:00+08:00",
+      "senderName": "Arvin Castillo"
     },
     {
       "id": "PY-0019",
@@ -2980,7 +3428,9 @@
       "reference": "7693 614 383812",
       "proofAttached": true,
       "receivedAt": "2026-09-10T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-10T07:44:00+08:00",
+      "senderName": "Jose Ramos"
     },
     {
       "id": "PY-0022",
@@ -2991,7 +3441,9 @@
       "reference": "BT-37603626",
       "proofAttached": true,
       "receivedAt": "2026-09-13T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0029",
@@ -3002,18 +3454,9 @@
       "reference": "5099 686 328869",
       "proofAttached": true,
       "receivedAt": "2026-09-13T07:50:00+08:00",
-      "receivedBy": "ST-02"
-    },
-    {
-      "id": "PY-0002",
-      "bookingId": "BK-0915-002",
-      "amount": 6500,
-      "method": "airbnb",
-      "type": "full",
-      "reference": "HM62418107",
-      "proofAttached": false,
-      "receivedAt": "2026-09-13T16:17:00+08:00",
-      "receivedBy": null
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-13T07:44:00+08:00",
+      "senderName": "Trisha Lontoc"
     },
     {
       "id": "PY-0026",
@@ -3024,7 +3467,9 @@
       "reference": "BT-73247801",
       "proofAttached": true,
       "receivedAt": "2026-09-14T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0007",
@@ -3035,7 +3480,9 @@
       "reference": "5450 199 777297",
       "proofAttached": true,
       "receivedAt": "2026-09-14T12:30:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-14T12:24:00+08:00",
+      "senderName": "Kath De Leon"
     },
     {
       "id": "PY-0023",
@@ -3046,7 +3493,9 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-09-15T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0006",
@@ -3057,7 +3506,9 @@
       "reference": "9913 962 196437",
       "proofAttached": true,
       "receivedAt": "2026-09-15T08:00:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-15T07:54:00+08:00",
+      "senderName": "Vince Aguilar"
     },
     {
       "id": "PY-0008",
@@ -3068,7 +3519,9 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-09-15T08:00:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0004",
@@ -3079,7 +3532,9 @@
       "reference": "1408 933 306058",
       "proofAttached": true,
       "receivedAt": "2026-09-15T18:00:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-15T17:54:00+08:00",
+      "senderName": "Luis Arellano"
     },
     {
       "id": "PY-0010",
@@ -3090,7 +3545,9 @@
       "reference": "7287 480 706381",
       "proofAttached": true,
       "receivedAt": "2026-09-16T08:00:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-16T07:54:00+08:00",
+      "senderName": "Mark Salazar"
     },
     {
       "id": "PY-0012",
@@ -3101,7 +3558,9 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-09-16T08:00:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0014",
@@ -3112,7 +3571,9 @@
       "reference": null,
       "proofAttached": false,
       "receivedAt": "2026-09-16T18:00:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": null,
+      "senderName": null
     },
     {
       "id": "PY-0017",
@@ -3123,7 +3584,9 @@
       "reference": "8341 508 500968",
       "proofAttached": true,
       "receivedAt": "2026-09-17T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-17T07:44:00+08:00",
+      "senderName": "Kristine Torres"
     },
     {
       "id": "PY-0025",
@@ -3134,7 +3597,23 @@
       "reference": "3897 761 190633",
       "proofAttached": true,
       "receivedAt": "2026-09-17T07:50:00+08:00",
-      "receivedBy": "ST-02"
+      "receivedBy": "ST-02",
+      "sentAt": "2026-09-17T07:44:00+08:00",
+      "senderName": "Vince Garcia"
+    },
+    {
+      "id": "PY-0037",
+      "bookingId": "BK-0923-043",
+      "amount": 20000,
+      "method": "gcash",
+      "type": "deposit",
+      "reference": "8124 553 902117",
+      "proofAttached": true,
+      "receivedAt": "2026-09-10T19:40:00+08:00",
+      "receivedBy": "ST-02",
+      "via": "desk",
+      "sentAt": "2026-09-10T19:34:00+08:00",
+      "senderName": "Carmela Villareal"
     }
   ],
   "events": [
@@ -3765,11 +4244,11 @@
       "detail": null
     },
     {
-      "at": "2026-09-16T12:00:00+08:00",
+      "at": "2026-09-16T10:20:00+08:00",
       "staffId": "ST-02",
-      "action": "booking.checked_out",
-      "ref": "BK-0915-002",
-      "detail": null
+      "action": "booking.created",
+      "ref": "BK-0926-044",
+      "detail": "Dennis Macaraig · EX-NIGHT-COTTAGES · 2026-09-26"
     },
     {
       "at": "2026-09-16T08:00:00+08:00",
@@ -3926,20 +4405,6 @@
       "detail": "Joshua Reyes · overnight · 2026-09-18"
     },
     {
-      "at": "2026-09-13T16:17:00+08:00",
-      "staffId": null,
-      "action": "payment.recorded",
-      "ref": "BK-0915-002",
-      "detail": "PHP 6,500 airbnb (full)"
-    },
-    {
-      "at": "2026-09-13T16:17:00+08:00",
-      "staffId": null,
-      "action": "booking.created",
-      "ref": "BK-0915-002",
-      "detail": "Rafael Ocampo · villa · 2026-09-15"
-    },
-    {
       "at": "2026-09-13T11:35:00+08:00",
       "staffId": "ST-02",
       "action": "booking.created",
@@ -3959,6 +4424,20 @@
       "action": "payment.recorded",
       "ref": "BK-0918-020",
       "detail": "PHP 300 bank_transfer (deposit)"
+    },
+    {
+      "at": "2026-09-10T19:40:00+08:00",
+      "staffId": "ST-02",
+      "action": "payment.recorded",
+      "ref": "BK-0923-043",
+      "detail": "₱20,000 GCash (deposit)"
+    },
+    {
+      "at": "2026-09-10T18:05:00+08:00",
+      "staffId": "ST-02",
+      "action": "booking.created",
+      "ref": "BK-0923-043",
+      "detail": "Carmela Villareal · EX-DAY-FULL · 2026-09-23"
     },
     {
       "at": "2026-09-10T14:22:00+08:00",
@@ -4324,5 +4803,87 @@
       "ref": "BK-0921-001",
       "detail": "Cruz 18th debut · event · 2026-09-21"
     }
+  ],
+  "exclusivePackages": [
+    {
+      "id": "EX-DAY-FULL",
+      "session": "day",
+      "use": "full",
+      "name": "Full resort use",
+      "includes": "All rooms + all amenities",
+      "start": "08:00",
+      "end": "16:00",
+      "price": 40000,
+      "maxGuests": 120,
+      "photo": "pkg-full.jpg"
+    },
+    {
+      "id": "EX-DAY-PARTIAL",
+      "session": "day",
+      "use": "partial",
+      "name": "Partial room use",
+      "includes": "3 rooms + all amenities",
+      "start": "08:00",
+      "end": "16:00",
+      "price": 35000,
+      "maxGuests": 120,
+      "photo": "pkg-partial.jpg"
+    },
+    {
+      "id": "EX-DAY-COTTAGES",
+      "session": "day",
+      "use": "cottages",
+      "name": "Cottages only",
+      "includes": "All kubo cottages + all amenities",
+      "start": "08:00",
+      "end": "16:00",
+      "price": 30000,
+      "maxGuests": 120,
+      "photo": "pkg-cottages.jpg"
+    },
+    {
+      "id": "EX-NIGHT-FULL",
+      "session": "overnight",
+      "use": "full",
+      "name": "Full resort use",
+      "includes": "All rooms + all amenities",
+      "start": "15:00",
+      "end": "12:00",
+      "price": 50000,
+      "maxGuests": 120,
+      "photo": "pkg-full.jpg"
+    },
+    {
+      "id": "EX-NIGHT-PARTIAL",
+      "session": "overnight",
+      "use": "partial",
+      "name": "Partial room use",
+      "includes": "3 rooms + all amenities",
+      "start": "15:00",
+      "end": "12:00",
+      "price": 45000,
+      "maxGuests": 120,
+      "photo": "pkg-partial.jpg"
+    },
+    {
+      "id": "EX-NIGHT-COTTAGES",
+      "session": "overnight",
+      "use": "cottages",
+      "name": "Cottages only",
+      "includes": "All kubo cottages + all amenities",
+      "start": "18:00",
+      "end": "06:00",
+      "price": 40000,
+      "maxGuests": 120,
+      "photo": "pkg-cottages.jpg"
+    }
+  ],
+  "amenities": [
+    "3 pools (adult and kiddie)",
+    "7 kubo cottages",
+    "7 air-conditioned villas",
+    "Free Wi-Fi",
+    "Grilling area",
+    "Ample parking"
   ]
 }

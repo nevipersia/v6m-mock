@@ -1,15 +1,18 @@
 // Booking detail drawer: summary, price, payments, and the actions staff can
 // take (record payment, check in, check out, cancel).
 
-import { applyDiscount, cancelBooking, checkIn, checkOut, payByQr, recordPayment, removeDiscount } from '../../core/actions.js';
+import {
+  applyDiscount, cancelBooking, checkIn, checkOut, payByQr, recordPayment, removeDiscount, setGuestList,
+} from '../../core/actions.js';
 import { $, $maybe, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
+import { blankCompanion, guestListRows, readGuestListField } from '../../core/guest-list.js';
 import { VERIFY_DELAY_MS, paymentCard, type PaymentCardState } from '../../core/payment-card.js';
 import { qrPaymentRequest, sampleReference } from '../../core/qr-payment.js';
 import { formatDate, formatDateTime, peso, plural, timeOf } from '../../core/format.js';
 import {
   DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, discountAmount, discountLabel, downpaymentDue, findBooking, isEditable, findGuest, findPackage, findStaff, isActive, productLabel,
 } from '../../core/rules.js';
-import type { Booking, PaymentMethod, State } from '../../core/types.js';
+import type { Booking, Companion, PaymentMethod, State } from '../../core/types.js';
 import type { DeskContext, DrawerContent } from '../types.js';
 import { kindDot, paymentPill, stagePill, statusPill } from './badges.js';
 import { downloadBookingPdf } from './booking-pdf.js';
@@ -27,6 +30,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'booking.discount_removed': 'Discount removed',
   'booking.unconfirmed': 'Back on hold',
   'booking.updated': 'Edited',
+  'booking.guest_list': 'Guest list updated',
 };
 
 const CANCEL_REASONS = ['Change of plans', 'Guest request', 'Typhoon or weather', 'Duplicate booking', 'Other'];
@@ -50,8 +54,11 @@ function facts(state: State, booking: Booking): SafeHTML {
     ['When', html`${formatDate(booking.date, 'long')}<br><span class="muted">${timeOf(booking.startsAt)} – ${timeOf(booking.endsAt)}${booking.endsAt.slice(0, 10) !== booking.date ? ' next day' : ''}</span>`],
     ['Guests', guestsText(booking)],
     ['Source', SOURCE_LABELS[booking.source] ?? booking.source],
-    ['Mobile', guest?.mobile ?? '—'],
+    ['Contact', guest?.mobile ?? '—'],
   ];
+  if (guest?.email) rows.push(['Email', guest.email]);
+  if (guest?.address) rows.push(['Address', guest.address]);
+  if (booking.scPwd) rows.push(['SC / PWD', String(booking.scPwd)]);
   if (pkg && event) rows.push(['Package', html`${pkg.name} ${stagePill(event.stage)}`]);
   if (booking.pets) rows.push(['Pets', `${booking.pets.count} ${booking.pets.type}, rules acknowledged`]);
   if (booking.notes) rows.push(['Notes', booking.notes]);
@@ -114,6 +121,8 @@ function paymentsSection(state: State, booking: Booking): SafeHTML | '' {
               <strong>${peso(payment.amount)}</strong> ${METHOD_LABELS[payment.method]} · ${payment.type === 'deposit' ? 'downpayment' : payment.type}
               ${payment.via === 'qr' ? html`<span class="pill pill--success">QR verified</span>` : ''}
               <span class="small muted">${formatDateTime(payment.receivedAt)}${payment.receivedBy ? ` · ${findStaff(state, payment.receivedBy)?.name}` : ''}</span>
+              ${payment.senderName || payment.sentAt ? html`
+                <span class="small muted">${payment.method === 'gcash' ? 'GCash sender' : 'Sent by'}: ${payment.senderName ?? '—'}${payment.sentAt ? ` · sent ${timeOf(payment.sentAt)}` : ''}</span>` : ''}
             </span>
             ${payment.reference ? html`<span class="small muted mono">${payment.reference}</span>` : ''}
           </li>`)}
@@ -141,6 +150,8 @@ export function createBookingDetail(bookingId: string): DrawerContent {
   const ui: {
     checkInOpen: boolean;
     confirmCancel: boolean;
+    guestListOpen: boolean;
+    guestList: Companion[];
     qrOpen: boolean;
     discountOpen: boolean;
     discount: DiscountDraft;
@@ -148,12 +159,50 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     card: PaymentCardState;
     errors: { checkIn?: string; payment?: string };
   } = {
-    checkInOpen: false, confirmCancel: false, qrOpen: false, discountOpen: false, discount: blankDiscount(), discountError: '',
-    card: { reference: '', error: '', checking: false }, errors: {},
+    checkInOpen: false, confirmCancel: false, guestListOpen: false, guestList: [], qrOpen: false, discountOpen: false, discount: blankDiscount(), discountError: '',
+    card: { reference: '', senderName: '', error: '', checking: false }, errors: {},
   };
 
   const discountKindChanged = (before: DiscountDraft['kind']) => before !== ui.discount.kind;
   const discountAmountFor = (booking: Booking) => discountAmount(booking.pricing.total, ui.discount.kind, ui.discount.value);
+
+  function guestListSection(ctx: DeskContext, booking: Booking): SafeHTML {
+    const list = booking.guestList ?? [];
+    const pax = booking.adults + booking.kids;
+    const canEdit = ctx.can('bookings.write') && booking.status !== 'cancelled';
+    if (ui.guestListOpen) {
+      return html`
+        <section class="detail-section">
+          <h3 class="detail-section__title">Guest list</h3>
+          <form class="guest-list-form" data-submit="save-guest-list" novalidate>
+            ${guestListRows(ui.guestList, 'companion')}
+            <div class="button-row">
+              <button class="btn btn--quiet btn--sm" type="button" data-action="add-companion">+ Add a guest</button>
+              <span class="small muted">${ui.guestList.filter((row) => row.name.trim()).length} of ${pax} named</span>
+            </div>
+            <div class="button-row button-row--end">
+              <button class="btn btn--quiet" type="button" data-action="cancel-guest-list">Cancel</button>
+              <button class="btn btn--primary" type="submit">Save guest list</button>
+            </div>
+          </form>
+        </section>`;
+    }
+    return html`
+      <section class="detail-section">
+        <div class="detail-section__head">
+          <h3 class="detail-section__title">Guest list <span class="muted">${list.length} of ${pax}</span></h3>
+          ${canEdit ? html`<button class="btn btn--quiet btn--sm" type="button" data-action="edit-guest-list">${list.length ? 'Edit' : 'Add guests'}</button>` : ''}
+        </div>
+        ${list.length ? html`
+          <table class="guest-table">
+            <thead><tr><th scope="col">#</th><th scope="col">Name</th><th scope="col">Gender</th><th scope="col" class="num">Age</th><th scope="col">Remarks</th></tr></thead>
+            <tbody>
+              ${list.map((row, index) => html`
+                <tr><td class="muted">${index + 1}</td><td>${row.name}</td><td>${row.gender || '—'}</td><td class="num">${row.age ?? '—'}</td><td class="muted">${row.remarks}</td></tr>`)}
+            </tbody>
+          </table>` : html`<p class="small muted">No names yet. The registration sheet PDF leaves blank lines for them to fill in at the gate.</p>`}
+      </section>`;
+  }
 
   function discountSection(ctx: DeskContext, booking: Booking): SafeHTML | '' {
     const open = ['hold', 'confirmed', 'checked_in'].includes(booking.status);
@@ -306,18 +355,25 @@ export function createBookingDetail(bookingId: string): DrawerContent {
             ${ctx.can('bookings.write') && isEditable(ctx.state, booking) ? html`
               <button class="btn btn--secondary" type="button" data-action="edit-booking">Edit booking</button>` : ''}
             <button class="btn btn--secondary" type="button" data-action="download-pdf">
-              ${icon('download')} Confirmation PDF
+              ${icon('download')} Registration sheet
             </button>
           </div>
           ${actionsSection(ctx, booking)}
           ${facts(ctx.state, booking)}
           ${priceSection(ctx.state, booking)}
+          ${guestListSection(ctx, booking)}
           ${paymentsSection(ctx.state, booking)}
           ${activitySection(ctx.state, booking)}
         </div>`;
     },
 
     inputs: {
+      companion: ({ el }) => {
+        const field = el as HTMLInputElement | HTMLSelectElement;
+        const shown = readGuestListField(ui.guestList, field);
+        if (shown !== null && shown !== field.value) field.value = shown;
+      },
+
       discount: ({ el, ctx, root }) => {
         const field = el as HTMLInputElement | HTMLSelectElement;
         const kindBefore = ui.discount.kind;
@@ -338,6 +394,11 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         }
       },
 
+      senderName: ({ el }) => {
+        ui.card.senderName = (el as HTMLInputElement).value;
+        ui.card.error = '';
+      },
+
       reference: ({ el }) => {
         ui.card.reference = (el as HTMLInputElement).value;
         ui.card.error = '';
@@ -346,6 +407,41 @@ export function createBookingDetail(bookingId: string): DrawerContent {
 
     actions: {
       'edit-booking': ({ ctx }) => ctx.editBooking(bookingId),
+
+      'edit-guest-list': ({ ctx, redraw }) => {
+        const booking = findBooking(ctx.state, bookingId);
+        if (!booking) return;
+        const list = (booking.guestList ?? []).map((row) => ({ ...row }));
+        const pax = booking.adults + booking.kids;
+        // Start with a blank line per expected guest (up to 10), like the paper sheet.
+        while (list.length < Math.min(pax, Math.max(list.length, 10))) list.push(blankCompanion());
+        if (!list.length) list.push(blankCompanion());
+        ui.guestList = list;
+        ui.guestListOpen = true;
+        redraw();
+      },
+
+      'add-companion': ({ redraw }) => {
+        ui.guestList.push(blankCompanion());
+        redraw();
+      },
+
+      'remove-companion': ({ el, redraw }) => {
+        ui.guestList.splice(Number(el.dataset.row), 1);
+        redraw();
+      },
+
+      'cancel-guest-list': ({ redraw }) => {
+        ui.guestListOpen = false;
+        redraw();
+      },
+
+      'save-guest-list': ({ ctx, redraw }) => {
+        ui.guestListOpen = false;
+        const booking = setGuestList(bookingId, ui.guestList, ctx.staff.id);
+        redraw();
+        ctx.toast(`Guest list saved · ${booking.guestList?.length ?? 0} of ${booking.adults + booking.kids} named`);
+      },
 
       'open-discount': ({ ctx, redraw }) => {
         const booking = findBooking(ctx.state, bookingId);
@@ -380,7 +476,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
 
       'open-qr': ({ redraw }) => {
         ui.qrOpen = true;
-        ui.card = { reference: '', error: '', checking: false };
+        ui.card = { reference: '', senderName: '', error: '', checking: false };
         redraw();
       },
 
@@ -394,6 +490,11 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         ui.card.error = '';
         const input = $maybe<HTMLInputElement>('[name="reference"]', root);
         if (input) input.value = ui.card.reference;
+        if (!ui.card.senderName.trim()) {
+          ui.card.senderName = findBooking(ctx.state, bookingId)?.guestName ?? '';
+          const sender = $maybe<HTMLInputElement>('[name="senderName"]', root);
+          if (sender) sender.value = ui.card.senderName;
+        }
       },
 
       'verify-qr': ({ ctx, redraw }) => {
@@ -404,7 +505,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         // Mock verification: pretend to check the reference with GCash.
         setTimeout(() => {
           ui.card.checking = false;
-          const result = payByQr(bookingId, ui.card.reference, ctx.staff.id);
+          const result = payByQr(bookingId, ui.card.reference, ctx.staff.id, ui.card.senderName);
           if (result.error !== undefined) {
             ui.card.error = result.error;
             redraw();
@@ -419,7 +520,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         const booking = findBooking(ctx.state, bookingId);
         if (!booking) return;
         downloadBookingPdf(ctx.state, booking);
-        ctx.toast('Confirmation PDF downloaded');
+        ctx.toast('Registration sheet downloaded');
       },
 
       'start-check-in': ({ redraw }) => {

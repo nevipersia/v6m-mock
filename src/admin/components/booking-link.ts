@@ -4,6 +4,7 @@
 import { cancelBookingLink, createBookingLink } from '../../core/actions.js';
 import { html, type SafeHTML } from '../../core/dom.js';
 import { formatDate, plural } from '../../core/format.js';
+import { productGroups } from '../../core/catalog.js';
 import { findBooking, findStaff, productLabel } from '../../core/rules.js';
 import type { BookingLink, State } from '../../core/types.js';
 import { asField, type DrawerContent } from '../types.js';
@@ -14,9 +15,10 @@ const linkUrl = (code: string): string => new URL(`../book/?code=${encodeURIComp
 function productOptions(state: State, selected: string): SafeHTML[] {
   return [
     html`<option value="" ${selected ? '' : 'selected'}>Let the guest choose</option>`,
-    ...state.poolSessions.map((session) => html`<option value="${session.id}" ${session.id === selected ? 'selected' : ''}>${session.label} entrance</option>`),
-    ...state.units.filter((unit) => unit.channel !== 'airbnb').map((unit) => html`
-      <option value="${unit.id}" ${unit.id === selected ? 'selected' : ''}>${unit.name}</option>`),
+    ...productGroups(state).map((group) => html`
+      <optgroup label="${group.label}">
+        ${group.options.map((item) => html`<option value="${item.value}" ${item.value === selected ? 'selected' : ''}>${item.label}</option>`)}
+      </optgroup>`),
   ];
 }
 

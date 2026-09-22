@@ -4,7 +4,7 @@
 import { html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { addDays, formatDate, parseDate, peso, plural, timeOf, toISODate } from '../../core/format.js';
 import {
-  closingEvent, findSession, isActive, poolGuests, productLabel, unitBookingOn,
+  bookingWindow, closingEvent, exclusiveOn, exclusiveOverlapping, findSession, isActive, poolGuests, productLabel, unitBookingOn,
 } from '../../core/rules.js';
 import type { ISODate, State, Unit } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
@@ -63,6 +63,11 @@ function dayView(ctx: DeskContext, day: ISODate): SafeHTML {
 
   return html`
     ${event ? html`<p class="notice notice--event">Closed for ${event.title}. Walk-ins and other bookings are blocked.</p>` : ''}
+    ${exclusiveOn(state, day) ? html`
+      <p class="notice notice--exclusive">
+        Exclusive rental: ${exclusiveOn(state, day)?.guestName} has ${productLabel(state, exclusiveOn(state, day)?.product ?? '')}
+        (${timeOf(exclusiveOn(state, day)?.startsAt ?? '')}–${timeOf(exclusiveOn(state, day)?.endsAt ?? '')}). No other guests during that time.
+      </p>` : ''}
 
     <div class="day-grid">
       <section class="panel">
@@ -89,24 +94,26 @@ function dayView(ctx: DeskContext, day: ISODate): SafeHTML {
           ${state.poolSessions.map((session) => {
             const guests = poolGuests(state, day, session.id);
             const percent = Math.min(100, Math.round((guests / session.capacity) * 100));
+            const held = exclusiveOverlapping(state, bookingWindow(state, session.id, day));
             return html`
               <li class="row">
                 <span class="row__main">
-                  <span class="row__title">${session.label} pool</span>
+                  <span class="row__title">${session.label}</span>
                   <span class="meter"><span style="width:${percent}%"></span></span>
                 </span>
-                <span class="small muted">${guests}/${session.capacity}</span>
+                <span class="small muted">${held ? 'Exclusive' : `${guests}/${session.capacity}`}</span>
               </li>`;
           })}
           ${state.units.map((unit) => {
             const booking = unitBookingOn(state, unit.id, day);
+            const held = exclusiveOverlapping(state, bookingWindow(state, unit.id, day));
             return html`
               <li class="row">
                 <span class="row__main"><span class="row__title">${unit.name}</span></span>
                 ${booking
                   ? html`<button class="btn btn--quiet btn--sm" type="button" data-action="open-booking" data-id="${booking.id}">${shortName(booking.guestName)}</button>`
-                  : event || unit.channel === 'airbnb' || !ctx.can('bookings.write')
-                    ? html`<span class="small muted">${event ? 'Closed' : unit.channel === 'airbnb' ? 'Airbnb' : 'Open'}</span>`
+                  : event || held || !ctx.can('bookings.write')
+                    ? html`<span class="small muted">${event ? 'Closed' : held ? 'Exclusive' : 'Open'}</span>`
                     : html`<button class="btn btn--secondary btn--sm" type="button" data-action="new-booking" data-product="${unit.id}" data-date="${day}">Book</button>`}
               </li>`;
           })}
@@ -120,6 +127,7 @@ function dayView(ctx: DeskContext, day: ISODate): SafeHTML {
 function poolCell(ctx: DeskContext, sessionId: string, day: ISODate): SafeHTML | '' {
   const session = findSession(ctx.state, sessionId);
   if (!session) return '';
+  if (exclusiveOverlapping(ctx.state, bookingWindow(ctx.state, sessionId, day))) return html`<span class="cal-closed cal-closed--exclusive">Exclusive</span>`;
   const guests = poolGuests(ctx.state, day, sessionId);
   const percent = Math.min(100, Math.round((guests / session.capacity) * 100));
   const content = html`
@@ -139,11 +147,24 @@ function unitCell(ctx: DeskContext, unit: Unit, day: ISODate): SafeHTML {
       <button class="cal-chip cal-chip--${unit.kind} cal-chip--${booking.status}" type="button" data-action="open-booking" data-id="${booking.id}"
         title="${booking.guestName} · ${booking.id}">${shortName(booking.guestName)}</button>`;
   }
-  if (unit.channel === 'airbnb') return html`<span class="cal-empty">Airbnb</span>`;
+  if (exclusiveOverlapping(ctx.state, bookingWindow(ctx.state, unit.id, day))) return html`<span class="cal-closed cal-closed--exclusive">Exclusive</span>`;
   if (!ctx.can('bookings.write')) return html`<span class="cal-empty"></span>`;
   return html`
     <button class="cal-add" type="button" data-action="new-booking" data-product="${unit.id}" data-date="${day}"
       aria-label="Book ${unit.name} on ${formatDate(day)}">${icon('plus')}</button>`;
+}
+
+function exclusiveCell(ctx: DeskContext, day: ISODate): SafeHTML {
+  const booking = exclusiveOn(ctx.state, day);
+  if (booking) {
+    return html`
+      <button class="cal-chip cal-chip--exclusive cal-chip--${booking.status}" type="button" data-action="open-booking" data-id="${booking.id}"
+        title="${booking.guestName} · ${productLabel(ctx.state, booking.product)}">${shortName(booking.guestName)}</button>`;
+  }
+  if (!ctx.can('bookings.write')) return html`<span class="cal-empty"></span>`;
+  return html`
+    <button class="cal-add" type="button" data-action="new-booking" data-product="EX-DAY-FULL" data-date="${day}"
+      aria-label="Book an exclusive rental on ${formatDate(day)}">${icon('plus')}</button>`;
 }
 
 function eventCell(ctx: DeskContext, day: ISODate): SafeHTML {
@@ -165,7 +186,8 @@ function weekView(ctx: DeskContext, days: ISODate[]): SafeHTML {
   const { state } = ctx;
   const rows: GridRow[] = [
     { label: 'Events', cell: (day) => eventCell(ctx, day), alwaysShow: true },
-    ...state.poolSessions.map((session): GridRow => ({ label: `${session.label} pool`, cell: (day) => poolCell(ctx, session.id, day) })),
+    { label: 'Exclusive rental', cell: (day) => exclusiveCell(ctx, day) },
+    ...state.poolSessions.map((session): GridRow => ({ label: session.label, cell: (day) => poolCell(ctx, session.id, day) })),
     ...state.units.map((unit): GridRow => ({ label: unit.name, cell: (day) => unitCell(ctx, unit, day) })),
   ];
 
@@ -271,7 +293,7 @@ export function render(ctx: DeskContext): SafeHTML {
       <ul class="legend">
         <li><span class="legend__swatch legend__swatch--room"></span>Rooms</li>
         <li><span class="legend__swatch legend__swatch--cottage"></span>Cottages</li>
-        <li><span class="legend__swatch legend__swatch--villa"></span>Villa (Airbnb)</li>
+        <li><span class="legend__swatch legend__swatch--exclusive"></span>Exclusive rental</li>
         <li><span class="legend__swatch legend__swatch--event"></span>Events</li>
         <li><span class="legend__swatch legend__swatch--hold"></span>On hold, downpayment due</li>
         <li><span class="legend__swatch legend__swatch--done"></span>Checked out</li>

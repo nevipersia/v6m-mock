@@ -5,7 +5,7 @@ import { checkOut } from '../../core/actions.js';
 import { html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { addDays, formatDate, formatDateTime, peso, plural, timeOf } from '../../core/format.js';
 import {
-  closingEvent, downpaymentDue, findSession, findStaff, findUnit, isActive, poolGuests, productLabel,
+  closingEvent, downpaymentDue, exclusiveOn, findSession, findStaff, findUnit, isActive, poolGuests, productLabel,
 } from '../../core/rules.js';
 import type { Booking, Staff, State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
@@ -115,6 +115,17 @@ function attentionItems(ctx: DeskContext): SafeHTML[] {
       </li>`);
   }
 
+  const nextExclusive = state.bookings.find((b) => isActive(b) && b.productType === 'exclusive' && b.date >= today && b.date <= addDays(today, 14));
+  if (nextExclusive) {
+    items.push(html`
+      <li>
+        <button class="attention__item" type="button" data-action="open-booking" data-id="${nextExclusive.id}">
+          ${icon('sparkles')}
+          <span><strong>Exclusive rental</strong> on ${formatDate(nextExclusive.date)}: ${nextExclusive.guestName}, ${productLabel(state, nextExclusive.product)}. Other bookings are closed then.</span>
+        </button>
+      </li>`);
+  }
+
   const newInquiries = state.inquiries.filter((inquiry) => inquiry.status === 'new').length;
   if (newInquiries && ctx.canView('inbox')) {
     items.push(html`
@@ -192,6 +203,8 @@ export function render(ctx: DeskContext): SafeHTML {
     })}
 
     ${closedFor ? html`<p class="notice notice--event">V6M is closed today for ${closedFor.title}.</p>` : ''}
+    ${exclusiveOn(state, today) ? html`
+      <p class="notice notice--exclusive">Exclusive rental today: ${exclusiveOn(state, today)?.guestName} has ${productLabel(state, exclusiveOn(state, today)?.product ?? '')}. No other guests during their time.</p>` : ''}
 
     <div class="metrics">
       ${metric('Arriving today', arriving.length, plural(arriving.reduce((sum, b) => sum + b.adults + b.kids, 0), 'guest'))}

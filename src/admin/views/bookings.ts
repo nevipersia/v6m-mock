@@ -49,6 +49,7 @@ function filterBar(state: State): SafeHTML {
     { value: 'all', text: 'All bookings' },
     ...state.poolSessions.map((s) => ({ value: s.id, text: s.label })),
     ...state.units.map((u) => ({ value: u.id, text: u.name })),
+    ...(state.exclusivePackages ?? []).map((p) => ({ value: p.id, text: `Exclusive ${p.session === 'day' ? 'day tour' : 'overnight'} · ${p.name}` })),
     { value: 'event', text: 'Events' },
   ];
   const statuses: Choice[] = [

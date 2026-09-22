@@ -1,16 +1,19 @@
 /*
  * Design tokens shared by the guest website and V6M Desk.
- * Colors are sampled from the V6M logo and Instagram feed.
+ * Colors follow the V6M brochure and logo.
  */
 :root {
-  /* Brand */
-  --orange: #F2782B;
-  --orange-strong: #D35F17;
-  --orange-soft: #FCE3D0;
-  --navy: #1F2D5C;
-  --navy-strong: #16214A;
-  --navy-soft: #E3E6F0;
+  /* Brand: the V6M brochure (charcoal green, cream, gold) and the logo (sun orange, sea blue) */
+  --orange: #8C7446;
+  --orange-strong: #6F5B33;
+  --orange-soft: #EFE7D6;
+  --navy: #2B312C;
+  --navy-strong: #1E231F;
+  --navy-soft: #E5E8E2;
   --lime: #B5C93A;
+  --sun: #F2782B;
+  --sun-soft: #FCE3D0;
+  --gold: #A48B5E;
 
   /* Supporting hues */
   --blue: #2E86C1;
@@ -25,29 +28,33 @@
   --pink: #F29BB0;
   --pink-soft: #FBE3EA;
   --pink-ink: #8E2F4C;
-  --amber-ink: #9A4510;
+  --plum: #6B4C8A;
+  --plum-soft: #ECE3F4;
+  --teal: #2F8C83;
+  --teal-soft: #DCEFEC;
+  --amber-ink: #6F5B33;
   --sand: #EDEAE2;
   --sand-ink: #6B6452;
 
   /* Surfaces and text */
-  --cream: #FBF5EA;
-  --cream-deep: #F3EAD8;
+  --cream: #FAF6EF;
+  --cream-deep: #F1EADC;
   --surface: #FFFFFF;
-  --line: #E6DCC8;
-  --line-strong: #D6C9AE;
-  --ink: #1F2D5C;
-  --ink-muted: #5E6788;
+  --line: #E3DCCD;
+  --line-strong: #CFC5B1;
+  --ink: #2B312C;
+  --ink-muted: #62695F;
 
-  /* Type */
-  --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
-  --font-script: 'Caveat', 'Segoe Print', cursive;
-  --font-sans: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
+  /* Type: bold condensed headings, engraved caps for labels, clean sans for text */
+  --font-serif: 'Anton', 'Arial Narrow', Impact, sans-serif;
+  --font-script: 'Cinzel', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Poppins', 'Segoe UI', system-ui, sans-serif;
 
   /* Shape and depth */
   --radius-sm: 8px;
   --radius: 12px;
   --radius-lg: 20px;
   --radius-pill: 999px;
-  --shadow-float: 0 18px 48px rgba(31, 45, 92, 0.14);
+  --shadow-float: 0 18px 48px rgba(43, 49, 44, 0.16);
   --focus-ring: 0 0 0 3px rgba(46, 134, 193, 0.35);
 }

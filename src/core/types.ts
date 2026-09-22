@@ -6,12 +6,12 @@ export type ISODate = string;
 export type Timestamp = string;
 
 export type BookingStatus = 'hold' | 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show';
-export type BookingSource = 'messenger' | 'instagram' | 'phone' | 'website' | 'walk_in' | 'airbnb' | 'booking_link';
-export type PaymentMethod = 'cash' | 'gcash' | 'bank_transfer' | 'airbnb';
+export type BookingSource = 'messenger' | 'instagram' | 'phone' | 'website' | 'walk_in' | 'booking_link';
+export type PaymentMethod = 'cash' | 'gcash' | 'bank_transfer';
 export type PaymentType = 'deposit' | 'balance' | 'full';
 export type EventStage = 'inquiry' | 'ocular' | 'reserved' | 'paid' | 'done';
-export type UnitKind = 'room' | 'cottage' | 'villa';
-export type ProductType = 'entrance' | UnitKind | 'event';
+export type UnitKind = 'room' | 'cottage';
+export type ProductType = 'entrance' | UnitKind | 'exclusive' | 'event';
 export type InquiryStatus = 'new' | 'replied' | 'booked' | 'lost';
 export type InquiryChannel = Extract<BookingSource, 'messenger' | 'instagram' | 'phone' | 'website'>;
 
@@ -64,6 +64,24 @@ export interface PoolSession {
   adult: number;
   kid: number;
   capacity: number;
+  /** Photo in assets/img. */
+  photo?: string;
+  /** The owner has not confirmed these entrance rates yet. */
+  ratesToConfirm?: boolean;
+}
+
+/** An exclusive rental from the brochure: while it is booked, nobody else is. */
+export interface ExclusivePackage {
+  id: string;
+  session: 'day' | 'overnight';
+  use: 'full' | 'partial' | 'cottages';
+  name: string;
+  includes: string;
+  start: string;
+  end: string;
+  price: number;
+  maxGuests: number;
+  photo?: string;
 }
 
 export interface Unit {
@@ -78,8 +96,8 @@ export interface Unit {
   session: string;
   addsEntrance: boolean;
   inclusions: string[];
-  channel?: 'airbnb';
   priceNote?: string;
+  photo?: string | null;
 }
 
 export interface Promo {
@@ -115,6 +133,22 @@ export interface Guest {
   id: string;
   name: string;
   mobile: string | null;
+  address?: string | null;
+  email?: string | null;
+}
+
+/** One person on the guest list (the companions sheet signed at the gate). */
+export interface Companion {
+  name: string;
+  gender: 'Female' | 'Male' | '';
+  age: number | null;
+  remarks: string;
+}
+
+/** An additional charge from the registration sheet: videoke, corkage, extra cottage… */
+export interface ExtraCharge {
+  label: string;
+  amount: number;
 }
 
 export interface PriceLine {
@@ -175,6 +209,10 @@ export interface Booking {
   /** What the guest pays: pricing.total minus any manual discount. */
   total: number;
   discount?: ManualDiscount | null;
+  /** Senior citizens and PWDs in the group. */
+  scPwd?: number;
+  extras?: ExtraCharge[];
+  guestList?: Companion[];
   depositRequired: number;
   paid: number;
   balance: number;
@@ -201,6 +239,10 @@ export interface Payment {
   receivedBy: string | null;
   /** 'qr' when the guest paid by scanning the payment QR and the reference was verified. */
   via?: 'desk' | 'qr';
+  /** When the guest says they sent it (the "Time sent" on their receipt). */
+  sentAt?: Timestamp | null;
+  /** Name on the GCash account that sent it. */
+  senderName?: string | null;
 }
 
 export interface ResortEvent {
@@ -266,6 +308,8 @@ export interface State {
   staff: Staff[];
   invites: Invite[];
   poolSessions: PoolSession[];
+  exclusivePackages: ExclusivePackage[];
+  amenities: string[];
   units: Unit[];
   promos: Promo[];
   eventPackages: EventPackage[];
@@ -288,6 +332,9 @@ export interface BookingPageCopy {
   nameLabel: string;
   mobileLabel: string;
   productLabel: string;
+  addressLabel: string;
+  emailLabel: string;
+  guestListLabel: string;
   notesLabel: string;
   notesPlaceholder: string;
   submitLabel: string;
@@ -313,6 +360,8 @@ export interface BookingPageSettings {
     notes: boolean;
     kids: boolean;
     priceEstimate: boolean;
+    email: boolean;
+    guestList: boolean;
   };
   /** Bulleted reminders under the form. Empty hides the block. */
   houseRules: string[];
