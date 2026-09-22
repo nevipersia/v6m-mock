@@ -1,7 +1,11 @@
 /* Single-use booking page. Depends on tokens.css and base.css. */
 
 .book-body {
-  background: var(--navy);
+  /* Set from data/booking-page.json by the page script. */
+  --orange: var(--book-accent, #F2782B);
+  --orange-strong: color-mix(in srgb, var(--orange) 82%, #000);
+  --orange-soft: color-mix(in srgb, var(--orange) 22%, #fff);
+  background: var(--book-background, var(--navy));
 }
 
 .book {
@@ -21,7 +25,7 @@
   align-items: center;
   gap: 14px;
   margin-bottom: 18px;
-  color: #fff;
+  color: var(--book-head-ink, #fff);
 }
 
 .book__head img {
@@ -36,7 +40,7 @@
 
 .book__title {
   font-size: 28px;
-  color: #fff;
+  color: inherit;
 }
 
 .book__card {
@@ -68,6 +72,17 @@
   font-size: 22px;
   font-weight: 600;
   line-height: 1.3;
+}
+
+.book__rules {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 12px 14px 12px 32px;
+  background: var(--cream-deep);
+  border-radius: var(--radius);
+  color: var(--ink-muted);
+  font-size: 14px;
 }
 
 .book__thanks {

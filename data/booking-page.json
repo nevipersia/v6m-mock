@@ -1,0 +1,32 @@
+{
+  "copy": {
+    "eyebrow": "Almost there",
+    "title": "Confirm your booking",
+    "intro": "Fill it in once and the front desk will hold your slot.",
+    "nameLabel": "Your name",
+    "mobileLabel": "Mobile number",
+    "productLabel": "What are you booking?",
+    "notesLabel": "Anything we should know? (optional)",
+    "notesPlaceholder": "Celebrating a birthday, bringing a dog…",
+    "submitLabel": "Send my booking",
+    "paymentNote": "No payment here. The front desk will message you the deposit details.",
+    "thanksScript": "Salamat!",
+    "thanksText": "Your booking is with the front desk. Keep this reference:",
+    "doneNote": "V6M holds the slot until the deposit comes in. This link cannot be used again.",
+    "problemHelp": "Message V6M Resort on Facebook or Instagram and they will send a fresh link."
+  },
+  "theme": {
+    "accent": "#F2782B",
+    "background": "#1F2D5C"
+  },
+  "fields": {
+    "notes": true,
+    "kids": true,
+    "priceEstimate": true
+  },
+  "houseRules": [
+    "Bring a valid ID for check-in.",
+    "Pets are welcome in diapers or cages."
+  ],
+  "products": []
+}

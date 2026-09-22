@@ -11,13 +11,18 @@ Everything runs in the browser. Nothing is booked, paid or sent.
 
 ## Run it
 
-The pages load `data/mock-data.json`, which browsers block when a file is opened directly, so serve the folder:
+The code is TypeScript in `src/`, compiled by `tsc` straight to ES modules in `assets/js/` (no
+bundler). The pages load `data/mock-data.json`, which browsers block when a file is opened directly,
+so build and serve the folder:
 
 ```bash
+npm install
 npm start
 ```
 
-Then open http://localhost:4789/admin/.
+Then open http://localhost:4789/admin/. `npm start` compiles once and serves. While you edit, run
+`npm run watch` in a second terminal so `assets/js/` stays current, and `npm run typecheck` to check
+types without writing files.
 
 ## Signing in
 
@@ -48,6 +53,14 @@ the staff member who sent it. The link then stops working.
 
 Booking links live in this browser's storage, so a link only opens on the same browser in this mock.
 
+## Editing the booking page
+
+The guest booking page reads `data/booking-page.json`: every piece of wording, the accent and
+background colors, whether the kids, notes and price estimate show, the house rules list, and which
+bookings a guest may pick (an empty `products` list offers everything bookable). Missing or invalid
+values fall back to the defaults in `src/core/booking-page.ts`, so a bad edit cannot break the page.
+Edit the file by hand, or use the booking page editor artifact and paste its JSON over the file.
+
 ## How data works
 
 - `data/mock-data.json` is the starting data: one week (Sep 15–21, 2026) of guests, bookings, payments, inquiries and one private event. The app treats **Sep 17, 2026** as today, and the calendar can still be moved to any other date.
@@ -60,29 +73,34 @@ Booking links live in this browser's storage, so a link only opens on the same b
 index.html                  Redirect to /admin/
 admin/index.html            V6M Desk shell
 book/index.html             Single-use booking page
-data/mock-data.json         Sample data
+data/
+  mock-data.json            Sample data
+  booking-page.json         Booking page wording, colors, fields and house rules
+src/                        TypeScript sources (compiled to assets/js/, which is not committed)
+  core/                     Shared by every page
+    types.ts                Types for everything in the data files
+    store.ts                Loads data, saves changes to localStorage, syncs tabs
+    rules.ts                Availability, pricing, lookups, labels
+    actions.ts              Every state change (bookings, payments, invites, links…)
+    booking-page.ts         Loads and validates booking-page.json
+    format.ts               Pesos, dates, times, digit grouping, PH mobile check
+    pdf.ts                  Minimal PDF writer, no dependencies
+    dom.ts                  Safe html`` templates and event delegation
+  book/
+    main.ts                 Booking page: load, validate, submit
+    screens.ts              Form, thank-you and problem screens
+  admin/
+    main.ts                 Sign-in, hash routing, event dispatch, focus restore
+    types.ts                DeskContext, view and drawer contracts
+    auth.ts                 Roles, page access, permissions
+    routes.ts, layout.ts    Navigation, shell, page header
+    components/             drawer, booking-detail, booking-form, booking-link, booking-pdf, badges, icons, toast
+    views/                  login, dashboard, calendar, bookings, inbox, events, users
 assets/
-  img/                      Logo and hero illustration
-  css/
-    tokens.css              Brand colors, fonts, radii (shared)
-    base.css                Reset, buttons, fields, pills (shared)
-    admin.css               V6M Desk layout
-    book.css                Booking page layout
-  js/
-    core/                   Shared by every page
-      store.js              Loads data, saves changes, syncs tabs
-      rules.js              Availability, pricing, lookups
-      actions.js            Every state change (bookings, payments, invites, links…)
-      format.js             Pesos, dates, times, digit grouping
-      pdf.js                Minimal PDF writer, no dependencies
-      dom.js                Safe HTML templates and event delegation
-    book/                   Single-use booking page
-    admin/
-      main.js               Sign-in, hash routing, event dispatch
-      auth.js               Roles and permissions
-      routes.js, layout.js  Navigation and page shell
-      components/           Drawer, booking detail, booking form, booking links, PDF, badges, icons, toast
-      views/                Login, dashboard, calendar, bookings, inbox, events, users
+  img/                      Logo
+  css/                      tokens.css, base.css (shared) · admin.css · book.css
+  js/                       Build output of src/ (git-ignored)
+tsconfig.json               Strict TypeScript, ES modules, no bundler
 ```
 
 The guest-facing website was removed; the inquiries in the sample data are kept as history for the

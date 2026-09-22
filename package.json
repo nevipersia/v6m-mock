@@ -1,9 +1,18 @@
 {
   "name": "v6m-mock",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Mock guest website and V6M Desk staff app for V6M Resort, driven by local mock data.",
+  "type": "module",
+  "description": "V6M Desk, the V6M Resort staff tool, and its single-use guest booking page. TypeScript, no framework, driven by local mock data.",
   "scripts": {
-    "start": "npx --yes serve -l 4789 ."
+    "build": "tsc",
+    "watch": "tsc --watch --preserveWatchOutput",
+    "typecheck": "tsc --noEmit",
+    "serve": "serve -l 4789 .",
+    "start": "tsc && serve -l 4789 ."
+  },
+  "devDependencies": {
+    "serve": "^14.2.6",
+    "typescript": "^7.0.2"
   }
 }

@@ -60,8 +60,9 @@ then removed on request; its inquiries stay in the data as inbox history.
 - **Booking link** (`/book/?code=…`): single-use page a staff member sends to one guest; the booking
   they submit lands on the calendar as a hold under that staff member.
 
-Static files, no build step, ES modules. Run it with `npm start`, then http://localhost:4789/admin/
-(`/` redirects there). Opening the HTML directly does not work because the browser blocks reading
+TypeScript (strict) in `src/`, compiled by `tsc` to plain ES modules in `assets/js/` (git-ignored, no
+bundler, no framework). Run `npm install` once, then `npm start` (build + serve) and open
+http://localhost:4789/admin/ (`/` redirects there). Use `npm run watch` while editing. Opening the HTML directly does not work because the browser blocks reading
 `data/mock-data.json`.
 
 ## Project structure
@@ -70,25 +71,34 @@ Static files, no build step, ES modules. Run it with `npm start`, then http://lo
 index.html                  Redirect to /admin/
 admin/index.html            V6M Desk shell
 book/index.html             Single-use booking page
-data/mock-data.json         Sample data
+data/
+  mock-data.json            Sample data
+  booking-page.json         Booking page wording, colors, fields and house rules
+src/                        TypeScript sources (compiled to assets/js/, which is not committed)
+  core/                     Shared by every page
+    types.ts                Types for everything in the data files
+    store.ts                Loads data, saves changes to localStorage, syncs tabs
+    rules.ts                Availability, pricing, lookups, labels
+    actions.ts              Every state change (bookings, payments, invites, links…)
+    booking-page.ts         Loads and validates booking-page.json
+    format.ts               Pesos, dates, times, digit grouping, PH mobile check
+    pdf.ts                  Minimal PDF writer, no dependencies
+    dom.ts                  Safe html`` templates and event delegation
+  book/
+    main.ts                 Booking page: load, validate, submit
+    screens.ts              Form, thank-you and problem screens
+  admin/
+    main.ts                 Sign-in, hash routing, event dispatch, focus restore
+    types.ts                DeskContext, view and drawer contracts
+    auth.ts                 Roles, page access, permissions
+    routes.ts, layout.ts    Navigation, shell, page header
+    components/             drawer, booking-detail, booking-form, booking-link, booking-pdf, badges, icons, toast
+    views/                  login, dashboard, calendar, bookings, inbox, events, users
 assets/
-  img/                      logo.svg, hero.svg
+  img/                      Logo
   css/                      tokens.css, base.css (shared) · admin.css · book.css
-  js/
-    core/                   Shared by every page
-      store.js              Loads JSON, saves changes to localStorage, syncs tabs
-      rules.js              Availability, pricing, lookups, labels
-      actions.js            Every state change, incl. invites and booking links
-      format.js             Pesos, dates, times, digit grouping, PH mobile check
-      pdf.js                Minimal dependency-free PDF writer
-      dom.js                html`` templating (escapes by default) + event delegation
-    book/                   Single-use booking page
-    admin/
-      main.js               Sign-in, hash routing, event dispatch, focus restore
-      auth.js               Roles, page access, permissions
-      routes.js, layout.js  Navigation, shell, page header
-      components/           drawer, booking-detail, booking-form, booking-link, booking-pdf, badges, icons, toast
-      views/                login, dashboard, calendar, bookings, inbox, events, users
+  js/                       Build output of src/ (git-ignored)
+tsconfig.json               Strict TypeScript, ES modules, no bundler
 ```
 
 ## Conventions to follow
@@ -96,8 +106,12 @@ assets/
 - Views export `render(ctx)` and optional `actions` / `inputs` objects. `main.js` dispatches clicks on
   `[data-action]`, submits on `form[data-submit]` and input on `[data-input]`. Drawer content objects
   use the same shape plus `live` (re-render when the store changes) and a `title`.
-- `ctx` carries `state`, `staff`, `can(permission)`, `canView(page)`, `toast()`, `redraw()`,
-  `openBooking(id)`, `newBooking(prefill)`.
+- `ctx` is a `DeskContext` (`src/admin/types.ts`): `state`, `staff`, `can(permission)`,
+  `canView(page)`, `toast()`, `redraw()`, `openBooking(id)`, `newBooking(prefill)`, `newBookingLink()`.
+- Data shapes live in `src/core/types.ts`. Change them there first when the JSON changes.
+- Import sibling modules with a `.js` extension (`'./rules.js'`); `tsc` resolves it to the `.ts` file.
+- The booking page's wording, colors, optional fields, house rules and allowed products come from
+  `data/booking-page.json`, validated by `normalizeBookingPage()` in `src/core/booking-page.ts`.
 - All mutations go through `core/actions.js` → `store.update()`, which saves and notifies subscribers.
 - Never build markup by string concatenation; use the `html` tag so values are escaped.
 - Sentence case, no emoji in UI chrome, plain error text, mobile-first (bottom tab bar under 900px).
