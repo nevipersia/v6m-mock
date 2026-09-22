@@ -65,6 +65,11 @@ export function bookingPdfBlob(state: State, booking: Booking): Blob {
     text(peso(line.amount), { x: RIGHT - 90 });
     y -= 17;
   });
+  if (booking.discount) {
+    text(`Discount${booking.discount.kind === 'percent' ? ` (${booking.discount.value}%)` : ''}${booking.discount.note ? `: ${booking.discount.note.slice(0, 40)}` : ''}`, { gray: 0.3 });
+    text(`-${peso(booking.discount.amount)}`, { x: RIGHT - 90 });
+    y -= 17;
+  }
   if (booking.pricing.discount) {
     text(`Promo ${booking.pricing.promoId}`, { gray: 0.3 });
     text(`-${peso(booking.pricing.discount)}`, { x: RIGHT - 90 });

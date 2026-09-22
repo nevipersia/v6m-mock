@@ -1,18 +1,19 @@
 // Booking detail drawer: summary, price, payments, and the actions staff can
 // take (record payment, check in, check out, cancel).
 
-import { cancelBooking, checkIn, checkOut, payByQr, recordPayment } from '../../core/actions.js';
+import { applyDiscount, cancelBooking, checkIn, checkOut, payByQr, recordPayment, removeDiscount } from '../../core/actions.js';
 import { $, $maybe, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { VERIFY_DELAY_MS, paymentCard, type PaymentCardState } from '../../core/payment-card.js';
 import { qrPaymentRequest, sampleReference } from '../../core/qr-payment.js';
 import { formatDate, formatDateTime, peso, plural, timeOf } from '../../core/format.js';
 import {
-  DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, downpaymentDue, findBooking, findGuest, findPackage, findStaff, isActive, productLabel,
+  DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, discountAmount, discountLabel, downpaymentDue, findBooking, findGuest, findPackage, findStaff, isActive, productLabel,
 } from '../../core/rules.js';
 import type { Booking, PaymentMethod, State } from '../../core/types.js';
 import type { DeskContext, DrawerContent } from '../types.js';
 import { kindDot, paymentPill, stagePill, statusPill } from './badges.js';
 import { downloadBookingPdf } from './booking-pdf.js';
+import { blankDiscount, discountFields, readDiscountField, type DiscountDraft } from './discount-fields.js';
 import { icon } from './icons.js';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -22,6 +23,9 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'booking.cancelled': 'Cancelled',
   'payment.recorded': 'Payment recorded',
   'booking.confirmed': 'Confirmed',
+  'booking.discounted': 'Discount given',
+  'booking.discount_removed': 'Discount removed',
+  'booking.unconfirmed': 'Back on hold',
 };
 
 const CANCEL_REASONS = ['Change of plans', 'Guest request', 'Typhoon or weather', 'Duplicate booking', 'Other'];
@@ -58,7 +62,7 @@ function facts(state: State, booking: Booking): SafeHTML {
     </dl>`;
 }
 
-function priceSection(booking: Booking): SafeHTML {
+function priceSection(state: State, booking: Booking): SafeHTML {
   const { pricing } = booking;
   return html`
     <section class="detail-section">
@@ -72,6 +76,14 @@ function priceSection(booking: Booking): SafeHTML {
         ${pricing.discount ? html`
           <div class="line-items__row line-items__row--discount">
             <dt>Promo ${pricing.promoId}</dt><dd>−${peso(pricing.discount)}</dd>
+          </div>` : ''}
+        ${booking.discount ? html`
+          <div class="line-items__row line-items__row--discount">
+            <dt>
+              ${discountLabel(booking.discount)}
+              <span class="line-items__note">${findStaff(state, booking.discount.by)?.name ?? 'Removed account'}${booking.discount.note ? ` · “${booking.discount.note}”` : ' · no note'}</span>
+            </dt>
+            <dd>−${peso(booking.discount.amount)}</dd>
           </div>` : ''}
         <div class="line-items__row line-items__row--total"><dt>Total</dt><dd>${peso(booking.total)}</dd></div>
         <div class="line-items__row line-items__row--downpayment ${downpaymentDue(booking) && isActive(booking) ? 'is-due' : ''}">
@@ -129,11 +141,43 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     checkInOpen: boolean;
     confirmCancel: boolean;
     qrOpen: boolean;
+    discountOpen: boolean;
+    discount: DiscountDraft;
+    discountError: string;
     card: PaymentCardState;
     errors: { checkIn?: string; payment?: string };
   } = {
-    checkInOpen: false, confirmCancel: false, qrOpen: false, card: { reference: '', error: '', checking: false }, errors: {},
+    checkInOpen: false, confirmCancel: false, qrOpen: false, discountOpen: false, discount: blankDiscount(), discountError: '',
+    card: { reference: '', error: '', checking: false }, errors: {},
   };
+
+  const discountKindChanged = (before: DiscountDraft['kind']) => before !== ui.discount.kind;
+  const discountAmountFor = (booking: Booking) => discountAmount(booking.pricing.total, ui.discount.kind, ui.discount.value);
+
+  function discountSection(ctx: DeskContext, booking: Booking): SafeHTML | '' {
+    const open = ['hold', 'confirmed', 'checked_in'].includes(booking.status);
+    if (!open || !ctx.can('discounts.apply')) return '';
+    if (!ui.discountOpen) {
+      return html`
+        <div class="button-row">
+          <button class="btn btn--quiet btn--sm" type="button" data-action="open-discount">
+            ${booking.discount ? 'Change discount' : 'Give a discount'}
+          </button>
+          ${booking.discount ? html`<button class="btn btn--quiet btn--sm btn--danger-text" type="button" data-action="remove-discount">Remove discount</button>` : ''}
+        </div>`;
+    }
+    return html`
+      <form class="action-card" data-submit="save-discount" novalidate>
+        <h4 class="action-card__title">${booking.discount ? 'Change the discount' : 'Give a discount'}</h4>
+        ${discountFields(ctx.staff, ui.discount, booking.pricing.total, 'discount')}
+        ${booking.paid ? html`<p class="small muted">${booking.guestName} already paid ${peso(booking.paid)}, so the total can't go below that.</p>` : ''}
+        <p class="form-error">${ui.discountError}</p>
+        <div class="button-row">
+          <button class="btn btn--quiet" type="button" data-action="close-discount">Cancel</button>
+          <button class="btn btn--primary" type="submit">Save discount</button>
+        </div>
+      </form>`;
+  }
 
   function qrSection(ctx: DeskContext, booking: Booking): SafeHTML | '' {
     const request = qrPaymentRequest(booking);
@@ -190,6 +234,9 @@ export function createBookingDetail(bookingId: string): DrawerContent {
 
     const qr = qrSection(ctx, booking);
     if (qr) parts.push(qr);
+
+    const discount = discountSection(ctx, booking);
+    if (discount) parts.push(discount);
 
     if (isActive(booking) && booking.status !== 'checked_out' && booking.balance > 0 && ctx.can('payments.write') && !ui.checkInOpen && !ui.qrOpen) {
       const suggested = downpaymentDue(booking) || booking.balance;
@@ -259,13 +306,33 @@ export function createBookingDetail(bookingId: string): DrawerContent {
           </button>
           ${actionsSection(ctx, booking)}
           ${facts(ctx.state, booking)}
-          ${priceSection(booking)}
+          ${priceSection(ctx.state, booking)}
           ${paymentsSection(ctx.state, booking)}
           ${activitySection(ctx.state, booking)}
         </div>`;
     },
 
     inputs: {
+      discount: ({ el, ctx, root }) => {
+        const field = el as HTMLInputElement | HTMLSelectElement;
+        const kindBefore = ui.discount.kind;
+        const formatted = readDiscountField(ui.discount, field);
+        if (formatted !== null && formatted !== field.value) field.value = formatted;
+        ui.discountError = '';
+        const booking = findBooking(ctx.state, bookingId);
+        if (discountKindChanged(kindBefore) && booking) {
+          const valueField = $maybe<HTMLInputElement>('[name="discountValue"]', root);
+          if (valueField) valueField.value = ui.discount.value ? String(ui.discount.value) : '';
+          const label = valueField?.closest('.field')?.querySelector('.field__label');
+          if (label) label.textContent = ui.discount.kind === 'percent' ? 'Percent off' : 'Pesos off';
+        }
+        const preview = $maybe('[data-slot="discount-preview"]', root);
+        if (preview && booking) {
+          const off = discountAmountFor(booking);
+          preview.textContent = off ? `Takes ${peso(off)} off the ${peso(booking.pricing.total)} price.` : '';
+        }
+      },
+
       reference: ({ el }) => {
         ui.card.reference = (el as HTMLInputElement).value;
         ui.card.error = '';
@@ -273,6 +340,37 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     },
 
     actions: {
+      'open-discount': ({ ctx, redraw }) => {
+        const booking = findBooking(ctx.state, bookingId);
+        const current = booking?.discount;
+        ui.discount = current ? { kind: current.kind, value: current.value, note: current.note ?? '' } : blankDiscount();
+        ui.discountError = '';
+        ui.discountOpen = true;
+        redraw();
+      },
+
+      'close-discount': ({ redraw }) => {
+        ui.discountOpen = false;
+        redraw();
+      },
+
+      'save-discount': ({ ctx, redraw }) => {
+        const result = applyDiscount(bookingId, ui.discount, ctx.staff.id);
+        if (result.error !== undefined) {
+          ui.discountError = result.error;
+          redraw();
+          return;
+        }
+        ui.discountOpen = false;
+        redraw();
+        ctx.toast(`${peso(result.booking.discount?.amount ?? 0)} discount saved · new total ${peso(result.booking.total)}`);
+      },
+
+      'remove-discount': ({ ctx }) => {
+        const result = removeDiscount(bookingId, ctx.staff.id);
+        ctx.toast(result.error ?? `Discount removed · total back to ${peso(result.booking.total)}`);
+      },
+
       'open-qr': ({ redraw }) => {
         ui.qrOpen = true;
         ui.card = { reference: '', error: '', checking: false };

@@ -127,6 +127,11 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 - Rooms and cottages add per-head overnight entrance; the Airbnb villa does not.
 - Every booking needs a 50% downpayment (`depositRequired`, rounded up to the peso; Airbnb in full)
   before it is confirmed; less stays on hold. `applyPayment` in `core/actions.ts` enforces it.
+- Manual discounts (`applyDiscount` / `removeDiscount`, rules in `core/rules.ts`): permission
+  `discounts.apply` (owner and manager by default). Non-owners must give a note; owners need not.
+  Stored as `booking.discount`; `booking.total` = `pricing.total` − discount, and `reprice()` moves
+  the booking between hold and confirmed as the 50% downpayment changes. The total can't drop below
+  what was paid.
 - Mock GCash QR payment (`payByQr`, `core/qr-payment.ts`): 13-digit reference, not one repeated
   digit, not already used. The QR is drawn by `core/qr.ts` and is not scannable. Booking-link guests
   pay it after the form; staff can show it from the booking drawer.

@@ -2,7 +2,7 @@
 
 import { addDays, formatDate, parseDate } from './format.js';
 import type {
-  Booking, BookingSource, BookingStatus, EventStage, ISODate, PaymentMethod, PoolSession, PriceLine,
+  Booking, BookingSource, DiscountKind, ManualDiscount, Staff, BookingStatus, EventStage, ISODate, PaymentMethod, PoolSession, PriceLine,
   Pricing, Promo, ResortEvent, State, Unit,
 } from './types.js';
 
@@ -187,6 +187,48 @@ export function quote(state: State, { product, date, adults = 0, kids = 0, night
 
   return { lines, subtotal, promoId: promo?.id ?? null, promo, discount, total: subtotal - discount, warnings };
 }
+
+// ---------- Manual discounts ----------
+
+/** Owners may discount without a reason; everyone else with the permission must write one. */
+export const discountNeedsNote = (staff: Staff): boolean => staff.role !== 'owner';
+
+export const canDiscount = (staff: Staff): boolean => staff.permissions.includes('discounts.apply');
+
+/** Pesos a discount takes off `base`, never more than `base`. */
+export function discountAmount(base: number, kind: DiscountKind, value: number): number {
+  if (!(value > 0)) return 0;
+  const amount = kind === 'percent' ? Math.round((base * Math.min(value, 100)) / 100) : Math.round(value);
+  return Math.min(amount, base);
+}
+
+export interface DiscountInput {
+  kind: DiscountKind;
+  value: number;
+  note?: string | null;
+}
+
+const formatPeso = (amount: number): string => `₱${Math.round(amount).toLocaleString('en-PH')}`;
+
+/**
+ * Why this staff member cannot give this discount, or null when it is fine.
+ * `base` is the price being discounted; `floor` is the least the total may
+ * drop to (what the guest already paid, since the desk does not refund here).
+ */
+export function discountProblem(staff: Staff, input: DiscountInput, base: number, floor = 0): string | null {
+  if (!canDiscount(staff)) return 'Your account cannot give discounts. Ask the owner.';
+  if (!(input.value > 0)) return input.kind === 'percent' ? 'Enter a percentage above 0.' : 'Enter a discount above ₱0.';
+  if (input.kind === 'percent' && input.value > 100) return 'A percentage discount goes up to 100%.';
+  if (input.kind === 'amount' && input.value > base) return `The discount can't be more than the ${formatPeso(base)} price.`;
+  if (base - discountAmount(base, input.kind, input.value) < floor) {
+    return `The guest already paid ${formatPeso(floor)}, so the total can't go below that.`;
+  }
+  if (discountNeedsNote(staff) && !input.note?.trim()) return 'Add a note saying why you are giving this discount.';
+  return null;
+}
+
+export const discountLabel = (discount: ManualDiscount): string =>
+  discount.kind === 'percent' ? `Discount (${discount.value}%)` : 'Discount';
 
 // ---------- Downpayment ----------
 

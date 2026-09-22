@@ -58,6 +58,19 @@ it counts as confirmed. Anything less keeps it **on hold**, and the desk shows h
 short ("₱750 to confirm"). Staff can record the downpayment in the new booking form or on the booking,
 or collect it by **GCash QR** from the booking drawer.
 
+## Discounts
+
+Owners and managers can give a discount by hand, as pesos off or a percentage, when creating a
+booking or later from the booking drawer (**Give a discount**). Managers must write a reason; owners
+may leave it blank. The reason, who gave it and when show on the booking, in its activity log and on
+the confirmation PDF.
+
+- The permission is **Give discounts** on the Users page. Owners and managers have it by default; the
+  owner can grant it to anyone else, and every non-owner must write a reason.
+- A discount can't push the total below what the guest already paid (the desk does not refund).
+- The 50% downpayment follows the discounted total. A discount can confirm a booking that was short;
+  removing one can put a confirmed booking back on hold.
+
 ## Paying by QR (mock)
 
 The payment QR shows the amount due, the booking and a check code. The guest "pays" and types the

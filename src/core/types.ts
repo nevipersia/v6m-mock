@@ -23,6 +23,7 @@ export type Permission =
   | 'bookings.cancel'
   | 'inbox.write'
   | 'events.manage'
+  | 'discounts.apply'
   | 'users.manage';
 
 export interface Meta {
@@ -137,6 +138,21 @@ export interface Pets {
   rulesAcknowledged: boolean;
 }
 
+export type DiscountKind = 'amount' | 'percent';
+
+/** A discount a staff member gave by hand, on top of any promo already in the pricing. */
+export interface ManualDiscount {
+  kind: DiscountKind;
+  /** Pesos for 'amount', 1-100 for 'percent'. */
+  value: number;
+  /** Pesos taken off the total. */
+  amount: number;
+  /** Why it was given. Required for everyone except owners. */
+  note: string | null;
+  by: string;
+  at: Timestamp;
+}
+
 export interface Booking {
   id: string;
   guestId: string;
@@ -154,8 +170,11 @@ export interface Booking {
   pets: Pets | null;
   source: BookingSource;
   status: BookingStatus;
+  /** List price after any promo. */
   pricing: Pricing;
+  /** What the guest pays: pricing.total minus any manual discount. */
   total: number;
+  discount?: ManualDiscount | null;
   depositRequired: number;
   paid: number;
   balance: number;

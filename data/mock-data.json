@@ -8,7 +8,7 @@
     },
     "timezone": "Asia/Manila",
     "currency": "PHP",
-    "seed": 665709761,
+    "seed": 665709762,
     "rules": [
       "A unit holds one booking per night; exclusive events that are reserved, paid or done close the resort for the day.",
       "Each pool session caps at 120 guests (placeholder until the owner confirms).",
@@ -18,7 +18,8 @@
       "Booking links are single use: a staff member sends one, the guest fills it in, and the booking lands on the calendar.",
       "Rates come from public listings; promo PR-BTS and all event packages are invented for testing.",
       "V6M Desk signs in with an email and password. Demo passwords sit in this file in plain text because it is a mock; a real build would never store them this way.",
-      "New accounts are invite only: the owner creates the account, the invite code is used once, and the person sets their own password."
+      "New accounts are invite only: the owner creates the account, the invite code is used once, and the person sets their own password.",
+      "Owners and managers can give a manual discount (amount or percent). Managers must write a note saying why; owners may skip it. The 50% downpayment follows the discounted total."
     ],
     "counts": {
       "staff": 2,
@@ -43,6 +44,7 @@
         "payments.write",
         "inbox.write",
         "events.manage",
+        "discounts.apply",
         "users.manage"
       ],
       "status": "active",
@@ -58,7 +60,8 @@
         "bookings.write",
         "payments.write",
         "inbox.write",
-        "events.manage"
+        "events.manage",
+        "discounts.apply"
       ],
       "status": "active",
       "demo": true,
@@ -629,7 +632,8 @@
       "checkedOutAt": "2026-09-15T16:00:00+08:00",
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0915-005",
@@ -679,7 +683,8 @@
       "checkedOutAt": "2026-09-15T16:00:00+08:00",
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Arriving late, around 8 PM"
+      "notes": "Arriving late, around 8 PM",
+      "discount": null
     },
     {
       "id": "BK-0915-002",
@@ -723,7 +728,8 @@
       "checkedOutAt": "2026-09-16T12:00:00+08:00",
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Asked for extra towels"
+      "notes": "Asked for extra towels",
+      "discount": null
     },
     {
       "id": "BK-0915-003",
@@ -773,7 +779,8 @@
       "checkedOutAt": "2026-09-16T06:00:00+08:00",
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0916-006",
@@ -817,7 +824,8 @@
       "checkedOutAt": "2026-09-16T16:00:00+08:00",
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0916-007",
@@ -867,7 +875,8 @@
       "checkedOutAt": "2026-09-16T16:00:00+08:00",
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Celebrating a birthday"
+      "notes": "Celebrating a birthday",
+      "discount": null
     },
     {
       "id": "BK-0916-008",
@@ -917,7 +926,8 @@
       "checkedOutAt": "2026-09-17T06:00:00+08:00",
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Arriving late, around 8 PM"
+      "notes": "Arriving late, around 8 PM",
+      "discount": null
     },
     {
       "id": "BK-0917-009",
@@ -961,7 +971,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Requested table near the grill"
+      "notes": "Requested table near the grill",
+      "discount": null
     },
     {
       "id": "BK-0918-015",
@@ -1005,7 +1016,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0918-016",
@@ -1055,7 +1067,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Senior citizen in group"
+      "notes": "Senior citizen in group",
+      "discount": null
     },
     {
       "id": "BK-0918-017",
@@ -1105,7 +1118,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Celebrating a birthday"
+      "notes": "Celebrating a birthday",
+      "discount": null
     },
     {
       "id": "BK-0918-018",
@@ -1155,7 +1169,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0918-019",
@@ -1205,7 +1220,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Requested table near the grill"
+      "notes": "Requested table near the grill",
+      "discount": null
     },
     {
       "id": "BK-0918-010",
@@ -1261,7 +1277,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0918-011",
@@ -1311,7 +1328,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0918-012",
@@ -1367,7 +1385,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0918-013",
@@ -1427,7 +1446,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0918-014",
@@ -1477,7 +1497,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0918-020",
@@ -1521,7 +1542,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0918-021",
@@ -1571,7 +1593,8 @@
       "checkedOutAt": null,
       "cancelledAt": "2026-09-17T09:30:00+08:00",
       "cancelReason": "Found another venue",
-      "notes": "Arriving late, around 8 PM"
+      "notes": "Arriving late, around 8 PM",
+      "discount": null
     },
     {
       "id": "BK-0918-022",
@@ -1621,7 +1644,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0919-028",
@@ -1665,7 +1689,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Senior citizen in group"
+      "notes": "Senior citizen in group",
+      "discount": null
     },
     {
       "id": "BK-0919-029",
@@ -1715,7 +1740,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0919-030",
@@ -1759,7 +1785,8 @@
       "checkedOutAt": null,
       "cancelledAt": "2026-09-17T09:30:00+08:00",
       "cancelReason": "Found another venue",
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0919-023",
@@ -1809,7 +1836,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Bringing own cake"
+      "notes": "Bringing own cake",
+      "discount": null
     },
     {
       "id": "BK-0919-024",
@@ -1859,7 +1887,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Senior citizen in group"
+      "notes": "Senior citizen in group",
+      "discount": null
     },
     {
       "id": "BK-0919-025",
@@ -1915,7 +1944,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0919-026",
@@ -1971,7 +2001,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0919-027",
@@ -2031,7 +2062,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Arriving late, around 8 PM"
+      "notes": "Arriving late, around 8 PM",
+      "discount": null
     },
     {
       "id": "BK-0919-031",
@@ -2081,7 +2113,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0920-036",
@@ -2131,7 +2164,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0920-037",
@@ -2175,7 +2209,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0920-038",
@@ -2225,7 +2260,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Bringing own cake"
+      "notes": "Bringing own cake",
+      "discount": null
     },
     {
       "id": "BK-0920-039",
@@ -2275,7 +2311,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0920-040",
@@ -2325,7 +2362,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0920-041",
@@ -2375,7 +2413,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Requested table near the grill"
+      "notes": "Requested table near the grill",
+      "discount": null
     },
     {
       "id": "BK-0920-032",
@@ -2435,7 +2474,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": null
+      "notes": null,
+      "discount": null
     },
     {
       "id": "BK-0920-033",
@@ -2491,7 +2531,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Celebrating a birthday"
+      "notes": "Celebrating a birthday",
+      "discount": null
     },
     {
       "id": "BK-0920-034",
@@ -2541,7 +2582,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Asked for extra towels"
+      "notes": "Asked for extra towels",
+      "discount": null
     },
     {
       "id": "BK-0920-035",
@@ -2597,7 +2639,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Requested table near the grill"
+      "notes": "Requested table near the grill",
+      "discount": null
     },
     {
       "id": "BK-0920-042",
@@ -2641,7 +2684,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Arriving late, around 8 PM"
+      "notes": "Arriving late, around 8 PM",
+      "discount": null
     },
     {
       "id": "BK-0921-001",
@@ -2691,7 +2735,8 @@
       "checkedOutAt": null,
       "cancelledAt": null,
       "cancelReason": null,
-      "notes": "Program starts 6 PM"
+      "notes": "Program starts 6 PM",
+      "discount": null
     }
   ],
   "payments": [

@@ -17,8 +17,8 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 export const ROLE_SUMMARIES: Record<Role, string> = {
-  owner: 'Full access, including cancellations and user accounts',
-  manager: 'Day-to-day running of bookings, payments and the inbox',
+  owner: 'Full access, including cancellations, discounts without a note and user accounts',
+  manager: 'Day-to-day running of bookings, payments, discounts (with a note) and the inbox',
   staff: 'Whatever the owner switches on',
 };
 
@@ -37,6 +37,7 @@ export const PERMISSIONS: PermissionInfo[] = [
   { id: 'bookings.cancel', label: 'Cancel bookings', detail: 'Frees the slot again' },
   { id: 'inbox.write', label: 'Use the inbox', detail: 'Reply to inquiries and turn them into bookings' },
   { id: 'events.manage', label: 'Manage events', detail: 'See the event pipeline and packages' },
+  { id: 'discounts.apply', label: 'Give discounts', detail: 'Owners can skip the note; everyone else must say why' },
   { id: 'users.manage', label: 'Manage users', detail: 'Invite accounts and change what they can do' },
 ];
 
@@ -44,7 +45,7 @@ export const PERMISSION_IDS: Permission[] = PERMISSIONS.map((permission) => perm
 
 export const ROLE_DEFAULTS: Record<Role, Permission[]> = {
   owner: [...PERMISSION_IDS],
-  manager: ['bookings.write', 'payments.write', 'inbox.write', 'events.manage'],
+  manager: ['bookings.write', 'payments.write', 'inbox.write', 'events.manage', 'discounts.apply'],
   staff: ['bookings.write', 'payments.write'],
 };
 

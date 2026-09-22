@@ -1,13 +1,15 @@
 // New booking drawer with a live availability check and price quote.
 
 import { createBooking, type NewBooking } from '../../core/actions.js';
-import { $, html, render, type SafeHTML } from '../../core/dom.js';
+import { $, $maybe, html, render, type SafeHTML } from '../../core/dom.js';
 import { formatDigits, isPHMobile, parseDigits, peso } from '../../core/format.js';
 import {
-  DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, checkAvailability, closingEvent, depositRequired, findUnit, quote,
+  DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, checkAvailability, closingEvent, depositRequired, discountAmount,
+  discountProblem, findUnit, quote,
 } from '../../core/rules.js';
 import type { BookingSource, PaymentMethod, State } from '../../core/types.js';
 import { asField, type BookingPrefill, type DrawerContent } from '../types.js';
+import { blankDiscount, discountFields, readDiscountField, type DiscountDraft } from './discount-fields.js';
 
 const SOURCES: BookingSource[] = ['walk_in', 'phone', 'messenger', 'instagram', 'website'];
 const METHODS: PaymentMethod[] = ['gcash', 'cash', 'bank_transfer'];
@@ -54,13 +56,20 @@ function initialDraft(state: State, prefill: BookingPrefill): Draft {
 const option = (value: string, label: string, selected: string): SafeHTML =>
   html`<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`;
 
-function summaryTemplate(state: State, draft: Draft): SafeHTML {
+/** The list price after any promo, the manual discount in pesos, and what the guest pays. */
+function priced(state: State, draft: Draft, discount: DiscountDraft | null) {
+  const estimate = quote(state, draft);
+  const off = discount ? discountAmount(estimate.total, discount.kind, discount.value) : 0;
+  return { estimate, off, total: estimate.total - off };
+}
+
+function summaryTemplate(state: State, draft: Draft, discount: DiscountDraft | null): SafeHTML {
   const guests = draft.adults + draft.kids;
   if (guests === 0) return html`<p class="small muted">Add guests to see the price.</p>`;
 
   const availability = checkAvailability(state, draft);
-  const estimate = quote(state, draft);
-  const required = depositRequired(state, draft.product, estimate.total);
+  const { estimate, off, total } = priced(state, draft, discount);
+  const required = depositRequired(state, draft.product, total);
   const short = draft.deposit > 0 && draft.deposit < required;
 
   return html`
@@ -75,9 +84,11 @@ function summaryTemplate(state: State, draft: Draft): SafeHTML {
           <div class="line-items__row"><dt>${line.label} <span class="muted">${line.qty} × ${peso(line.unitPrice)}</span></dt><dd>${peso(line.amount)}</dd></div>`)}
         ${estimate.promo ? html`
           <div class="line-items__row line-items__row--discount"><dt>${estimate.promo.name} (${estimate.promo.percent}%)</dt><dd>−${peso(estimate.discount)}</dd></div>` : ''}
-        <div class="line-items__row line-items__row--total"><dt>Total</dt><dd>${peso(estimate.total)}</dd></div>
+        ${off && discount ? html`
+          <div class="line-items__row line-items__row--discount"><dt>Discount${discount.kind === 'percent' ? ` (${discount.value}%)` : ''}</dt><dd>−${peso(off)}</dd></div>` : ''}
+        <div class="line-items__row line-items__row--total"><dt>Total</dt><dd>${peso(total)}</dd></div>
         <div class="line-items__row line-items__row--downpayment"><dt>${DOWNPAYMENT_PERCENT}% downpayment to confirm</dt><dd>${peso(required)}</dd></div>
-        <div class="line-items__row"><dt>Balance after this payment</dt><dd>${peso(Math.max(0, estimate.total - draft.deposit))}</dd></div>
+        <div class="line-items__row"><dt>Balance after this payment</dt><dd>${peso(Math.max(0, total - draft.deposit))}</dd></div>
       </dl>
       ${estimate.warnings.map((warning) => html`<p class="form-error">${warning}</p>`)}
       <p class="small ${short ? 'is-due' : 'muted'}">
@@ -97,10 +108,18 @@ function summaryTemplate(state: State, draft: Draft): SafeHTML {
 export function createBookingForm(prefill: BookingPrefill = {}): DrawerContent {
   let draft: Draft | null = null;
   let error = '';
+  const discount = blankDiscount();
+  let canDiscount = false;
+  const activeDiscount = () => (canDiscount && discount.value > 0 ? discount : null);
 
   const refreshSummary = (root: HTMLElement, state: State) => {
     if (!draft) return;
-    render($('[data-slot="summary"]', root), summaryTemplate(state, draft));
+    render($('[data-slot="summary"]', root), summaryTemplate(state, draft, activeDiscount()));
+    const preview = $maybe('[data-slot="discount-preview"]', root);
+    if (preview) {
+      const { estimate, off } = priced(state, draft, activeDiscount());
+      preview.textContent = off ? `Takes ${peso(off)} off the ${peso(estimate.total)} price.` : '';
+    }
     $('[data-slot="error"]', root).textContent = error;
   };
 
@@ -112,6 +131,7 @@ export function createBookingForm(prefill: BookingPrefill = {}): DrawerContent {
       const { state } = ctx;
       draft ??= initialDraft(state, prefill);
       const form = draft;
+      canDiscount = ctx.can('discounts.apply');
 
       return html`
         <form class="booking-form" data-submit="save-booking" novalidate>
@@ -166,7 +186,13 @@ export function createBookingForm(prefill: BookingPrefill = {}): DrawerContent {
             </label>
           </fieldset>
 
-          <div data-slot="summary">${summaryTemplate(state, form)}</div>
+          ${canDiscount ? html`
+            <fieldset class="form-section">
+              <legend class="form-section__title">Discount (optional)</legend>
+              ${discountFields(ctx.staff, discount, quote(state, form).total, 'discount')}
+            </fieldset>` : ''}
+
+          <div data-slot="summary">${summaryTemplate(state, form, activeDiscount())}</div>
 
           <fieldset class="form-section">
             <legend class="form-section__title">Downpayment received</legend>
@@ -199,6 +225,21 @@ export function createBookingForm(prefill: BookingPrefill = {}): DrawerContent {
     },
 
     inputs: {
+      discount: ({ el, ctx, root }) => {
+        const field = asField(el) as HTMLInputElement | HTMLSelectElement;
+        const kindBefore = discount.kind;
+        const formatted = readDiscountField(discount, field);
+        if (formatted !== null && formatted !== field.value) field.value = formatted;
+        if (discount.kind !== kindBefore) {
+          const valueField = $maybe<HTMLInputElement>('[name="discountValue"]', root);
+          if (valueField) valueField.value = discount.value ? String(discount.value) : '';
+          const label = valueField?.closest('.field')?.querySelector('.field__label');
+          if (label) label.textContent = discount.kind === 'percent' ? 'Percent off' : 'Pesos off';
+        }
+        error = '';
+        refreshSummary(root, ctx.state);
+      },
+
       field: ({ el, ctx, root }) => {
         if (!draft) return;
         const field = asField(el);
@@ -235,8 +276,10 @@ export function createBookingForm(prefill: BookingPrefill = {}): DrawerContent {
         const { state } = ctx;
         const guests = draft.adults + draft.kids;
         const availability = checkAvailability(state, draft);
-        const estimate = quote(state, draft);
+        const { estimate, total } = priced(state, draft, activeDiscount());
         const unit = findUnit(state, draft.product);
+        const chosen = activeDiscount();
+        const discountError = chosen ? discountProblem(ctx.staff, chosen, estimate.total) : null;
 
         if (!draft.guestName.trim()) error = 'Enter the guest name.';
         else if (!draft.date) error = 'Pick a date.';
@@ -244,7 +287,9 @@ export function createBookingForm(prefill: BookingPrefill = {}): DrawerContent {
         else if (guests === 0) error = 'Add at least one guest.';
         else if (!availability.ok) error = availability.reason ?? 'Not available.';
         else if (unit && guests > unit.capacityMax) error = `${unit.name} fits up to ${unit.capacityMax} guests.`;
-        else if (draft.deposit > estimate.total) error = `The payment can't be more than the ${peso(estimate.total)} total.`;
+        else if (discountError) error = discountError;
+        else if (!chosen && discount.note.trim() && canDiscount) error = 'Enter the discount amount, or clear the reason.';
+        else if (draft.deposit > total) error = `The payment can't be more than the ${peso(total)} total.`;
         else error = '';
 
         if (error) {
@@ -252,7 +297,7 @@ export function createBookingForm(prefill: BookingPrefill = {}): DrawerContent {
           return;
         }
 
-        const booking = createBooking({ ...draft, mobile: draft.mobile.trim() }, ctx.staff.id);
+        const booking = createBooking({ ...draft, mobile: draft.mobile.trim(), discount: chosen }, ctx.staff.id);
         ctx.toast(booking.status === 'confirmed'
           ? `Booking confirmed with a ${peso(booking.paid)} downpayment`
           : booking.paid

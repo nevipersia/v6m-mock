@@ -4,7 +4,8 @@
 import { update } from './store.js';
 import { addDays, peso } from './format.js';
 import {
-  METHOD_LABELS, depositRequired, downpaymentDue, findBooking, findUnit, quote, sessionFor,
+  METHOD_LABELS, depositRequired, discountAmount, discountProblem, downpaymentDue, findBooking, findStaff, findUnit,
+  quote, sessionFor, type DiscountInput,
 } from './rules.js';
 import { formatReference, referenceProblem } from './qr-payment.js';
 import type {
@@ -108,10 +109,71 @@ export interface NewBooking {
   reference?: string;
   notes?: string;
   inquiryId?: string | null;
+  /** Optional manual discount; checked against the staff member's role. */
+  discount?: DiscountInput | null;
 }
 
 export function createBooking(input: NewBooking, staffId: string): Booking {
   return update((state) => createBookingInState(state, input, staffId));
+}
+
+/** Sets total, downpayment and balance from the pricing and any manual discount. */
+function reprice(state: State, booking: Booking, staffId: string): void {
+  booking.total = booking.pricing.total - (booking.discount?.amount ?? 0);
+  booking.depositRequired = depositRequired(state, booking.product, booking.total);
+  booking.balance = booking.total - booking.paid;
+  if (booking.status === 'hold' && booking.paid > 0 && downpaymentDue(booking) === 0) {
+    booking.status = 'confirmed';
+    logActivity(state, staffId, 'booking.confirmed', booking.id, 'Downpayment met after the price changed');
+  } else if (booking.status === 'confirmed' && downpaymentDue(booking) > 0) {
+    booking.status = 'hold';
+    logActivity(state, staffId, 'booking.unconfirmed', booking.id, `${peso(downpaymentDue(booking))} short of the downpayment after the price changed`);
+  }
+}
+
+/** Records the discount on the booking; the caller has already checked it. */
+function setDiscount(state: State, booking: Booking, input: DiscountInput, staffId: string): void {
+  const amount = discountAmount(booking.pricing.total, input.kind, input.value);
+  booking.discount = {
+    kind: input.kind,
+    value: input.value,
+    amount,
+    note: input.note?.trim() || null,
+    by: staffId,
+    at: demoNow(state),
+  };
+  const what = input.kind === 'percent' ? `${input.value}% (${peso(amount)})` : peso(amount);
+  logActivity(state, staffId, 'booking.discounted', booking.id, booking.discount.note ? `${what} · ${booking.discount.note}` : what);
+  reprice(state, booking, staffId);
+}
+
+export type DiscountResult = { error: string } | { error?: undefined; booking: Booking };
+
+/** Gives or replaces a manual discount on an existing booking. */
+export function applyDiscount(bookingId: string, input: DiscountInput, staffId: string): DiscountResult {
+  return update((state): DiscountResult => {
+    const booking = findBooking(state, bookingId);
+    const staff = findStaff(state, staffId);
+    if (!booking || !staff) return { error: 'This booking no longer exists.' };
+    const problem = discountProblem(staff, input, booking.pricing.total, booking.paid);
+    if (problem) return { error: problem };
+    setDiscount(state, booking, input, staffId);
+    return { booking };
+  });
+}
+
+export function removeDiscount(bookingId: string, staffId: string): DiscountResult {
+  return update((state): DiscountResult => {
+    const booking = findBooking(state, bookingId);
+    const staff = findStaff(state, staffId);
+    if (!booking || !staff) return { error: 'This booking no longer exists.' };
+    if (!staff.permissions.includes('discounts.apply')) return { error: 'Your account cannot change discounts.' };
+    if (!booking.discount) return { booking };
+    booking.discount = null;
+    reprice(state, booking, staffId);
+    logActivity(state, staffId, 'booking.discount_removed', booking.id);
+    return { booking };
+  });
 }
 
 function createBookingInState(state: State, input: NewBooking, staffId: string): Booking {
@@ -154,7 +216,13 @@ function createBookingInState(state: State, input: NewBooking, staffId: string):
     cancelledAt: null,
     cancelReason: null,
     notes: input.notes?.trim() || null,
+    discount: null,
   };
+
+  const staff = findStaff(state, staffId);
+  if (input.discount && staff && !discountProblem(staff, input.discount, booking.pricing.total)) {
+    setDiscount(state, booking, input.discount, staffId);
+  }
 
   state.bookings.push(booking);
   state.bookings.sort((a, b) => (a.date === b.date ? a.startsAt.localeCompare(b.startsAt) : a.date.localeCompare(b.date)));
