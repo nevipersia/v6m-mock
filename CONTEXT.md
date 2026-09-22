@@ -130,7 +130,6 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 - Mock GCash QR payment (`payByQr`, `core/qr-payment.ts`): 13-digit reference, not one repeated
   digit, not already used. The QR is drawn by `core/qr.ts` and is not scannable. Booking-link guests
   pay it after the form; staff can show it from the booking drawer.
-- A booking stays "on hold" until a payment is recorded, then becomes confirmed.
 - Check-in needs a valid-ID tick and collects any balance.
 - Sign-in takes an email and password; demo passwords live in the data in plain text (mock only).
 - V6M Desk is invite only: the owner creates an account and a code, each code works once, and the
