@@ -26,6 +26,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'booking.discounted': 'Discount given',
   'booking.discount_removed': 'Discount removed',
   'booking.unconfirmed': 'Booking back on hold',
+  'booking.updated': 'Booking edited',
   'inquiry.replied': 'Inquiry replied',
   'user.invited': 'User invited',
   'user.joined': 'User joined',

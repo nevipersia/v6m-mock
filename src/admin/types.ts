@@ -26,6 +26,7 @@ export interface DeskContext {
   openBooking: (bookingId: string) => void;
   newBooking: (prefill?: BookingPrefill) => void;
   newBookingLink: () => void;
+  editBooking: (bookingId: string) => void;
 }
 
 /**

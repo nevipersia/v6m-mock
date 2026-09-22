@@ -7,7 +7,7 @@ import { VERIFY_DELAY_MS, paymentCard, type PaymentCardState } from '../../core/
 import { qrPaymentRequest, sampleReference } from '../../core/qr-payment.js';
 import { formatDate, formatDateTime, peso, plural, timeOf } from '../../core/format.js';
 import {
-  DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, discountAmount, discountLabel, downpaymentDue, findBooking, findGuest, findPackage, findStaff, isActive, productLabel,
+  DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, discountAmount, discountLabel, downpaymentDue, findBooking, isEditable, findGuest, findPackage, findStaff, isActive, productLabel,
 } from '../../core/rules.js';
 import type { Booking, PaymentMethod, State } from '../../core/types.js';
 import type { DeskContext, DrawerContent } from '../types.js';
@@ -26,6 +26,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'booking.discounted': 'Discount given',
   'booking.discount_removed': 'Discount removed',
   'booking.unconfirmed': 'Back on hold',
+  'booking.updated': 'Edited',
 };
 
 const CANCEL_REASONS = ['Change of plans', 'Guest request', 'Typhoon or weather', 'Duplicate booking', 'Other'];
@@ -301,9 +302,13 @@ export function createBookingDetail(bookingId: string): DrawerContent {
             <span class="small muted mono">${booking.id}</span>
           </div>
 
-          <button class="btn btn--secondary btn--block" type="button" data-action="download-pdf">
-            ${icon('download')} Download confirmation PDF
-          </button>
+          <div class="detail__tools">
+            ${ctx.can('bookings.write') && isEditable(ctx.state, booking) ? html`
+              <button class="btn btn--secondary" type="button" data-action="edit-booking">Edit booking</button>` : ''}
+            <button class="btn btn--secondary" type="button" data-action="download-pdf">
+              ${icon('download')} Confirmation PDF
+            </button>
+          </div>
           ${actionsSection(ctx, booking)}
           ${facts(ctx.state, booking)}
           ${priceSection(ctx.state, booking)}
@@ -340,6 +345,8 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     },
 
     actions: {
+      'edit-booking': ({ ctx }) => ctx.editBooking(bookingId),
+
       'open-discount': ({ ctx, redraw }) => {
         const booking = findBooking(ctx.state, bookingId);
         const current = booking?.discount;

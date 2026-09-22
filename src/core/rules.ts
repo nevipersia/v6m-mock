@@ -230,6 +230,13 @@ export function discountProblem(staff: Staff, input: DiscountInput, base: number
 export const discountLabel = (discount: ManualDiscount): string =>
   discount.kind === 'percent' ? `Discount (${discount.value}%)` : 'Discount';
 
+/** Bookings the desk can edit: not yet arrived, and not an event or an Airbnb stay. */
+export function isEditable(state: State, booking: Booking): boolean {
+  if (!['hold', 'confirmed'].includes(booking.status)) return false;
+  if (booking.productType === 'event' || booking.eventId) return false;
+  return findUnit(state, booking.product)?.channel !== 'airbnb';
+}
+
 // ---------- Downpayment ----------
 
 /** Every booking needs this share of its total paid before it counts as confirmed. */

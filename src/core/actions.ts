@@ -4,8 +4,8 @@
 import { update } from './store.js';
 import { addDays, peso } from './format.js';
 import {
-  METHOD_LABELS, depositRequired, discountAmount, discountProblem, downpaymentDue, findBooking, findStaff, findUnit,
-  quote, sessionFor, type DiscountInput,
+  METHOD_LABELS, checkAvailability, depositRequired, discountAmount, discountProblem, downpaymentDue, findBooking,
+  findStaff, findUnit, isEditable, productLabel, quote, sessionFor, type DiscountInput,
 } from './rules.js';
 import { formatReference, referenceProblem } from './qr-payment.js';
 import type {
@@ -176,27 +176,42 @@ export function removeDiscount(bookingId: string, staffId: string): DiscountResu
   });
 }
 
-function createBookingInState(state: State, input: NewBooking, staffId: string): Booking {
-  const unit = findUnit(state, input.product);
-  const session = sessionFor(state, input.product);
-  const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, input);
-  const guest = findOrCreateGuest(state, { name: input.guestName, mobile: input.mobile ?? null });
+/** Times, session and type for a product on a date. */
+function schedule(state: State, product: string, date: ISODate) {
+  const unit = findUnit(state, product);
+  const session = sessionFor(state, product);
   const startTime = unit ? unit.checkIn : session.start;
   const endTime = unit ? unit.checkOut : session.end;
   const endsNextDay = Boolean(unit) || endTime < startTime;
-  const endDate = endsNextDay ? addDays(input.date, 1) : input.date;
+  const endDate = endsNextDay ? addDays(date, 1) : date;
+  return {
+    session: session.id,
+    productType: unit ? unit.kind : 'entrance' as const,
+    startsAt: `${date}T${startTime}:00+08:00`,
+    endsAt: `${endDate}T${endTime}:00+08:00`,
+  };
+}
+
+const sortBookings = (state: State): void => {
+  state.bookings.sort((a, b) => (a.date === b.date ? a.startsAt.localeCompare(b.startsAt) : a.date.localeCompare(b.date)));
+};
+
+function createBookingInState(state: State, input: NewBooking, staffId: string): Booking {
+  const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, input);
+  const guest = findOrCreateGuest(state, { name: input.guestName, mobile: input.mobile ?? null });
+  const when = schedule(state, input.product, input.date);
 
   const booking: Booking = {
     id: `BK-${input.date.slice(5, 7)}${input.date.slice(8, 10)}-${pad(nextSequence(state.bookings), 3)}`,
     guestId: guest.id,
     guestName: guest.name,
     product: input.product,
-    productType: unit ? unit.kind : 'entrance',
+    productType: when.productType,
     date: input.date,
     nights: 1,
-    session: session.id,
-    startsAt: `${input.date}T${startTime}:00+08:00`,
-    endsAt: `${endDate}T${endTime}:00+08:00`,
+    session: when.session,
+    startsAt: when.startsAt,
+    endsAt: when.endsAt,
     adults: input.adults,
     kids: input.kids,
     pets: null,
@@ -225,7 +240,7 @@ function createBookingInState(state: State, input: NewBooking, staffId: string):
   }
 
   state.bookings.push(booking);
-  state.bookings.sort((a, b) => (a.date === b.date ? a.startsAt.localeCompare(b.startsAt) : a.date.localeCompare(b.date)));
+  sortBookings(state);
   logActivity(state, staffId, 'booking.created', booking.id, `${booking.guestName} · ${booking.product} · ${booking.date}`);
 
   if (input.deposit > 0) {
@@ -236,6 +251,108 @@ function createBookingInState(state: State, input: NewBooking, staffId: string):
   if (inquiry) Object.assign(inquiry, { status: 'booked', relatedBookingId: booking.id, assignedTo: staffId } satisfies Partial<Inquiry>);
 
   return booking;
+}
+
+export interface BookingEdit {
+  guestName: string;
+  mobile: string;
+  source: BookingSource;
+  product: string;
+  date: ISODate;
+  adults: number;
+  kids: number;
+  notes: string;
+  /** A new discount, null to remove it, or 'keep' to leave the current one as it is. */
+  discount: DiscountInput | null | 'keep';
+}
+
+export type EditResult = { error: string } | { error?: undefined; booking: Booking };
+
+/**
+ * Changes a booking that has not arrived yet. Payments stay; the price,
+ * discount and 50% downpayment are worked out again, so the booking can move
+ * between on hold and confirmed.
+ */
+export function updateBooking(bookingId: string, input: BookingEdit, staffId: string): EditResult {
+  return update((state): EditResult => {
+    const booking = findBooking(state, bookingId);
+    const staff = findStaff(state, staffId);
+    if (!booking || !staff) return { error: 'This booking no longer exists.' };
+    if (!staff.permissions.includes('bookings.write')) return { error: 'Your account cannot edit bookings.' };
+    if (!isEditable(state, booking)) return { error: 'This booking can no longer be edited.' };
+
+    const guests = input.adults + input.kids;
+    const unit = findUnit(state, input.product);
+    const availability = checkAvailability(state, { ...input, excludeId: booking.id });
+    if (!input.guestName.trim()) return { error: 'Enter the guest name.' };
+    if (guests === 0) return { error: 'Add at least one guest.' };
+    if (!availability.ok) return { error: availability.reason ?? 'Not available.' };
+    if (unit && guests > unit.capacityMax) return { error: `${unit.name} fits up to ${unit.capacityMax} guests.` };
+
+    const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, input);
+    const current = booking.discount ?? null;
+    let discount: DiscountInput | null;
+    if (input.discount === 'keep') {
+      discount = current;
+    } else {
+      if (!staff.permissions.includes('discounts.apply')) return { error: 'Your account cannot change discounts.' };
+      discount = input.discount;
+      if (discount) {
+        const problem = discountProblem(staff, discount, pricing.total, booking.paid);
+        if (problem) return { error: problem };
+      }
+    }
+    const off = discount ? discountAmount(pricing.total, discount.kind, discount.value) : 0;
+    if (pricing.total - off < booking.paid) {
+      return { error: `The guest already paid ${peso(booking.paid)}, so the new total can't be less than that.` };
+    }
+
+    const changes: string[] = [];
+    const before = { product: booking.product, date: booking.date, guests: booking.adults + booking.kids, total: booking.total };
+
+    const guest = findOrCreateGuest(state, { name: input.guestName, mobile: input.mobile.trim() || null });
+    if (input.mobile.trim()) guest.mobile = input.mobile.trim();
+    if (guest.id !== booking.guestId) changes.push(`guest ${booking.guestName} → ${guest.name}`);
+
+    Object.assign(booking, {
+      guestId: guest.id,
+      guestName: guest.name,
+      source: input.source,
+      product: input.product,
+      date: input.date,
+      adults: input.adults,
+      kids: input.kids,
+      notes: input.notes.trim() || null,
+      pricing,
+      ...schedule(state, input.product, input.date),
+    } satisfies Partial<Booking>);
+
+    if (input.discount === 'keep') {
+      if (current) booking.discount = { ...current, amount: discountAmount(pricing.total, current.kind, current.value) };
+    } else if (!discount) {
+      if (current) changes.push('discount removed');
+      booking.discount = null;
+    } else {
+      const same = current && current.kind === discount.kind && current.value === discount.value && (current.note ?? '') === (discount.note?.trim() ?? '');
+      booking.discount = same && current
+        ? { ...current, amount: off }
+        : { kind: discount.kind, value: discount.value, amount: off, note: discount.note?.trim() || null, by: staffId, at: demoNow(state) };
+      if (!same) {
+        const what = discount.kind === 'percent' ? `${discount.value}% (${peso(off)})` : peso(off);
+        logActivity(state, staffId, 'booking.discounted', booking.id, booking.discount.note ? `${what} · ${booking.discount.note}` : what);
+      }
+    }
+
+    reprice(state, booking, staffId);
+    sortBookings(state);
+
+    if (before.product !== booking.product) changes.push(`${productLabel(state, before.product)} → ${productLabel(state, booking.product)}`);
+    if (before.date !== booking.date) changes.push(`${before.date} → ${booking.date}`);
+    if (before.guests !== booking.adults + booking.kids) changes.push(`${before.guests} → ${booking.adults + booking.kids} guests`);
+    if (before.total !== booking.total) changes.push(`total ${peso(before.total)} → ${peso(booking.total)}`);
+    logActivity(state, staffId, 'booking.updated', booking.id, changes.join(' · ') || 'Details updated');
+    return { booking };
+  });
 }
 
 export function recordPayment(bookingId: string, payment: PaymentInput, staffId: string): Booking {

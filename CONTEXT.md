@@ -127,6 +127,10 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 - Rooms and cottages add per-head overnight entrance; the Airbnb villa does not.
 - Every booking needs a 50% downpayment (`depositRequired`, rounded up to the peso; Airbnb in full)
   before it is confirmed; less stays on hold. `applyPayment` in `core/actions.ts` enforces it.
+- Editing (`updateBooking` in `core/actions.ts`, form `booking-form.ts` with `editId`): hold or
+  confirmed bookings only (`isEditable`), not events or Airbnb. Re-checks availability excluding the
+  booking itself, re-quotes, keeps payments, re-prices. An unchanged discount is kept as is, so a
+  manager can edit a booking an owner discounted without a note.
 - Manual discounts (`applyDiscount` / `removeDiscount`, rules in `core/rules.ts`): permission
   `discounts.apply` (owner and manager by default). Non-owners must give a note; owners need not.
   Stored as `booking.discount`; `booking.total` = `pricing.total` − discount, and `reprice()` moves

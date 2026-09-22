@@ -58,10 +58,19 @@ it counts as confirmed. Anything less keeps it **on hold**, and the desk shows h
 short ("₱750 to confirm"). Staff can record the downpayment in the new booking form or on the booking,
 or collect it by **GCash QR** from the booking drawer.
 
+## Editing a booking
+
+Open a booking and click **Edit booking** to change the guest, mobile, source, booking type, date,
+guests, notes or discount. It works for bookings on hold or confirmed (not checked in, checked out,
+cancelled, events or Airbnb stays). Payments stay; the availability, price and 50% downpayment are
+worked out again, so an edit can confirm a booking or put it back on hold, and the total can't drop
+below what was already paid. Each edit is written to the booking's activity log.
+
 ## Discounts
 
-Owners and managers can give a discount by hand, as pesos off or a percentage, when creating a
-booking or later from the booking drawer (**Give a discount**). Managers must write a reason; owners
+Owners and managers can give a discount by hand, as pesos off or a percentage: when creating a
+booking, when editing one (**Edit booking** in the booking drawer), or with **Give a discount** in the
+drawer. Managers must write a reason; owners
 may leave it blank. The reason, who gave it and when show on the booking, in its activity log and on
 the confirmation PDF.
 

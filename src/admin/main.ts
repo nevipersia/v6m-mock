@@ -46,6 +46,7 @@ function buildContext(state: State, staff: Staff): DeskContext {
     openBooking: (bookingId) => openDrawer(createBookingDetail(bookingId), ctx),
     newBooking: (prefill = {}) => openDrawer(createBookingForm(prefill), ctx),
     newBookingLink: () => openDrawer(createBookingLinkPanel(), ctx),
+    editBooking: (bookingId) => openDrawer(createBookingForm({}, { editId: bookingId }), ctx),
   };
   return ctx;
 }
