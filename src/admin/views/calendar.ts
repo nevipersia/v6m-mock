@@ -273,7 +273,7 @@ export function render(ctx: DeskContext): SafeHTML {
         <li><span class="legend__swatch legend__swatch--cottage"></span>Cottages</li>
         <li><span class="legend__swatch legend__swatch--villa"></span>Villa (Airbnb)</li>
         <li><span class="legend__swatch legend__swatch--event"></span>Events</li>
-        <li><span class="legend__swatch legend__swatch--hold"></span>On hold, no deposit</li>
+        <li><span class="legend__swatch legend__swatch--hold"></span>On hold, downpayment due</li>
         <li><span class="legend__swatch legend__swatch--done"></span>Checked out</li>
       </ul>`}`;
 }

@@ -1,14 +1,17 @@
-// Single-use booking page. A staff member sends the link; the guest fills this
-// in once and the booking appears on the V6M Desk calendar.
+// Single-use booking page. A staff member sends the link; the guest fills it
+// in once, pays the 50% downpayment by GCash QR, and the booking appears on
+// the V6M Desk calendar (on hold until the downpayment is verified).
 
-import { bookingLinkProblem, findBookingLink, useBookingLink } from '../core/actions.js';
-import { $, on, render } from '../core/dom.js';
+import { bookingLinkStage, payByQr, useBookingLink } from '../core/actions.js';
+import { $, $maybe, on, render } from '../core/dom.js';
 import { DEFAULT_BOOKING_PAGE, loadBookingPage, readableInk } from '../core/booking-page.js';
 import { isPHMobile, parseDigits } from '../core/format.js';
-import { checkAvailability, findUnit } from '../core/rules.js';
-import { loadStore } from '../core/store.js';
-import type { BookingLink, BookingPageSettings, State } from '../core/types.js';
-import { bookableProducts, doneScreen, formScreen, problemScreen, summary, type Draft } from './screens.js';
+import { VERIFY_DELAY_MS, type PaymentCardState } from '../core/payment-card.js';
+import { qrPaymentRequest, sampleReference } from '../core/qr-payment.js';
+import { checkAvailability, findBooking, findUnit } from '../core/rules.js';
+import { loadStore, requireState } from '../core/store.js';
+import type { Booking, BookingLink, BookingPageSettings, State } from '../core/types.js';
+import { bookableProducts, doneScreen, formScreen, payScreen, problemScreen, summary, type Draft } from './screens.js';
 
 const app = $('#app');
 const code = new URLSearchParams(window.location.search).get('code') ?? '';
@@ -17,6 +20,10 @@ const draft: Draft = {
   guestName: '', mobile: '', product: 'daytour', date: '', adults: 2, kids: 0, notes: '',
 };
 let error = '';
+const card: PaymentCardState = { reference: '', error: '', checking: false };
+
+type Screen = { name: 'form'; link: BookingLink } | { name: 'pay'; bookingId: string } | { name: 'other' };
+let screen: Screen = { name: 'other' };
 
 function applyTheme(page: BookingPageSettings): void {
   const { style } = document.body;
@@ -39,8 +46,28 @@ function validate(state: State): string {
   return '';
 }
 
-function bindForm(state: State, page: BookingPageSettings, link: BookingLink): void {
+function showPay(page: BookingPageSettings, booking: Booking): void {
+  const request = qrPaymentRequest(booking);
+  if (!request) {
+    render(app, doneScreen(requireState(), page, booking));
+    screen = { name: 'other' };
+    return;
+  }
+  screen = { name: 'pay', bookingId: booking.id };
+  render(app, payScreen(page, booking, request, card));
+  window.scrollTo({ top: 0 });
+}
+
+function bind(page: BookingPageSettings): void {
   on<HTMLInputElement>(app, 'input', '[data-input]', (_event, field) => {
+    if (field.name === 'reference') {
+      card.reference = field.value;
+      card.error = '';
+      const slot = $maybe('[data-slot="pay-error"]', app);
+      if (slot) slot.textContent = '';
+      return;
+    }
+    if (screen.name !== 'form') return;
     if (field.name === 'adults' || field.name === 'kids') {
       draft[field.name] = parseDigits(field.value);
       const formatted = String(parseDigits(field.value) || '');
@@ -49,24 +76,58 @@ function bindForm(state: State, page: BookingPageSettings, link: BookingLink): v
       draft[field.name] = field.value;
     }
     error = '';
-    render($('[data-slot="summary"]', app), summary(state, page, draft));
+    render($('[data-slot="summary"]', app), summary(requireState(), page, draft));
     $('[data-slot="error"]', app).textContent = '';
   });
 
   on<HTMLFormElement>(app, 'submit', 'form[data-form]', (event) => {
     event.preventDefault();
-    error = validate(state);
+    if (screen.name !== 'form') return;
+    error = validate(requireState());
     if (error) {
       $('[data-slot="error"]', app).textContent = error;
       return;
     }
-
-    const result = useBookingLink(link.code, draft);
+    const result = useBookingLink(screen.link.code, draft);
     if (result.error !== undefined) {
       render(app, problemScreen(page, result.error));
       return;
     }
-    render(app, doneScreen(state, page, result.booking));
+    showPay(page, result.booking);
+  });
+
+  on<HTMLFormElement>(app, 'submit', 'form[data-pay-form]', (event) => {
+    event.preventDefault();
+    if (screen.name !== 'pay' || card.checking) return;
+    const { bookingId } = screen;
+    const booking = findBooking(requireState(), bookingId);
+    if (!booking) return;
+
+    card.checking = true;
+    card.error = '';
+    showPay(page, booking);
+    // Mock verification: pretend to check the reference with GCash.
+    setTimeout(() => {
+      card.checking = false;
+      const result = payByQr(bookingId, card.reference, null);
+      if (result.error !== undefined) {
+        card.error = result.error;
+        const current = findBooking(requireState(), bookingId);
+        if (current) showPay(page, current);
+        return;
+      }
+      screen = { name: 'other' };
+      render(app, doneScreen(requireState(), page, result.booking, result.payment));
+      window.scrollTo({ top: 0 });
+    }, VERIFY_DELAY_MS);
+  });
+
+  on(app, 'click', '[data-action="simulate-payment"]', () => {
+    if (screen.name !== 'pay') return;
+    card.reference = sampleReference(requireState(), `${screen.bookingId}|${Date.now()}`);
+    card.error = '';
+    const input = $maybe<HTMLInputElement>('[name="reference"]', app);
+    if (input) input.value = card.reference;
   });
 }
 
@@ -82,21 +143,26 @@ async function start(): Promise<void> {
     return;
   }
 
-  const link = findBookingLink(state, code);
-  const problem = bookingLinkProblem(state, link);
-  if (problem || !link) {
-    render(app, problemScreen(page, problem ?? 'This booking link is not valid.'));
+  bind(page);
+  const stage = bookingLinkStage(state, code);
+  if (stage.stage === 'problem') {
+    render(app, problemScreen(page, stage.message));
+    return;
+  }
+  if (stage.stage === 'pay') {
+    showPay(page, stage.booking);
     return;
   }
 
+  const { link } = stage;
   const offered = bookableProducts(state, page).map((option) => option.value);
   draft.date = link.date ?? state.meta.asOf;
   draft.product = link.product && offered.includes(link.product) ? link.product : offered[0] ?? 'daytour';
   const unit = findUnit(state, draft.product);
   if (unit && unit.capacityMin > 1) draft.adults = unit.capacityMin;
 
+  screen = { name: 'form', link };
   render(app, formScreen(state, page, link, draft, error));
-  bindForm(state, page, link);
 }
 
 void start();

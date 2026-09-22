@@ -81,12 +81,15 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     rules.ts                Availability, pricing, lookups, labels
     actions.ts              Every state change (bookings, payments, invites, links…)
     booking-page.ts         Loads and validates booking-page.json
+    qr-payment.ts           Mock GCash QR payment: request, check code, reference checks
+    qr.ts                   Draws the QR-style code as SVG (not scannable)
+    payment-card.ts         The QR payment card shared by both pages
     format.ts               Pesos, dates, times, digit grouping, PH mobile check
     pdf.ts                  Minimal PDF writer, no dependencies
     dom.ts                  Safe html`` templates and event delegation
   book/
     main.ts                 Booking page: load, validate, submit
-    screens.ts              Form, thank-you and problem screens
+    screens.ts              Form, downpayment, thank-you and problem screens
   admin/
     main.ts                 Sign-in, hash routing, event dispatch, focus restore
     types.ts                DeskContext, view and drawer contracts
@@ -122,8 +125,12 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   resort that day.
 - Each pool session caps at 120 guests — a placeholder until the owner confirms.
 - Rooms and cottages add per-head overnight entrance; the Airbnb villa does not.
+- Every booking needs a 50% downpayment (`depositRequired`, rounded up to the peso; Airbnb in full)
+  before it is confirmed; less stays on hold. `applyPayment` in `core/actions.ts` enforces it.
+- Mock GCash QR payment (`payByQr`, `core/qr-payment.ts`): 13-digit reference, not one repeated
+  digit, not already used. The QR is drawn by `core/qr.ts` and is not scannable. Booking-link guests
+  pay it after the form; staff can show it from the booking drawer.
 - A booking stays "on hold" until a payment is recorded, then becomes confirmed.
-- Deposits: 50% rooms, cottages and overnight; 30% day tours; 40% events; Airbnb paid in full.
 - Check-in needs a valid-ID tick and collects any balance.
 - Sign-in takes an email and password; demo passwords live in the data in plain text (mock only).
 - V6M Desk is invite only: the owner creates an account and a code, each code works once, and the
@@ -165,7 +172,7 @@ Everything except the rates and the resort's own details is fictional: guests, s
 
 1. Are the 2026 rates above still correct?
 2. Real maximum pool capacity per session?
-3. Required deposit percentage, and the cancellation or rebooking policy?
+3. Confirm the 50% downpayment for every booking type, and the cancellation or rebooking policy?
 4. What do the event packages include and cost?
 5. Does the on-site restaurant need orders linked to bookings?
 6. How many staff, and who may give discounts?

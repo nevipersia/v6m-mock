@@ -4,10 +4,11 @@
 import { update } from './store.js';
 import { addDays, peso } from './format.js';
 import {
-  METHOD_LABELS, depositRequired, findBooking, findUnit, quote, sessionFor,
+  METHOD_LABELS, depositRequired, downpaymentDue, findBooking, findUnit, quote, sessionFor,
 } from './rules.js';
+import { formatReference, referenceProblem } from './qr-payment.js';
 import type {
-  Booking, BookingLink, BookingSource, Guest, ISODate, Inquiry, Invite, PaymentMethod, Permission, Role,
+  Booking, BookingLink, BookingSource, Guest, ISODate, Inquiry, Invite, Payment, PaymentMethod, Permission, Role,
   Staff, StaffStatus, State, Timestamp,
 } from './types.js';
 
@@ -51,11 +52,16 @@ interface PaymentInput {
   amount: number;
   method: PaymentMethod;
   reference?: string | null;
+  via?: 'desk' | 'qr';
 }
 
-function applyPayment(state: State, booking: Booking, { amount, method, reference }: PaymentInput, staffId: string): void {
-  const type = booking.paid === 0 ? (amount >= booking.total ? 'full' : 'deposit') : 'balance';
-  state.payments.push({
+/**
+ * Records a payment. A booking on hold only becomes confirmed once the 50%
+ * downpayment is met; anything less stays on hold as a partial payment.
+ */
+function applyPayment(state: State, booking: Booking, { amount, method, reference, via = 'desk' }: PaymentInput, staffId: string | null): Payment {
+  const type = booking.paid === 0 && amount >= booking.total ? 'full' : booking.paid < booking.depositRequired ? 'deposit' : 'balance';
+  const payment: Payment = {
     id: nextId(state.payments, 'PY'),
     bookingId: booking.id,
     amount,
@@ -65,11 +71,17 @@ function applyPayment(state: State, booking: Booking, { amount, method, referenc
     proofAttached: method === 'gcash' || method === 'bank_transfer',
     receivedAt: demoNow(state),
     receivedBy: staffId,
-  });
+    via,
+  };
+  state.payments.push(payment);
   booking.paid += amount;
   booking.balance = booking.total - booking.paid;
-  if (booking.status === 'hold') booking.status = 'confirmed';
-  logActivity(state, staffId, 'payment.recorded', booking.id, `${peso(amount)} ${METHOD_LABELS[method]} (${type})`);
+  const confirmed = booking.status === 'hold' && downpaymentDue(booking) === 0;
+  if (confirmed) booking.status = 'confirmed';
+  const how = via === 'qr' ? 'GCash QR, verified' : METHOD_LABELS[method];
+  logActivity(state, staffId, 'payment.recorded', booking.id, `${peso(amount)} ${how} (${type})`);
+  if (confirmed) logActivity(state, staffId, 'booking.confirmed', booking.id, 'Downpayment met');
+  return payment;
 }
 
 /** Short, readable, single-use code: V6M-4KQ7RX */
@@ -163,6 +175,27 @@ export function recordPayment(bookingId: string, payment: PaymentInput, staffId:
     const booking = must(findBooking(state, bookingId), `Booking ${bookingId}`);
     applyPayment(state, booking, payment, staffId);
     return booking;
+  });
+}
+
+export type QrPaymentResult = { error: string } | { error?: undefined; booking: Booking; payment: Payment };
+
+/**
+ * Mock GCash QR payment: the guest scans the booking's payment QR, pays the
+ * downpayment still due, and types the reference number. Verification is
+ * simulated (see referenceProblem); nothing is charged.
+ * @param staffId the desk account that showed the QR, or null when the guest paid from a booking link
+ */
+export function payByQr(bookingId: string, reference: string, staffId: string | null): QrPaymentResult {
+  return update((state): QrPaymentResult => {
+    const booking = findBooking(state, bookingId);
+    if (!booking) return { error: 'This booking no longer exists.' };
+    const amount = downpaymentDue(booking);
+    if (amount === 0) return { error: 'The downpayment for this booking is already paid.' };
+    const problem = referenceProblem(state, reference);
+    if (problem) return { error: problem };
+    const payment = applyPayment(state, booking, { amount, method: 'gcash', reference: formatReference(reference), via: 'qr' }, staffId);
+    return { booking, payment };
   });
 }
 
@@ -339,6 +372,26 @@ export function bookingLinkProblem(state: State, link: BookingLink | null): stri
   if (link.status === 'cancelled') return 'This booking link was cancelled. Ask the resort for a new one.';
   if (link.expiresAt < state.meta.asOf) return 'This booking link has expired. Ask the resort for a new one.';
   return null;
+}
+
+export type BookingLinkStage =
+  | { stage: 'form'; link: BookingLink }
+  | { stage: 'pay'; link: BookingLink; booking: Booking }
+  | { stage: 'problem'; message: string };
+
+/**
+ * Where a guest opening a link should land: the form, the downpayment step
+ * (the link was used but the booking still owes its 50%), or a problem.
+ */
+export function bookingLinkStage(state: State, code: string | null | undefined): BookingLinkStage {
+  const link = findBookingLink(state, code);
+  if (link?.status === 'used') {
+    const booking = findBooking(state, link.bookingId);
+    if (booking && booking.status === 'hold' && downpaymentDue(booking) > 0) return { stage: 'pay', link, booking };
+  }
+  const problem = bookingLinkProblem(state, link);
+  if (problem || !link) return { stage: 'problem', message: problem ?? 'This booking link is not valid.' };
+  return { stage: 'form', link };
 }
 
 export type GuestBooking = Pick<NewBooking, 'guestName' | 'mobile' | 'product' | 'date' | 'adults' | 'kids' | 'notes'>;

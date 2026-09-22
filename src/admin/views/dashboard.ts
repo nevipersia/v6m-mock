@@ -5,7 +5,7 @@ import { checkOut } from '../../core/actions.js';
 import { html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { addDays, formatDate, formatDateTime, peso, plural, timeOf } from '../../core/format.js';
 import {
-  closingEvent, findSession, findStaff, findUnit, isActive, poolGuests, productLabel,
+  closingEvent, downpaymentDue, findSession, findStaff, findUnit, isActive, poolGuests, productLabel,
 } from '../../core/rules.js';
 import type { Booking, Staff, State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
@@ -22,6 +22,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'booking.checked_out': 'Checked out',
   'booking.cancelled': 'Booking cancelled',
   'payment.recorded': 'Payment recorded',
+  'booking.confirmed': 'Booking confirmed',
   'inquiry.replied': 'Inquiry replied',
   'user.invited': 'User invited',
   'user.joined': 'User joined',
@@ -84,7 +85,7 @@ function attentionItems(ctx: DeskContext): SafeHTML[] {
     <li>
       <button class="attention__item" type="button" data-action="open-booking" data-id="${b.id}">
         ${icon('wallet')}
-        <span><strong>${b.guestName}</strong> has no deposit yet for ${productLabel(state, b.product)} on ${formatDate(b.date)}</span>
+        <span><strong>${b.guestName}</strong> ${b.paid ? `still owes ${peso(downpaymentDue(b))} of the downpayment` : 'has not paid the downpayment'} for ${productLabel(state, b.product)} on ${formatDate(b.date)}</span>
       </button>
     </li>`));
 
@@ -93,7 +94,7 @@ function attentionItems(ctx: DeskContext): SafeHTML[] {
       <li>
         <a class="attention__item" href="#/bookings">
           ${icon('wallet')}
-          <span><strong>${plural(holds.length - MAX_HOLDS_SHOWN, 'more booking')}</strong> on hold without a deposit</span>
+          <span><strong>${plural(holds.length - MAX_HOLDS_SHOWN, 'more booking')}</strong> on hold, downpayment due</span>
         </a>
       </li>`);
   }

@@ -2,7 +2,7 @@
 
 import { createPdf, downloadBlob, pdfPage, type PdfItem, type RGB } from '../../core/pdf.js';
 import { formatDate, formatDateTime, peso, plural, timeOf } from '../../core/format.js';
-import { SOURCE_LABELS, findGuest, findStaff, productLabel } from '../../core/rules.js';
+import { DOWNPAYMENT_PERCENT, SOURCE_LABELS, downpaymentDue, findGuest, findStaff, productLabel } from '../../core/rules.js';
 import type { Booking, State } from '../../core/types.js';
 
 const MARGIN = 56;
@@ -73,6 +73,7 @@ export function bookingPdfBlob(state: State, booking: Booking): Blob {
 
   rule(8);
   row('Total', peso(booking.total), { bold: true });
+  row(`Downpayment (${DOWNPAYMENT_PERCENT}%)`, `${peso(booking.depositRequired)}${downpaymentDue(booking) ? `, ${peso(downpaymentDue(booking))} still due` : ', paid'}`);
   row('Paid', peso(booking.paid));
   row('Balance due', peso(booking.balance), { bold: true });
 

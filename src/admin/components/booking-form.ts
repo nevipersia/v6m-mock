@@ -4,7 +4,7 @@ import { createBooking, type NewBooking } from '../../core/actions.js';
 import { $, html, render, type SafeHTML } from '../../core/dom.js';
 import { formatDigits, isPHMobile, parseDigits, peso } from '../../core/format.js';
 import {
-  METHOD_LABELS, SOURCE_LABELS, checkAvailability, closingEvent, depositRequired, findUnit, quote,
+  DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, checkAvailability, closingEvent, depositRequired, findUnit, quote,
 } from '../../core/rules.js';
 import type { BookingSource, PaymentMethod, State } from '../../core/types.js';
 import { asField, type BookingPrefill, type DrawerContent } from '../types.js';
@@ -60,7 +60,8 @@ function summaryTemplate(state: State, draft: Draft): SafeHTML {
 
   const availability = checkAvailability(state, draft);
   const estimate = quote(state, draft);
-  const suggested = depositRequired(state, draft.product, estimate.total);
+  const required = depositRequired(state, draft.product, estimate.total);
+  const short = draft.deposit > 0 && draft.deposit < required;
 
   return html`
     <div class="quote-box">
@@ -75,12 +76,21 @@ function summaryTemplate(state: State, draft: Draft): SafeHTML {
         ${estimate.promo ? html`
           <div class="line-items__row line-items__row--discount"><dt>${estimate.promo.name} (${estimate.promo.percent}%)</dt><dd>−${peso(estimate.discount)}</dd></div>` : ''}
         <div class="line-items__row line-items__row--total"><dt>Total</dt><dd>${peso(estimate.total)}</dd></div>
-        <div class="line-items__row"><dt>Balance after deposit</dt><dd>${peso(Math.max(0, estimate.total - draft.deposit))}</dd></div>
+        <div class="line-items__row line-items__row--downpayment"><dt>${DOWNPAYMENT_PERCENT}% downpayment to confirm</dt><dd>${peso(required)}</dd></div>
+        <div class="line-items__row"><dt>Balance after this payment</dt><dd>${peso(Math.max(0, estimate.total - draft.deposit))}</dd></div>
       </dl>
       ${estimate.warnings.map((warning) => html`<p class="form-error">${warning}</p>`)}
-      <button class="btn btn--quiet btn--sm" type="button" data-action="use-suggested-deposit" data-amount="${suggested}">
-        Use suggested deposit of ${peso(suggested)}
-      </button>
+      <p class="small ${short ? 'is-due' : 'muted'}">
+        ${draft.deposit >= required
+          ? 'The downpayment is covered, so the booking is saved as confirmed.'
+          : short
+            ? `${peso(required - draft.deposit)} short of the downpayment, so the booking stays on hold.`
+            : 'No payment yet, so the booking is saved on hold.'}
+      </p>
+      ${draft.deposit === required ? '' : html`
+        <button class="btn btn--quiet btn--sm" type="button" data-action="use-suggested-deposit" data-amount="${required}">
+          Use the ${DOWNPAYMENT_PERCENT}% downpayment of ${peso(required)}
+        </button>`}
     </div>`;
 }
 
@@ -159,7 +169,7 @@ export function createBookingForm(prefill: BookingPrefill = {}): DrawerContent {
           <div data-slot="summary">${summaryTemplate(state, form)}</div>
 
           <fieldset class="form-section">
-            <legend class="form-section__title">Deposit received</legend>
+            <legend class="form-section__title">Downpayment received</legend>
             <div class="form-grid">
               <label class="field">
                 <span class="field__label">Amount (₱)</span>
@@ -176,7 +186,7 @@ export function createBookingForm(prefill: BookingPrefill = {}): DrawerContent {
               <span class="field__label">Reference (optional)</span>
               <input class="input" name="reference" data-input="field" value="${form.reference}" placeholder="GCash or bank reference number">
             </label>
-            <p class="small muted">Leave the amount blank to hold the slot without a deposit.</p>
+            <p class="small muted">A booking is confirmed once ${DOWNPAYMENT_PERCENT}% is paid. Leave the amount blank to hold the slot; the guest can pay later by GCash QR from the booking.</p>
           </fieldset>
 
           <p class="form-error" data-slot="error" role="alert">${error}</p>
@@ -234,7 +244,7 @@ export function createBookingForm(prefill: BookingPrefill = {}): DrawerContent {
         else if (guests === 0) error = 'Add at least one guest.';
         else if (!availability.ok) error = availability.reason ?? 'Not available.';
         else if (unit && guests > unit.capacityMax) error = `${unit.name} fits up to ${unit.capacityMax} guests.`;
-        else if (draft.deposit > estimate.total) error = `The deposit can't be more than the ${peso(estimate.total)} total.`;
+        else if (draft.deposit > estimate.total) error = `The payment can't be more than the ${peso(estimate.total)} total.`;
         else error = '';
 
         if (error) {
@@ -243,7 +253,11 @@ export function createBookingForm(prefill: BookingPrefill = {}): DrawerContent {
         }
 
         const booking = createBooking({ ...draft, mobile: draft.mobile.trim() }, ctx.staff.id);
-        ctx.toast(booking.paid ? `Booking saved and confirmed with a ${peso(booking.paid)} deposit` : 'Booking saved on hold until a deposit comes in');
+        ctx.toast(booking.status === 'confirmed'
+          ? `Booking confirmed with a ${peso(booking.paid)} downpayment`
+          : booking.paid
+            ? `Booking on hold: ${peso(booking.depositRequired - booking.paid)} more needed to confirm`
+            : `Booking on hold until the ${DOWNPAYMENT_PERCENT}% downpayment is paid`);
         ctx.openBooking(booking.id);
       },
     },

@@ -66,8 +66,9 @@ export function createBookingLinkPanel(): DrawerContent {
       return html`
         <div class="detail">
           <p class="small muted">
-            Send this to a guest who is ready to book. They fill in their own details once, the link
-            stops working, and the booking lands on your calendar as a hold under your name.
+            Send this to a guest who is ready to book. They fill in their own details once and pay the
+            50% downpayment by GCash QR. The booking lands on your calendar under your name, on hold
+            until the downpayment is verified.
           </p>
 
           ${createdBlock(state)}

@@ -1,15 +1,19 @@
-// Markup for the booking page's three screens: the form, the thank-you and
+// Markup for the booking page's screens: the form, the downpayment QR, the thank-you and
 // the "this link can't be used" message. Wording comes from booking-page.json.
 
 import type { GuestBooking } from '../core/actions.js';
 import { html, type SafeHTML, type TemplateValue } from '../core/dom.js';
 import { formatDate, formatTime, peso, plural } from '../core/format.js';
-import { checkAvailability, findStaff, findUnit, productLabel, quote } from '../core/rules.js';
-import type { Booking, BookingLink, BookingPageSettings, State } from '../core/types.js';
+import { paymentCard, type PaymentCardState } from '../core/payment-card.js';
+import type { QrPaymentRequest } from '../core/qr-payment.js';
+import {
+  DOWNPAYMENT_PERCENT, checkAvailability, depositRequired, findStaff, findUnit, productLabel, quote,
+} from '../core/rules.js';
+import type { Booking, BookingLink, BookingPageSettings, Payment, State } from '../core/types.js';
 
 export type Draft = Required<Pick<GuestBooking, 'guestName' | 'mobile' | 'product' | 'date' | 'adults' | 'kids' | 'notes'>>;
 
-const card = (content: TemplateValue): SafeHTML => html`<section class="book__card">${content}</section>`;
+const panel = (content: TemplateValue): SafeHTML => html`<section class="book__card">${content}</section>`;
 
 function header(page: BookingPageSettings): SafeHTML {
   return html`
@@ -64,6 +68,7 @@ export function summary(state: State, page: BookingPageSettings, draft: Draft): 
         ${estimate.promo ? html`
           <div class="line-items__row line-items__row--discount"><dt>${estimate.promo.name} (${estimate.promo.percent}%)</dt><dd>−${peso(estimate.discount)}</dd></div>` : ''}
         <div class="line-items__row line-items__row--total"><dt>Estimated total</dt><dd>${peso(estimate.total)}</dd></div>
+        <div class="line-items__row"><dt>${DOWNPAYMENT_PERCENT}% downpayment to confirm</dt><dd>${peso(depositRequired(state, draft.product, estimate.total))}</dd></div>
       </dl>
       ${estimate.warnings.map((warning) => html`<p class="form-error">${warning}</p>`)}
     </div>`;
@@ -80,7 +85,7 @@ function houseRules(page: BookingPageSettings): SafeHTML | '' {
 export function problemScreen(page: BookingPageSettings, message: string): SafeHTML {
   return html`
     ${header(page)}
-    ${card(html`
+    ${panel(html`
       <p class="book__problem">${message}</p>
       <p class="small muted">${page.copy.problemHelp}</p>`)}`;
 }
@@ -91,7 +96,7 @@ export function formScreen(state: State, page: BookingPageSettings, link: Bookin
 
   return html`
     ${header(page)}
-    ${card(html`
+    ${panel(html`
       <p class="book__intro">
         ${staff ? `${staff.name} from V6M Resort sent you this link.` : 'V6M Resort sent you this link.'}
         ${link.note ? html`<span class="book__note">“${link.note}”</span>` : ''}
@@ -145,18 +150,39 @@ export function formScreen(state: State, page: BookingPageSettings, link: Bookin
       </form>`)}`;
 }
 
-export function doneScreen(state: State, page: BookingPageSettings, booking: Booking): SafeHTML {
+export function payScreen(page: BookingPageSettings, booking: Booking, request: QrPaymentRequest, card: PaymentCardState): SafeHTML {
+  return html`
+    ${header(page)}
+    ${panel(html`
+      <div class="book__step">
+        <h2 class="book__step-title">${page.copy.payTitle}</h2>
+        <p class="book__intro">${page.copy.payIntro}</p>
+      </div>
+      <dl class="facts">
+        <div class="facts__row"><dt>Reference</dt><dd class="mono">${booking.id}</dd></div>
+        <div class="facts__row"><dt>Estimated total</dt><dd>${peso(booking.total)}</dd></div>
+        ${booking.paid ? html`<div class="facts__row"><dt>Already paid</dt><dd>${peso(booking.paid)}</dd></div>` : ''}
+      </dl>
+      <form class="book__form" data-pay-form novalidate>
+        ${paymentCard(request, card, { partial: booking.paid > 0 })}
+      </form>
+      <p class="small muted">${page.copy.payHelp}</p>`)}`;
+}
+
+export function doneScreen(state: State, page: BookingPageSettings, booking: Booking, payment?: Payment): SafeHTML {
   const unit = findUnit(state, booking.product);
   return html`
     ${header(page)}
-    ${card(html`
+    ${panel(html`
       ${page.copy.thanksScript ? html`<p class="script book__thanks">${page.copy.thanksScript}</p>` : ''}
       <p class="book__intro">${page.copy.thanksText} <strong class="mono">${booking.id}</strong></p>
       <dl class="facts">
         <div class="facts__row"><dt>Booking</dt><dd>${productLabel(state, booking.product)}</dd></div>
         <div class="facts__row"><dt>Date</dt><dd>${formatDate(booking.date, 'long')}</dd></div>
         <div class="facts__row"><dt>Guests</dt><dd>${plural(booking.adults + booking.kids, 'guest')}</dd></div>
-        <div class="facts__row"><dt>Estimated total</dt><dd>${peso(booking.total)}</dd></div>
+        <div class="facts__row"><dt>Total</dt><dd>${peso(booking.total)}</dd></div>
+        <div class="facts__row"><dt>Downpayment paid</dt><dd>${peso(booking.paid)}${payment?.reference ? html`<span class="book__sub mono">GCash ${payment.reference}</span>` : ''}</dd></div>
+        <div class="facts__row"><dt>Balance at check-in</dt><dd>${peso(booking.balance)}</dd></div>
         ${unit ? html`<div class="facts__row"><dt>Check in</dt><dd>${formatTime(unit.checkIn)}</dd></div>` : ''}
       </dl>
       <p class="small muted">${page.copy.doneNote}</p>`)}`;

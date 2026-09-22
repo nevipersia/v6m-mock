@@ -186,3 +186,18 @@
 .book__card .btn--block {
   justify-self: stretch;
 }
+
+.book__step {
+  display: grid;
+  gap: 6px;
+}
+
+.book__step-title {
+  font-size: 22px;
+}
+
+.book__sub {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-muted);
+}

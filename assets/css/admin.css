@@ -1833,3 +1833,21 @@ body.has-drawer {
   margin-left: auto;
   flex-wrap: nowrap;
 }
+
+/* Downpayment */
+
+.line-items__row--downpayment {
+  font-weight: 600;
+}
+
+.line-items__row--downpayment.is-due,
+.quote-box .is-due {
+  color: var(--terra-ink);
+}
+
+.action-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

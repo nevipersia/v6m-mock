@@ -1,11 +1,13 @@
 // Booking detail drawer: summary, price, payments, and the actions staff can
 // take (record payment, check in, check out, cancel).
 
-import { cancelBooking, checkIn, checkOut, recordPayment } from '../../core/actions.js';
+import { cancelBooking, checkIn, checkOut, payByQr, recordPayment } from '../../core/actions.js';
 import { $, $maybe, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
+import { VERIFY_DELAY_MS, paymentCard, type PaymentCardState } from '../../core/payment-card.js';
+import { qrPaymentRequest, sampleReference } from '../../core/qr-payment.js';
 import { formatDate, formatDateTime, peso, plural, timeOf } from '../../core/format.js';
 import {
-  METHOD_LABELS, SOURCE_LABELS, findBooking, findGuest, findPackage, findStaff, isActive, productLabel,
+  DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, downpaymentDue, findBooking, findGuest, findPackage, findStaff, isActive, productLabel,
 } from '../../core/rules.js';
 import type { Booking, PaymentMethod, State } from '../../core/types.js';
 import type { DeskContext, DrawerContent } from '../types.js';
@@ -19,6 +21,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'booking.checked_out': 'Checked out',
   'booking.cancelled': 'Cancelled',
   'payment.recorded': 'Payment recorded',
+  'booking.confirmed': 'Confirmed',
 };
 
 const CANCEL_REASONS = ['Change of plans', 'Guest request', 'Typhoon or weather', 'Duplicate booking', 'Other'];
@@ -71,13 +74,17 @@ function priceSection(booking: Booking): SafeHTML {
             <dt>Promo ${pricing.promoId}</dt><dd>−${peso(pricing.discount)}</dd>
           </div>` : ''}
         <div class="line-items__row line-items__row--total"><dt>Total</dt><dd>${peso(booking.total)}</dd></div>
+        <div class="line-items__row line-items__row--downpayment ${downpaymentDue(booking) && isActive(booking) ? 'is-due' : ''}">
+          <dt>${DOWNPAYMENT_PERCENT}% downpayment</dt>
+          <dd>${peso(booking.depositRequired)}${downpaymentDue(booking) ? '' : ' ✓'}</dd>
+        </div>
         <div class="line-items__row"><dt>Paid</dt><dd>${peso(booking.paid)}</dd></div>
         <div class="line-items__row line-items__row--balance ${booking.balance > 0 && isActive(booking) ? 'is-due' : ''}">
           <dt>Balance</dt><dd>${peso(booking.balance)}</dd>
         </div>
       </dl>
-      ${booking.balance > 0 && booking.paid < booking.depositRequired && isActive(booking)
-        ? html`<p class="small muted">Required deposit: ${peso(booking.depositRequired)}</p>` : ''}
+      ${downpaymentDue(booking) > 0 && isActive(booking)
+        ? html`<p class="small muted">${peso(downpaymentDue(booking))} more confirms this booking. Until then it stays on hold.</p>` : ''}
     </section>`;
 }
 
@@ -91,7 +98,8 @@ function paymentsSection(state: State, booking: Booking): SafeHTML | '' {
         ${payments.map((payment) => html`
           <li class="plain-list__row">
             <span>
-              <strong>${peso(payment.amount)}</strong> ${METHOD_LABELS[payment.method]} · ${payment.type}
+              <strong>${peso(payment.amount)}</strong> ${METHOD_LABELS[payment.method]} · ${payment.type === 'deposit' ? 'downpayment' : payment.type}
+              ${payment.via === 'qr' ? html`<span class="pill pill--success">QR verified</span>` : ''}
               <span class="small muted">${formatDateTime(payment.receivedAt)}${payment.receivedBy ? ` · ${findStaff(state, payment.receivedBy)?.name}` : ''}</span>
             </span>
             ${payment.reference ? html`<span class="small muted mono">${payment.reference}</span>` : ''}
@@ -117,9 +125,34 @@ function activitySection(state: State, booking: Booking): SafeHTML | '' {
 }
 
 export function createBookingDetail(bookingId: string): DrawerContent {
-  const ui: { checkInOpen: boolean; confirmCancel: boolean; errors: { checkIn?: string; payment?: string } } = {
-    checkInOpen: false, confirmCancel: false, errors: {},
+  const ui: {
+    checkInOpen: boolean;
+    confirmCancel: boolean;
+    qrOpen: boolean;
+    card: PaymentCardState;
+    errors: { checkIn?: string; payment?: string };
+  } = {
+    checkInOpen: false, confirmCancel: false, qrOpen: false, card: { reference: '', error: '', checking: false }, errors: {},
   };
+
+  function qrSection(ctx: DeskContext, booking: Booking): SafeHTML | '' {
+    const request = qrPaymentRequest(booking);
+    if (!request || booking.status !== 'hold' || !ctx.can('payments.write') || ui.checkInOpen) return '';
+    if (!ui.qrOpen) {
+      return html`
+        <button class="btn btn--secondary btn--block" type="button" data-action="open-qr">
+          Collect the ${peso(request.amount)} downpayment by GCash QR
+        </button>`;
+    }
+    return html`
+      <form class="action-card" data-submit="verify-qr" novalidate>
+        <div class="action-card__head">
+          <h4 class="action-card__title">Show this to ${booking.guestName}</h4>
+          <button class="btn btn--quiet btn--sm" type="button" data-action="close-qr">Hide</button>
+        </div>
+        ${paymentCard(request, ui.card, { partial: booking.paid > 0 })}
+      </form>`;
+  }
 
   function actionsSection(ctx: DeskContext, booking: Booking): SafeHTML | '' {
     const { state } = ctx;
@@ -155,14 +188,18 @@ export function createBookingDetail(bookingId: string): DrawerContent {
       parts.push(html`<button class="btn btn--primary btn--block" type="button" data-action="check-out">Check out guest</button>`);
     }
 
-    if (isActive(booking) && booking.status !== 'checked_out' && booking.balance > 0 && ctx.can('payments.write') && !ui.checkInOpen) {
+    const qr = qrSection(ctx, booking);
+    if (qr) parts.push(qr);
+
+    if (isActive(booking) && booking.status !== 'checked_out' && booking.balance > 0 && ctx.can('payments.write') && !ui.checkInOpen && !ui.qrOpen) {
+      const suggested = downpaymentDue(booking) || booking.balance;
       parts.push(html`
         <form class="action-card" data-submit="record-payment" novalidate>
           <h4 class="action-card__title">Record a payment</h4>
           <div class="form-grid">
             <label class="field">
               <span class="field__label">Amount (₱)</span>
-              <input class="input" name="amount" type="number" min="1" max="${booking.balance}" step="1" value="${booking.balance}" inputmode="numeric">
+              <input class="input" name="amount" type="number" min="1" max="${booking.balance}" step="1" value="${suggested}" inputmode="numeric">
             </label>
             <label class="field">
               <span class="field__label">Method</span>
@@ -173,6 +210,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
             <span class="field__label">Reference (optional)</span>
             <input class="input" name="reference" placeholder="GCash or bank reference number">
           </label>
+          ${downpaymentDue(booking) ? html`<p class="small muted">${peso(downpaymentDue(booking))} completes the ${DOWNPAYMENT_PERCENT}% downpayment and confirms the booking.</p>` : ''}
           <p class="form-error">${ui.errors.payment}</p>
           <button class="btn btn--secondary" type="submit">Record payment</button>
         </form>`);
@@ -227,7 +265,51 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         </div>`;
     },
 
+    inputs: {
+      reference: ({ el }) => {
+        ui.card.reference = (el as HTMLInputElement).value;
+        ui.card.error = '';
+      },
+    },
+
     actions: {
+      'open-qr': ({ redraw }) => {
+        ui.qrOpen = true;
+        ui.card = { reference: '', error: '', checking: false };
+        redraw();
+      },
+
+      'close-qr': ({ redraw }) => {
+        ui.qrOpen = false;
+        redraw();
+      },
+
+      'simulate-payment': ({ ctx, root }) => {
+        ui.card.reference = sampleReference(ctx.state, `${bookingId}|${Date.now()}`);
+        ui.card.error = '';
+        const input = $maybe<HTMLInputElement>('[name="reference"]', root);
+        if (input) input.value = ui.card.reference;
+      },
+
+      'verify-qr': ({ ctx, redraw }) => {
+        if (ui.card.checking) return;
+        ui.card.checking = true;
+        ui.card.error = '';
+        redraw();
+        // Mock verification: pretend to check the reference with GCash.
+        setTimeout(() => {
+          ui.card.checking = false;
+          const result = payByQr(bookingId, ui.card.reference, ctx.staff.id);
+          if (result.error !== undefined) {
+            ui.card.error = result.error;
+            redraw();
+            return;
+          }
+          ui.qrOpen = false;
+          ctx.toast(`${peso(result.payment.amount)} verified by GCash QR${result.booking.status === 'confirmed' ? ' · booking confirmed' : ''}`);
+        }, VERIFY_DELAY_MS);
+      },
+
       'download-pdf': ({ ctx }) => {
         const booking = findBooking(ctx.state, bookingId);
         if (!booking) return;

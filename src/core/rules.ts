@@ -188,9 +188,19 @@ export function quote(state: State, { product, date, adults = 0, kids = 0, night
   return { lines, subtotal, promoId: promo?.id ?? null, promo, discount, total: subtotal - discount, warnings };
 }
 
+// ---------- Downpayment ----------
+
+/** Every booking needs this share of its total paid before it counts as confirmed. */
+export const DOWNPAYMENT_RATE = 0.5;
+export const DOWNPAYMENT_PERCENT = Math.round(DOWNPAYMENT_RATE * 100);
+
+/** The required downpayment: 50% of the total rounded up to the peso, or the full total for Airbnb. */
 export function depositRequired(state: State, product: string, total: number): number {
-  const roundTo100 = (amount: number) => Math.round(amount / 100) * 100;
   if (findUnit(state, product)?.channel === 'airbnb') return total;
-  if (product === 'daytour') return roundTo100(total * 0.3);
-  return roundTo100(total * 0.5);
+  return Math.ceil(total * DOWNPAYMENT_RATE);
 }
+
+/** What is still needed to reach the downpayment; 0 once it is met. */
+export const downpaymentDue = (booking: Booking): number => Math.max(0, booking.depositRequired - booking.paid);
+
+export const hasDownpayment = (booking: Booking): boolean => downpaymentDue(booking) === 0;

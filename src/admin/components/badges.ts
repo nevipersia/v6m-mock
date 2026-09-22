@@ -2,7 +2,7 @@
 
 import { html, type SafeHTML } from '../../core/dom.js';
 import { initials, peso } from '../../core/format.js';
-import { STAGE_LABELS, STATUS_LABELS, isActive, productKind } from '../../core/rules.js';
+import { STAGE_LABELS, STATUS_LABELS, downpaymentDue, isActive, productKind } from '../../core/rules.js';
 import type { Booking, BookingStatus, EventStage, State } from '../../core/types.js';
 
 export type Tone = 'warning' | 'info' | 'success' | 'neutral' | 'danger';
@@ -31,6 +31,7 @@ export function paymentPill(booking: Booking): SafeHTML | '' {
   if (!isActive(booking)) return '';
   if (booking.balance <= 0) return html`<span class="pill pill--success">Paid</span>`;
   if (booking.paid === 0) return html`<span class="pill pill--danger">Unpaid</span>`;
+  if (downpaymentDue(booking) > 0) return html`<span class="pill pill--danger" title="Short of the 50% downpayment">${peso(downpaymentDue(booking))} to confirm</span>`;
   return html`<span class="pill pill--warning">${peso(booking.balance)} due</span>`;
 }
 

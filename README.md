@@ -51,11 +51,30 @@ single-use code and picks their own password.
 The owner can invite more accounts, tick or untick individual permissions, suspend someone, or revoke
 an invite before it is used. Each invite code works once.
 
+## The 50% downpayment
+
+Every booking needs 50% of its total paid (rounded up to the peso; Airbnb stays paid in full) before
+it counts as confirmed. Anything less keeps it **on hold**, and the desk shows how much is still
+short ("₱750 to confirm"). Staff can record the downpayment in the new booking form or on the booking,
+or collect it by **GCash QR** from the booking drawer.
+
+## Paying by QR (mock)
+
+The payment QR shows the amount due, the booking and a check code. The guest "pays" and types the
+13-digit GCash reference from their receipt; the app then pretends to check it with GCash and, if it
+passes, records the payment and confirms the booking. **It is a mock:** the QR follows a real QR's
+layout but cannot be scanned, and nothing is charged. Verification refuses references that are not
+13 digits, are one repeated digit, or were already used. **Simulate a GCash payment** fills in a
+test reference. The rules live in `src/core/qr-payment.ts`; swap them for the payment provider's API in
+a real build.
+
 ## Sending a booking link
 
 From the dashboard or the bookings page, **Send booking link** creates a single-use URL. Give it to a
-guest, they fill in their own details once, and the booking appears on the calendar as a hold under
-the staff member who sent it. The link then stops working.
+guest: they fill in their own details once, then pay the 50% downpayment by GCash QR. The booking
+appears on the calendar under the staff member who sent it, on hold until the downpayment is
+verified. If the guest leaves before paying, opening the link again goes straight to the payment step;
+once paid, the link stops working.
 
 Booking links live in this browser's storage, so a link only opens on the same browser in this mock.
 
@@ -89,12 +108,15 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     rules.ts                Availability, pricing, lookups, labels
     actions.ts              Every state change (bookings, payments, invites, links…)
     booking-page.ts         Loads and validates booking-page.json
+    qr-payment.ts           Mock GCash QR payment: request, check code, reference checks
+    qr.ts                   Draws the QR-style code as SVG (not scannable)
+    payment-card.ts         The QR payment card shared by both pages
     format.ts               Pesos, dates, times, digit grouping, PH mobile check
     pdf.ts                  Minimal PDF writer, no dependencies
     dom.ts                  Safe html`` templates and event delegation
   book/
     main.ts                 Booking page: load, validate, submit
-    screens.ts              Form, thank-you and problem screens
+    screens.ts              Form, downpayment, thank-you and problem screens
   admin/
     main.ts                 Sign-in, hash routing, event dispatch, focus restore
     types.ts                DeskContext, view and drawer contracts

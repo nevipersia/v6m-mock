@@ -8,13 +8,13 @@
     },
     "timezone": "Asia/Manila",
     "currency": "PHP",
-    "seed": 665709760,
+    "seed": 665709761,
     "rules": [
       "A unit holds one booking per night; exclusive events that are reserved, paid or done close the resort for the day.",
       "Each pool session caps at 120 guests (placeholder until the owner confirms).",
       "Rooms and cottages add per-head overnight entrance; the Airbnb villa does not.",
-      "A booking stays on hold until a payment is recorded; checked-out bookings have zero balance.",
-      "Deposits: 50% rooms, cottages and overnight; 30% day tours; 40% events; Airbnb paid in full.",
+      "A booking stays on hold until at least 50% of the total is paid; checked-out bookings have zero balance.",
+      "Downpayment: 50% of the total for every booking, rounded up to the peso; Airbnb is paid in full. Guests on a booking link pay it by GCash QR.",
       "Booking links are single use: a staff member sends one, the guest fills it in, and the booking lands on the calendar.",
       "Rates come from public listings; promo PR-BTS and all event packages are invented for testing.",
       "V6M Desk signs in with an email and password. Demo passwords sit in this file in plain text because it is a mock; a real build would never store them this way.",
@@ -618,7 +618,7 @@
         "total": 300
       },
       "total": 300,
-      "depositRequired": 100,
+      "depositRequired": 150,
       "paid": 300,
       "balance": 0,
       "idVerified": true,
@@ -668,7 +668,7 @@
         "total": 1845
       },
       "total": 1845,
-      "depositRequired": 600,
+      "depositRequired": 923,
       "paid": 1845,
       "balance": 0,
       "idVerified": true,
@@ -762,7 +762,7 @@
         "total": 3300
       },
       "total": 3300,
-      "depositRequired": 1700,
+      "depositRequired": 1650,
       "paid": 3300,
       "balance": 0,
       "idVerified": true,
@@ -806,7 +806,7 @@
         "total": 600
       },
       "total": 600,
-      "depositRequired": 200,
+      "depositRequired": 300,
       "paid": 600,
       "balance": 0,
       "idVerified": true,
@@ -856,7 +856,7 @@
         "total": 1575
       },
       "total": 1575,
-      "depositRequired": 500,
+      "depositRequired": 788,
       "paid": 1575,
       "balance": 0,
       "idVerified": true,
@@ -906,7 +906,7 @@
         "total": 1350
       },
       "total": 1350,
-      "depositRequired": 700,
+      "depositRequired": 675,
       "paid": 1350,
       "balance": 0,
       "idVerified": true,
@@ -994,7 +994,7 @@
         "total": 2700
       },
       "total": 2700,
-      "depositRequired": 800,
+      "depositRequired": 1350,
       "paid": 0,
       "balance": 2700,
       "idVerified": false,
@@ -1044,9 +1044,9 @@
         "total": 1200
       },
       "total": 1200,
-      "depositRequired": 400,
-      "paid": 400,
-      "balance": 800,
+      "depositRequired": 600,
+      "paid": 600,
+      "balance": 600,
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-10T14:22:00+08:00",
@@ -1072,7 +1072,7 @@
       "kids": 2,
       "pets": null,
       "source": "messenger",
-      "status": "confirmed",
+      "status": "hold",
       "pricing": {
         "lines": [
           {
@@ -1094,7 +1094,7 @@
         "total": 800
       },
       "total": 800,
-      "depositRequired": 200,
+      "depositRequired": 400,
       "paid": 200,
       "balance": 600,
       "idVerified": false,
@@ -1144,7 +1144,7 @@
         "total": 550
       },
       "total": 550,
-      "depositRequired": 200,
+      "depositRequired": 275,
       "paid": 0,
       "balance": 550,
       "idVerified": false,
@@ -1172,7 +1172,7 @@
       "kids": 7,
       "pets": null,
       "source": "instagram",
-      "status": "confirmed",
+      "status": "hold",
       "pricing": {
         "lines": [
           {
@@ -1194,7 +1194,7 @@
         "total": 2650
       },
       "total": 2650,
-      "depositRequired": 800,
+      "depositRequired": 1325,
       "paid": 800,
       "balance": 1850,
       "idVerified": false,
@@ -1250,7 +1250,7 @@
         "total": 3450
       },
       "total": 3450,
-      "depositRequired": 1700,
+      "depositRequired": 1725,
       "paid": 0,
       "balance": 3450,
       "idVerified": false,
@@ -1356,7 +1356,7 @@
         "total": 3900
       },
       "total": 3900,
-      "depositRequired": 2000,
+      "depositRequired": 1950,
       "paid": 2000,
       "balance": 1900,
       "idVerified": false,
@@ -1560,7 +1560,7 @@
         "total": 1850
       },
       "total": 1850,
-      "depositRequired": 900,
+      "depositRequired": 925,
       "paid": 0,
       "balance": 1850,
       "idVerified": false,
@@ -1610,7 +1610,7 @@
         "total": 1350
       },
       "total": 1350,
-      "depositRequired": 700,
+      "depositRequired": 675,
       "paid": 700,
       "balance": 650,
       "idVerified": false,
@@ -1654,9 +1654,9 @@
         "total": 1350
       },
       "total": 1350,
-      "depositRequired": 400,
-      "paid": 400,
-      "balance": 950,
+      "depositRequired": 675,
+      "paid": 700,
+      "balance": 650,
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-08-30T21:01:00+08:00",
@@ -1682,7 +1682,7 @@
       "kids": 4,
       "pets": null,
       "source": "phone",
-      "status": "confirmed",
+      "status": "hold",
       "pricing": {
         "lines": [
           {
@@ -1704,7 +1704,7 @@
         "total": 2800
       },
       "total": 2800,
-      "depositRequired": 800,
+      "depositRequired": 1400,
       "paid": 800,
       "balance": 2000,
       "idVerified": false,
@@ -1748,7 +1748,7 @@
         "total": 450
       },
       "total": 450,
-      "depositRequired": 100,
+      "depositRequired": 225,
       "paid": 0,
       "balance": 450,
       "idVerified": false,
@@ -1798,7 +1798,7 @@
         "total": 2900
       },
       "total": 2900,
-      "depositRequired": 1500,
+      "depositRequired": 1450,
       "paid": 1500,
       "balance": 1400,
       "idVerified": false,
@@ -1904,7 +1904,7 @@
         "total": 4100
       },
       "total": 4100,
-      "depositRequired": 2100,
+      "depositRequired": 2050,
       "paid": 0,
       "balance": 4100,
       "idVerified": false,
@@ -2020,7 +2020,7 @@
         "total": 2150
       },
       "total": 2150,
-      "depositRequired": 1100,
+      "depositRequired": 1075,
       "paid": 1100,
       "balance": 1050,
       "idVerified": false,
@@ -2070,7 +2070,7 @@
         "total": 2150
       },
       "total": 2150,
-      "depositRequired": 1100,
+      "depositRequired": 1075,
       "paid": 1100,
       "balance": 1050,
       "idVerified": false,
@@ -2120,7 +2120,7 @@
         "total": 2450
       },
       "total": 2450,
-      "depositRequired": 700,
+      "depositRequired": 1225,
       "paid": 2450,
       "balance": 0,
       "idVerified": false,
@@ -2148,7 +2148,7 @@
       "kids": 0,
       "pets": null,
       "source": "phone",
-      "status": "confirmed",
+      "status": "hold",
       "pricing": {
         "lines": [
           {
@@ -2164,7 +2164,7 @@
         "total": 1050
       },
       "total": 1050,
-      "depositRequired": 300,
+      "depositRequired": 525,
       "paid": 300,
       "balance": 750,
       "idVerified": false,
@@ -2214,7 +2214,7 @@
         "total": 2150
       },
       "total": 2150,
-      "depositRequired": 600,
+      "depositRequired": 1075,
       "paid": 0,
       "balance": 2150,
       "idVerified": false,
@@ -2264,7 +2264,7 @@
         "total": 1100
       },
       "total": 1100,
-      "depositRequired": 300,
+      "depositRequired": 550,
       "paid": 0,
       "balance": 1100,
       "idVerified": false,
@@ -2314,7 +2314,7 @@
         "total": 250
       },
       "total": 250,
-      "depositRequired": 100,
+      "depositRequired": 125,
       "paid": 250,
       "balance": 0,
       "idVerified": false,
@@ -2364,9 +2364,9 @@
         "total": 1600
       },
       "total": 1600,
-      "depositRequired": 500,
-      "paid": 500,
-      "balance": 1100,
+      "depositRequired": 800,
+      "paid": 800,
+      "balance": 800,
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-07T10:40:00+08:00",
@@ -2424,9 +2424,9 @@
         "total": 3450
       },
       "total": 3450,
-      "depositRequired": 1700,
-      "paid": 1700,
-      "balance": 1750,
+      "depositRequired": 1725,
+      "paid": 1725,
+      "balance": 1725,
       "idVerified": false,
       "eventId": null,
       "createdAt": "2026-09-07T13:30:00+08:00",
@@ -2480,7 +2480,7 @@
         "total": 4450
       },
       "total": 4450,
-      "depositRequired": 2200,
+      "depositRequired": 2225,
       "paid": 0,
       "balance": 4450,
       "idVerified": false,
@@ -2530,7 +2530,7 @@
         "total": 3300
       },
       "total": 3300,
-      "depositRequired": 1700,
+      "depositRequired": 1650,
       "paid": 1700,
       "balance": 1600,
       "idVerified": false,
@@ -2586,7 +2586,7 @@
         "total": 2100
       },
       "total": 2100,
-      "depositRequired": 1100,
+      "depositRequired": 1050,
       "paid": 1100,
       "balance": 1000,
       "idVerified": false,
@@ -2680,9 +2680,9 @@
         "total": 48000
       },
       "total": 48000,
-      "depositRequired": 19200,
-      "paid": 19200,
-      "balance": 28800,
+      "depositRequired": 24000,
+      "paid": 24000,
+      "balance": 24000,
       "idVerified": false,
       "eventId": "EV-001",
       "createdAt": "2026-07-26T10:00:00+08:00",
@@ -2698,7 +2698,7 @@
     {
       "id": "PY-0001",
       "bookingId": "BK-0921-001",
-      "amount": 19200,
+      "amount": 24000,
       "method": "bank_transfer",
       "type": "deposit",
       "reference": "BT-14936462",
@@ -2742,7 +2742,7 @@
     {
       "id": "PY-0027",
       "bookingId": "BK-0919-028",
-      "amount": 400,
+      "amount": 700,
       "method": "bank_transfer",
       "type": "deposit",
       "reference": "BT-55374156",
@@ -2907,7 +2907,7 @@
     {
       "id": "PY-0030",
       "bookingId": "BK-0920-032",
-      "amount": 1700,
+      "amount": 1725,
       "method": "bank_transfer",
       "type": "deposit",
       "reference": "BT-58289925",
@@ -2918,7 +2918,7 @@
     {
       "id": "PY-0036",
       "bookingId": "BK-0920-041",
-      "amount": 500,
+      "amount": 800,
       "method": "gcash",
       "type": "deposit",
       "reference": "6383 512 880260",
@@ -2929,7 +2929,7 @@
     {
       "id": "PY-0019",
       "bookingId": "BK-0918-016",
-      "amount": 400,
+      "amount": 600,
       "method": "gcash",
       "type": "deposit",
       "reference": "7693 614 383812",

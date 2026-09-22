@@ -269,3 +269,112 @@ textarea.input {
 .dot--cottage { background: var(--green); }
 .dot--villa { background: var(--lime); }
 .dot--event { background: var(--pink); }
+
+/* GCash QR payment card (booking page and V6M Desk) */
+
+.pay-qr {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.pay-qr__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.pay-qr__code {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  margin: 0;
+  padding: 10px 10px 8px;
+  background: #fff;
+  border: 2px solid var(--blue);
+  border-radius: var(--radius);
+}
+
+.pay-qr__code .qr {
+  display: block;
+  width: 148px;
+  height: 148px;
+}
+
+.pay-qr__code figcaption {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blue-ink);
+}
+
+.pay-qr__details {
+  display: grid;
+  gap: 4px;
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.pay-qr__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.pay-qr__amount {
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.pay-qr__facts {
+  display: grid;
+  gap: 2px;
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+.pay-qr__facts div {
+  display: flex;
+  gap: 8px;
+}
+
+.pay-qr__facts dt {
+  min-width: 76px;
+  color: var(--ink-muted);
+}
+
+.pay-qr__facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pay-qr__steps {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+.pay-qr .button-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.pay-qr .mono,
+.pay-qr input.mono {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}

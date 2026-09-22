@@ -180,6 +180,8 @@ export interface Payment {
   proofAttached: boolean;
   receivedAt: Timestamp;
   receivedBy: string | null;
+  /** 'qr' when the guest paid by scanning the payment QR and the reference was verified. */
+  via?: 'desk' | 'qr';
 }
 
 export interface ResortEvent {
@@ -271,6 +273,9 @@ export interface BookingPageCopy {
   notesPlaceholder: string;
   submitLabel: string;
   paymentNote: string;
+  payTitle: string;
+  payIntro: string;
+  payHelp: string;
   thanksScript: string;
   thanksText: string;
   doneNote: string;
