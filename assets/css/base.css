@@ -214,8 +214,21 @@ textarea.input {
   opacity: 1;
 }
 
-/* A dropdown still showing its "Choose…" line reads like a placeholder too. */
+/*
+ * A dropdown still showing its "Choose…" line reads like a placeholder too —
+ * but only the closed control. The options inherit that colour, so they are
+ * set back to the normal ink, leaving just the "Choose…" line dimmed.
+ */
 .input.is-placeholder {
+  color: var(--ink-hint);
+}
+
+.input.is-placeholder option {
+  color: var(--ink);
+}
+
+.input option:disabled,
+.input.is-placeholder option[value=""] {
   color: var(--ink-hint);
 }
 
