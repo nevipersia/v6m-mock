@@ -897,6 +897,43 @@ button.cal-pool:hover {
   color: var(--ink-muted);
 }
 
+.data-table__actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.data-table__actions .btn {
+  opacity: 0.55;
+  transition: opacity 0.12s ease;
+}
+
+.data-table tr:hover .data-table__actions .btn,
+.data-table__actions .btn:focus-visible {
+  opacity: 1;
+}
+
+/* Phones keep the one-field-per-line layout from base.css. */
+@media (min-width: 561px) {
+  /* The drawer is narrow, so guest rows go two lines there: name, then the rest. */
+  .drawer .guest-row,
+  .drawer .guest-row--short {
+    grid-template-columns: 22px minmax(0, 1fr) 72px minmax(0, 1.4fr) 32px;
+    grid-template-areas:
+      "num name name name remove"
+      ". gender age remarks .";
+    row-gap: 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--line);
+  }
+
+  .drawer .guest-row__number { grid-area: num; }
+  .drawer .guest-row [name="companionName"] { grid-area: name; }
+  .drawer .guest-row [name="companionGender"] { grid-area: gender; }
+  .drawer .guest-row [name="companionAge"] { grid-area: age; }
+  .drawer .guest-row [name="companionRemarks"] { grid-area: remarks; }
+  .drawer .guest-row__remove { grid-area: remove; }
+}
+
 /* ---------- Inbox ---------- */
 
 .segmented {

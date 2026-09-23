@@ -302,6 +302,8 @@ export interface BookingEdit {
   notes: string;
   /** A new discount, null to remove it, or 'keep' to leave the current one as it is. */
   discount: DiscountInput | null | 'keep';
+  /** The companions sheet. Left out, the current list stays. */
+  guestList?: Companion[];
 }
 
 export type EditResult = { error: string } | { error?: undefined; booking: Booking };
@@ -366,6 +368,15 @@ export function updateBooking(bookingId: string, input: BookingEdit, staffId: st
       pricing,
       ...schedule(state, input.product, input.date),
     } satisfies Partial<Booking>);
+
+    if (input.guestList) {
+      const list = cleanGuestList(input.guestList);
+      const before_ = booking.guestList ?? [];
+      if (list.length !== before_.length || list.some((row, index) => row.name !== before_[index]?.name)) {
+        changes.push(`${list.length} on the guest list`);
+      }
+      booking.guestList = list;
+    }
 
     if (input.discount === 'keep') {
       if (current) booking.discount = { ...current, amount: discountAmount(pricing.total, current.kind, current.value) };

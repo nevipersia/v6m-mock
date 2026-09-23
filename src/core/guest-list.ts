@@ -47,3 +47,40 @@ export function readGuestListField(list: Companion[], field: HTMLInputElement | 
   }
   return null;
 }
+
+/** Rows with a name typed in. */
+export const namedGuests = (list: Companion[]): Companion[] => list.filter((row) => row.name.trim());
+
+/**
+ * How many names the booking page insists on. Big groups (an exclusive rental
+ * takes up to 120) would never finish a form asking for every name, so they
+ * list this many and the rest sign the sheet at the gate.
+ */
+export const NAMES_ASKED_CAP = 20;
+
+export const namesAsked = (pax: number): number => Math.max(1, Math.min(pax, NAMES_ASKED_CAP));
+
+/**
+ * Grows the list so there is a line per guest the page asks about. Never drops
+ * a typed name.
+ */
+export function fitGuestList(list: Companion[], pax: number): Companion[] {
+  const want = namesAsked(pax);
+  const next = list.slice();
+  while (next.length < want) next.push(blankCompanion());
+  // Trim only the blank lines past the headcount, keeping what was typed.
+  while (next.length > want && !next[next.length - 1]!.name.trim()) next.pop();
+  return next;
+}
+
+/** Why the list is not complete yet, or '' when everyone the page asks for is named. */
+export function guestListProblem(list: Companion[], pax: number): string {
+  const asked = namesAsked(pax);
+  const named = namedGuests(list).length;
+  if (named >= asked) return '';
+  const missing = asked - named;
+  const rest = pax > asked ? ' The rest can sign the list at the gate.' : '';
+  return named === 0
+    ? `Write the names of everyone coming (${asked}).${rest}`
+    : `${missing} more ${missing === 1 ? 'name' : 'names'} to go — the list needs ${asked}.${rest}`;
+}

@@ -151,6 +151,13 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 - Guest details from the registration template: complete address, email, SC/PWD count, a guest list
   (`booking.guestList`: name, gender, age, remarks), additional charges (`booking.extras`, typed
   amounts, part of the price) and payment details (`payment.sentAt`, `payment.senderName`).
+- The guest list is required on the booking page and optional at the desk. `core/guest-list.ts` holds
+  the shared rules: `fitGuestList` keeps a row per guest, `namesAsked` caps that at
+  `NAMES_ASKED_CAP` (20, so a 120-guest exclusive rental is not asked for 120 names) and
+  `guestListProblem` is the validation message. Desk-side the list is part of `booking-form.ts`
+  (new and edit; `updateBooking` takes an optional `guestList`) as well as its own section in the
+  booking drawer. The Bookings list shows how many are named and carries per-row Edit and Sheet
+  (PDF) buttons.
 - The booking PDF is the guest registration sheet (companions template): details, guest list with
   signature column, charges, total / downpayment / overall amount, "Received by". Multi-page.
 - Every booking needs a 50% downpayment (`depositRequired`, rounded up to the peso)

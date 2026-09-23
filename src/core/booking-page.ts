@@ -17,7 +17,7 @@ export const DEFAULT_BOOKING_PAGE: BookingPageSettings = {
     productLabel: 'What are you booking?',
     addressLabel: 'Complete address',
     emailLabel: 'Email address (optional)',
-    guestListLabel: 'Who is coming? (optional)',
+    guestListLabel: 'Who is coming?',
     notesLabel: 'Anything we should know? (optional)',
     notesPlaceholder: 'Celebrating a birthday, bringing a dog…',
     submitLabel: 'Send my booking',

@@ -410,13 +410,46 @@ select.input {
 
 .guest-row {
   display: grid;
-  grid-template-columns: 22px minmax(0, 2fr) minmax(88px, 1fr) 64px minmax(0, 1.5fr) 32px;
+  grid-template-columns: 22px minmax(0, 2fr) minmax(104px, 1fr) 64px minmax(0, 1.5fr) 32px;
   gap: 6px;
   align-items: center;
 }
 
 .guest-row--short {
-  grid-template-columns: 22px minmax(0, 2fr) minmax(88px, 1fr) 64px 32px;
+  grid-template-columns: 22px minmax(0, 2fr) minmax(104px, 1fr) 64px 32px;
+}
+
+.guest-rows__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+
+.guest-count {
+  font-size: 13px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.guest-count--short {
+  color: var(--terra-ink);
+  font-weight: 600;
+}
+
+.field__req {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--orange-soft);
+  color: var(--amber-ink);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: 1px;
 }
 
 .guest-row__number {

@@ -6,14 +6,14 @@ import { bookingLinkStage, payByQr, useBookingLink } from '../core/actions.js';
 import { $, $maybe, on, render } from '../core/dom.js';
 import { DEFAULT_BOOKING_PAGE, loadBookingPage, readableInk } from '../core/booking-page.js';
 import { isPHMobile, parseDigits } from '../core/format.js';
-import { blankCompanion, guestListRows, readGuestListField } from '../core/guest-list.js';
+import { blankCompanion, fitGuestList, guestListProblem, namesAsked, readGuestListField } from '../core/guest-list.js';
 import { VERIFY_DELAY_MS, type PaymentCardState } from '../core/payment-card.js';
 import { qrPaymentRequest, sampleReference } from '../core/qr-payment.js';
 import { checkAvailability, findBooking, findExclusive, findUnit } from '../core/rules.js';
 import { loadStore, requireState } from '../core/store.js';
 import type { Booking, BookingLink, BookingPageSettings, State } from '../core/types.js';
 import {
-  bookableIds, doneScreen, formScreen, payScreen, problemScreen, productCard, summary, type Draft,
+  bookableIds, doneScreen, formScreen, guestListBody, payScreen, problemScreen, productCard, summary, type Draft,
 } from './screens.js';
 
 const app = $('#app');
@@ -50,6 +50,10 @@ function validate(state: State, page: BookingPageSettings): string {
   if (!draft.address.trim()) return 'Enter your complete address.';
   if (!draft.date) return 'Pick a date.';
   if (guests === 0) return 'Add at least one guest.';
+  if (page.fields.guestList) {
+    const listProblem = guestListProblem(draft.guestList, guests);
+    if (listProblem) return listProblem;
+  }
   if (draft.scPwd > guests) return 'Senior / PWD can\'t be more than the number of guests.';
   if (!availability.ok) return availability.reason ?? 'That date is not available.';
   if (unit && guests > unit.capacityMax) return `${unit.name} fits up to ${unit.capacityMax} guests.`;
@@ -72,8 +76,18 @@ function showPay(page: BookingPageSettings, booking: Booking): void {
 
 const redrawGuestList = () => {
   const slot = $maybe('[data-slot="guest-list"]', app);
-  if (slot) render(slot, guestListRows(draft.guestList, 'companion', { remarks: false }));
+  if (slot) render(slot, guestListBody(draft));
 };
+
+/** Just the "3 of 5 named" line, so typing a name doesn't rebuild the rows. */
+function refreshGuestCount(): void {
+  const label = $maybe('.guest-count', app);
+  if (!label) return;
+  const asked = namesAsked(draft.adults + draft.kids);
+  const named = draft.guestList.filter((row) => row.name.trim()).length;
+  label.textContent = `${named} of ${asked} named`;
+  label.classList.toggle('guest-count--short', named < asked);
+}
 
 function bind(page: BookingPageSettings): void {
   on<HTMLInputElement>(app, 'input', '[data-input]', (_event, field) => {
@@ -88,12 +102,18 @@ function bind(page: BookingPageSettings): void {
     if (field.dataset.row !== undefined) {
       const shown = readGuestListField(draft.guestList, field);
       if (shown !== null && shown !== field.value) field.value = shown;
+      if (field.name === 'companionName') refreshGuestCount();
       return;
     }
     if (field.name === 'adults' || field.name === 'kids' || field.name === 'scPwd') {
       draft[field.name] = parseDigits(field.value);
       const formatted = String(parseDigits(field.value) || '');
       if (formatted !== field.value) field.value = formatted;
+      // Keep a line per guest, so the list always asks for everyone.
+      if (field.name !== 'scPwd') {
+        draft.guestList = fitGuestList(draft.guestList, draft.adults + draft.kids);
+        redrawGuestList();
+      }
     } else if (['guestName', 'mobile', 'email', 'address', 'product', 'date', 'notes'].includes(field.name)) {
       draft[field.name as 'guestName'] = field.value;
     }
@@ -112,6 +132,7 @@ function bind(page: BookingPageSettings): void {
 
   on(app, 'click', '[data-action="remove-companion"]', (_event, el) => {
     draft.guestList.splice(Number(el.dataset.row), 1);
+    if (!draft.guestList.length) draft.guestList.push(blankCompanion());
     redrawGuestList();
   });
 
@@ -195,6 +216,7 @@ async function start(): Promise<void> {
   draft.product = link.product && offered.includes(link.product) ? link.product : offered[0] ?? 'daytour';
   const unit = findUnit(state, draft.product);
   if (unit && unit.capacityMin > 1) draft.adults = unit.capacityMin;
+  draft.guestList = fitGuestList(draft.guestList, draft.adults + draft.kids);
 
   screen = { name: 'form', link };
   render(app, formScreen(state, page, link, draft, error));

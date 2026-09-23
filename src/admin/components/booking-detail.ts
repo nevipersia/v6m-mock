@@ -5,7 +5,7 @@ import {
   applyDiscount, cancelBooking, checkIn, checkOut, payByQr, recordPayment, removeDiscount, setGuestList,
 } from '../../core/actions.js';
 import { $, $maybe, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
-import { blankCompanion, guestListRows, readGuestListField } from '../../core/guest-list.js';
+import { blankCompanion, fitGuestList, guestListRows, namedGuests, readGuestListField } from '../../core/guest-list.js';
 import { VERIFY_DELAY_MS, paymentCard, type PaymentCardState } from '../../core/payment-card.js';
 import { qrPaymentRequest, sampleReference } from '../../core/qr-payment.js';
 import { formatDate, formatDateTime, peso, plural, timeOf } from '../../core/format.js';
@@ -176,9 +176,9 @@ export function createBookingDetail(bookingId: string): DrawerContent {
           <h3 class="detail-section__title">Guest list</h3>
           <form class="guest-list-form" data-submit="save-guest-list" novalidate>
             ${guestListRows(ui.guestList, 'companion')}
-            <div class="button-row">
+            <div class="guest-rows__foot">
               <button class="btn btn--quiet btn--sm" type="button" data-action="add-companion">+ Add a guest</button>
-              <span class="small muted">${ui.guestList.filter((row) => row.name.trim()).length} of ${pax} named</span>
+              <span class="guest-count ${namedGuests(ui.guestList).length < pax ? 'guest-count--short' : ''}">${namedGuests(ui.guestList).length} of ${pax} named</span>
             </div>
             <div class="button-row button-row--end">
               <button class="btn btn--quiet" type="button" data-action="cancel-guest-list">Cancel</button>
@@ -191,7 +191,10 @@ export function createBookingDetail(bookingId: string): DrawerContent {
       <section class="detail-section">
         <div class="detail-section__head">
           <h3 class="detail-section__title">Guest list <span class="muted">${list.length} of ${pax}</span></h3>
-          ${canEdit ? html`<button class="btn btn--quiet btn--sm" type="button" data-action="edit-guest-list">${list.length ? 'Edit' : 'Add guests'}</button>` : ''}
+          <div class="button-row">
+            ${list.length < pax ? html`<span class="pill pill--warning">${pax - list.length} missing</span>` : html`<span class="pill pill--success">Complete</span>`}
+            ${canEdit ? html`<button class="btn btn--quiet btn--sm" type="button" data-action="edit-guest-list">${list.length ? 'Edit names' : 'Add names'}</button>` : ''}
+          </div>
         </div>
         ${list.length ? html`
           <table class="guest-table">
@@ -411,12 +414,8 @@ export function createBookingDetail(bookingId: string): DrawerContent {
       'edit-guest-list': ({ ctx, redraw }) => {
         const booking = findBooking(ctx.state, bookingId);
         if (!booking) return;
-        const list = (booking.guestList ?? []).map((row) => ({ ...row }));
-        const pax = booking.adults + booking.kids;
-        // Start with a blank line per expected guest (up to 10), like the paper sheet.
-        while (list.length < Math.min(pax, Math.max(list.length, 10))) list.push(blankCompanion());
-        if (!list.length) list.push(blankCompanion());
-        ui.guestList = list;
+        // A blank line per expected guest, like the paper sheet.
+        ui.guestList = fitGuestList((booking.guestList ?? []).map((row) => ({ ...row })), booking.adults + booking.kids);
         ui.guestListOpen = true;
         redraw();
       },
@@ -428,6 +427,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
 
       'remove-companion': ({ el, redraw }) => {
         ui.guestList.splice(Number(el.dataset.row), 1);
+        if (!ui.guestList.length) ui.guestList.push(blankCompanion());
         redraw();
       },
 

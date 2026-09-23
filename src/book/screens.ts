@@ -5,7 +5,7 @@
 import { productGroups, productInfo, type ProductGroup } from '../core/catalog.js';
 import { html, type SafeHTML, type TemplateValue } from '../core/dom.js';
 import { formatDate, formatTime, peso, plural } from '../core/format.js';
-import { guestListRows } from '../core/guest-list.js';
+import { guestListRows, namedGuests, namesAsked } from '../core/guest-list.js';
 import { paymentCard, type PaymentCardState } from '../core/payment-card.js';
 import type { QrPaymentRequest } from '../core/qr-payment.js';
 import {
@@ -115,14 +115,26 @@ export function problemScreen(page: BookingPageSettings, message: string): SafeH
       <p class="small muted">${page.copy.problemHelp}</p>`)}`;
 }
 
+/** The rows plus the counter, redrawn together as the headcount changes. */
+export function guestListBody(draft: Draft): SafeHTML {
+  const asked = namesAsked(draft.adults + draft.kids);
+  const named = namedGuests(draft.guestList).length;
+  const short = named < asked;
+  return html`
+    ${guestListRows(draft.guestList, 'companion', { remarks: false })}
+    <div class="guest-rows__foot">
+      <button class="btn btn--quiet btn--sm" type="button" data-action="add-companion">+ Add a guest</button>
+      <span class="guest-count ${short ? 'guest-count--short' : ''}">${named} of ${asked} named</span>
+    </div>`;
+}
+
 export function guestListBlock(page: BookingPageSettings, draft: Draft): SafeHTML | '' {
   if (!page.fields.guestList) return '';
   return html`
     <fieldset class="book__fieldset">
-      <legend class="field__label">${page.copy.guestListLabel}</legend>
-      <p class="small muted">Names on this list sign in at the gate. You can also bring the list on the day.</p>
-      <div data-slot="guest-list">${guestListRows(draft.guestList, 'companion', { remarks: false })}</div>
-      <button class="btn btn--quiet btn--sm" type="button" data-action="add-companion">+ Add a guest</button>
+      <legend class="field__label">${page.copy.guestListLabel} <span class="field__req">Required</span></legend>
+      <p class="small muted">Write everyone who is coming, yourself included. They sign this same list at the gate.${draft.adults + draft.kids > namesAsked(draft.adults + draft.kids) ? ` Big group: list the first ${namesAsked(draft.adults + draft.kids)} here and the rest can sign on the day.` : ''}</p>
+      <div data-slot="guest-list">${guestListBody(draft)}</div>
     </fieldset>`;
 }
 

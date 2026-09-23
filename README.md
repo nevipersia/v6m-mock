@@ -65,8 +65,17 @@ an invite before it is used. Each invite code works once.
 Each booking keeps the details from the guest information form: complete address, contact number,
 email, SC/PWD count, a **guest list** (name, gender, age, remarks), **additional charges** (videoke,
 corkage, extra heads… with amounts staff type) and payment details (mode, time sent, GCash sender).
-Guests can fill in their own list on the booking link. **Registration sheet** in the booking drawer
-downloads the companions sheet as a PDF with signature lines and "Received by".
+**Who is coming** is required on the booking link: the guest names everyone in their headcount
+before they can send the booking. The list resizes itself as they change the number of adults and
+kids, and a counter shows how many are still missing. Groups larger than 20 name the first 20 and
+the rest sign at the gate.
+
+At the desk, names sit inside the booking form, so **New booking** and **Edit booking** change the
+headcount and the names in one place (optional there — staff often fill them at the gate). The
+booking drawer's guest list section shows "5 missing" or "Complete" and edits the names on its own.
+**Registration sheet** downloads the companions sheet as a PDF with signature lines and
+"Received by" — from the booking drawer, or straight from the **Sheet** button on any row of the
+Bookings list, which also has an **Edit** button and shows how many guests are named.
 
 ## The 50% downpayment
 
@@ -77,8 +86,8 @@ or collect it by **GCash QR** from the booking drawer.
 
 ## Editing a booking
 
-Open a booking and click **Edit booking** to change the guest, mobile, source, booking type, date,
-guests, notes or discount. It works for bookings on hold or confirmed (not checked in, checked out,
+Open a booking and click **Edit booking** (or **Edit** on a row of the Bookings list) to change the
+guest, mobile, source, booking type, date, number of guests, the guest list, notes or discount. It works for bookings on hold or confirmed (not checked in, checked out,
 cancelled or events). Payments stay; the availability, price and 50% downpayment are
 worked out again, so an edit can confirm a booking or put it back on hold, and the total can't drop
 below what was already paid. Each edit is written to the booking's activity log.

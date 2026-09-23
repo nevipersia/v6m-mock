@@ -9,8 +9,9 @@ import {
   DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, checkAvailability, closingEvent, depositRequired, discountAmount,
   discountProblem, findBooking, findExclusive, findGuest, findUnit, quote,
 } from '../../core/rules.js';
-import type { Booking, BookingSource, ExtraCharge, PaymentMethod, State } from '../../core/types.js';
+import type { Booking, BookingSource, Companion, ExtraCharge, PaymentMethod, State } from '../../core/types.js';
 import { asField, type BookingPrefill, type DrawerContent } from '../types.js';
+import { blankCompanion, fitGuestList, guestListRows, namedGuests, readGuestListField } from '../../core/guest-list.js';
 import { blankDiscount, discountFields, readDiscountField, type DiscountDraft } from './discount-fields.js';
 
 const SOURCES: BookingSource[] = ['walk_in', 'phone', 'messenger', 'instagram', 'website', 'booking_link'];
@@ -32,6 +33,7 @@ const EXTRA_PRESETS = ['Videoke', 'Corkage', 'Extra adult', 'Extra kid', 'Extra 
 type Draft = NewBooking & {
   mobile: string; reference: string; notes: string; inquiryId: string | null;
   address: string; email: string; scPwd: number; extras: ExtraCharge[]; sentTime: string; senderName: string;
+  guestList: Companion[];
 };
 
 const isEmail = (value: string): boolean => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
@@ -40,13 +42,15 @@ function initialDraft(state: State, prefill: BookingPrefill): Draft {
   const products = allProductIds(state);
   const product = prefill.product && products.includes(prefill.product) ? prefill.product : 'daytour';
   const unit = findUnit(state, product);
+  const adults = unit && unit.capacityMin > 1 ? unit.capacityMin : 2;
   return {
+    guestList: fitGuestList([], adults),
     guestName: prefill.guestName ?? '',
     mobile: prefill.mobile ?? '',
     source: NEW_SOURCES.find((source) => source === prefill.source) ?? 'walk_in',
     product,
     date: prefill.date || state.meta.asOf,
-    adults: unit && unit.capacityMin > 1 ? unit.capacityMin : 2,
+    adults,
     kids: 0,
     deposit: 0,
     method: 'gcash',
@@ -65,6 +69,7 @@ function initialDraft(state: State, prefill: BookingPrefill): Draft {
 function draftFromBooking(state: State, booking: Booking): Draft {
   const guest = findGuest(state, booking.guestId);
   return {
+    guestList: fitGuestList((booking.guestList ?? []).map((row) => ({ ...row })), booking.adults + booking.kids),
     address: guest?.address ?? '',
     email: guest?.email ?? '',
     scPwd: booking.scPwd ?? 0,
@@ -149,6 +154,16 @@ function summaryTemplate(state: State, draft: Draft, { discount, editing }: Summ
     </div>`;
 }
 
+/** Updates just the "3 of 5 named" line while staff type into the rows. */
+function refreshGuestCount(root: HTMLElement, form: Draft): void {
+  const label = $maybe('.guest-count', root);
+  if (!label) return;
+  const pax = form.adults + form.kids;
+  const named = namedGuests(form.guestList).length;
+  label.textContent = `${named} of ${pax} named`;
+  label.classList.toggle('guest-count--short', named < pax);
+}
+
 const sameDiscount = (a: DiscountDraft, b: DiscountDraft): boolean =>
   a.kind === b.kind && a.value === b.value && a.note.trim() === b.note.trim();
 
@@ -178,6 +193,27 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
     }
     $('[data-slot="error"]', root).textContent = error;
   };
+
+  /** The rows and the counter: redrawn on their own when the headcount changes. */
+  function guestListBody(form: Draft): SafeHTML {
+    const pax = form.adults + form.kids;
+    const named = namedGuests(form.guestList).length;
+    return html`
+      ${guestListRows(form.guestList, 'companion')}
+      <div class="guest-rows__foot">
+        <button class="btn btn--quiet btn--sm" type="button" data-action="add-companion">+ Add a guest</button>
+        <span class="guest-count ${named < pax ? 'guest-count--short' : ''}">${named} of ${pax} named</span>
+      </div>`;
+  }
+
+  function guestListSection(form: Draft): SafeHTML {
+    return html`
+      <fieldset class="form-section">
+        <legend class="form-section__title">Who is coming</legend>
+        <div data-slot="guest-list">${guestListBody(form)}</div>
+        <p class="small muted">The names on the registration sheet. Leave blanks if they will sign at the gate.</p>
+      </fieldset>`;
+  }
 
   function extrasSection(form: Draft): SafeHTML {
     return html`
@@ -304,6 +340,8 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
             </label>
           </fieldset>
 
+          ${guestListSection(form)}
+
           ${extrasSection(form)}
 
           ${discountSection(ctx, form, editing)}
@@ -369,6 +407,14 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         refreshSummary(root, ctx.state);
       },
 
+      companion: ({ el, root }) => {
+        if (!draft) return;
+        const field = asField(el) as HTMLInputElement | HTMLSelectElement;
+        const shown = readGuestListField(draft.guestList, field);
+        if (shown !== null && shown !== field.value) field.value = shown;
+        if (field.name === 'companionName') refreshGuestCount(root, draft);
+      },
+
       discount: ({ el, ctx, root }) => {
         const field = asField(el) as HTMLInputElement | HTMLSelectElement;
         const kindBefore = discount.kind;
@@ -395,6 +441,11 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
             field.value = formatted;
             if (caretAtEnd) field.setSelectionRange(formatted.length, formatted.length);
           }
+          if (field.name === 'adults' || field.name === 'kids') {
+            draft.guestList = fitGuestList(draft.guestList, draft.adults + draft.kids);
+            const slot = $maybe('[data-slot="guest-list"]', root);
+            if (slot) render(slot, guestListBody(draft));
+          }
         } else if (field.name === 'source') {
           draft.source = field.value as BookingSource;
         } else if (field.name === 'method') {
@@ -413,6 +464,19 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
       'add-extra': ({ redraw }) => {
         if (!draft) return;
         draft.extras.push({ label: '', amount: 0 });
+        redraw();
+      },
+
+      'add-companion': ({ redraw }) => {
+        if (!draft) return;
+        draft.guestList.push(blankCompanion());
+        redraw();
+      },
+
+      'remove-companion': ({ el, redraw }) => {
+        if (!draft) return;
+        draft.guestList.splice(Number(el.dataset.row), 1);
+        if (!draft.guestList.length) draft.guestList.push(blankCompanion());
         redraw();
       },
 
@@ -453,6 +517,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         else if (draft.email.trim() && !isEmail(draft.email)) error = 'Enter an email address like maria@example.com, or leave it blank.';
         else if (draft.scPwd > guests) error = 'SC / PWD can\'t be more than the number of guests.';
         else if (draft.extras.some((extra) => extra.amount > 0 && !extra.label.trim())) error = 'Name each additional charge.';
+        else if (namedGuests(draft.guestList).length > guests) error = `You listed ${namedGuests(draft.guestList).length} names but only ${guests} ${guests === 1 ? 'guest' : 'guests'}. Raise the headcount or take a name off.`;
         else if (guests === 0) error = 'Add at least one guest.';
         else if (!availability.ok) error = availability.reason ?? 'Not available.';
         else if (unit && guests > unit.capacityMax) error = `${unit.name} fits up to ${unit.capacityMax} guests.`;
@@ -481,6 +546,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
             email: draft.email,
             scPwd: draft.scPwd,
             extras: draft.extras,
+            guestList: draft.guestList,
             discount: canDiscount && discountChanged ? chosen : 'keep',
           }, ctx.staff.id);
           if (result.error !== undefined) {

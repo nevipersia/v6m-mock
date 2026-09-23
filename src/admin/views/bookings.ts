@@ -3,11 +3,12 @@
 import { html, type SafeHTML } from '../../core/dom.js';
 import { formatDate, peso, plural, timeOf } from '../../core/format.js';
 import {
-  STATUS_LABELS, isActive, productLabel,
+  STATUS_LABELS, findBooking, isActive, isEditable, productLabel,
 } from '../../core/rules.js';
 import type { Booking, BookingStatus, State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { kindDot, statusPill } from '../components/badges.js';
+import { downloadBookingPdf } from '../components/booking-pdf.js';
 import { icon } from '../components/icons.js';
 import { emptyState, pageHead } from '../layout.js';
 
@@ -42,6 +43,14 @@ const option = (key: FilterKey, value: string, text: string): SafeHTML =>
 interface Choice {
   value: string;
   text: string;
+}
+
+/** How much of the guest list is filled in, for the Guests column. */
+function namedSub(booking: Booking): string {
+  const named = booking.guestList?.length ?? 0;
+  const pax = booking.adults + booking.kids;
+  if (!named) return 'no names yet';
+  return named >= pax ? 'all named' : `${named} named`;
 }
 
 function filterBar(state: State): SafeHTML {
@@ -112,6 +121,7 @@ export function render(ctx: DeskContext): SafeHTML {
                 <th scope="col" class="num">Total</th>
                 <th scope="col" class="num">Balance</th>
                 <th scope="col">Status</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
@@ -123,10 +133,15 @@ export function render(ctx: DeskContext): SafeHTML {
                   </td>
                   <td><span class="inline-kind">${kindDot(state, b.product)} ${productLabel(state, b.product)}</span></td>
                   <td>${formatDate(b.date)}<span class="data-table__sub">${timeOf(b.startsAt)}</span></td>
-                  <td class="num">${b.adults + b.kids}</td>
+                  <td class="num">${b.adults + b.kids}<span class="data-table__sub">${namedSub(b)}</span></td>
                   <td class="num">${peso(b.total)}</td>
                   <td class="num ${b.balance > 0 && isActive(b) ? 'is-due' : ''}">${peso(b.balance)}</td>
                   <td>${statusPill(b)}</td>
+                  <td class="data-table__actions">
+                    ${ctx.can('bookings.write') && isEditable(state, b) ? html`
+                      <button class="btn btn--quiet btn--sm" type="button" data-action="edit-booking-row" data-id="${b.id}" title="Edit this booking">Edit</button>` : ''}
+                    <button class="btn btn--quiet btn--sm" type="button" data-action="download-sheet" data-id="${b.id}" title="Download the registration sheet">${icon('download')} Sheet</button>
+                  </td>
                 </tr>`)}
             </tbody>
           </table>
@@ -144,6 +159,17 @@ export const inputs: HandlerMap = {
 };
 
 export const actions: HandlerMap = {
+  'edit-booking-row': ({ el, ctx }) => {
+    if (el.dataset.id) ctx.editBooking(el.dataset.id);
+  },
+
+  'download-sheet': ({ el, ctx }) => {
+    const booking = el.dataset.id ? findBooking(ctx.state, el.dataset.id) : null;
+    if (!booking) return;
+    downloadBookingPdf(ctx.state, booking);
+    ctx.toast(`Registration sheet downloaded · ${booking.guestName}`);
+  },
+
   'clear-filters': ({ ctx }) => {
     filters = { ...DEFAULT_FILTERS };
     ctx.redraw();
