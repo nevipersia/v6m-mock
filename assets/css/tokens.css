@@ -44,6 +44,8 @@
   --line-strong: #D6C9AE;
   --ink: #1F2D5C;
   --ink-muted: #5E6788;
+  /* Placeholder text: lighter than a typed value, still readable. */
+  --ink-hint: #9099B4;
 
   /* Type */
   --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;

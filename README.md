@@ -63,8 +63,9 @@ an invite before it is used. Each invite code works once.
   An exclusive rental can only be booked when its whole time window is free.
 
 Each booking keeps the details from the guest information form: complete address, contact number,
-email, SC/PWD count, a **guest list** (name, gender, age, remarks), **additional charges** (videoke,
-corkage, extra heads… with amounts staff type) and payment details (mode, time sent, GCash sender).
+email, SC/PWD count, a **guest list** (name, gender, age, remarks), **additional charges** (picked
+from a dropdown — videoke, corkage, extra heads, extra cottage or room — or **Other…** to type
+anything else, with the amount staff type) and payment details (mode, time sent, GCash sender).
 **Who is coming** is required on the booking link: the guest names everyone in their headcount
 before they can send the booking. The list resizes itself as they change the number of adults and
 kids, and a counter shows how many are still missing. Groups larger than 20 name the first 20 and

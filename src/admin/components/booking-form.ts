@@ -28,11 +28,18 @@ const TEXT_FIELDS: readonly string[] = [
 
 /** Charges from the registration sheet. Staff type the amount; none of these have set prices. */
 const EXTRA_PRESETS = ['Videoke', 'Corkage', 'Extra adult', 'Extra kid', 'Extra cottage', 'Extra room', 'Grill use'];
+/** Picked from the dropdown when the charge is not on the list, so staff can type it. */
+const EXTRA_OTHER = '__other';
+
+/** A charge being edited: `custom` means it is typed in rather than picked. */
+type ExtraDraft = ExtraCharge & { custom: boolean };
+
+const extraDraft = (extra: ExtraCharge): ExtraDraft => ({ ...extra, custom: !EXTRA_PRESETS.includes(extra.label) });
 
 /** The form keeps every field as a plain value; optional text fields are never undefined here. */
-type Draft = NewBooking & {
+type Draft = Omit<NewBooking, 'extras'> & {
   mobile: string; reference: string; notes: string; inquiryId: string | null;
-  address: string; email: string; scPwd: number; extras: ExtraCharge[]; sentTime: string; senderName: string;
+  address: string; email: string; scPwd: number; extras: ExtraDraft[]; sentTime: string; senderName: string;
   guestList: Companion[];
 };
 
@@ -73,7 +80,7 @@ function draftFromBooking(state: State, booking: Booking): Draft {
     address: guest?.address ?? '',
     email: guest?.email ?? '',
     scPwd: booking.scPwd ?? 0,
-    extras: (booking.extras ?? []).map((extra) => ({ ...extra })),
+    extras: (booking.extras ?? []).map(extraDraft),
     sentTime: '',
     senderName: '',
     guestName: booking.guestName,
@@ -222,17 +229,23 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         ${form.extras.length ? html`
           <ul class="extra-rows">
             ${form.extras.map((extra, index) => html`
-              <li class="extra-row">
-                <input class="input" data-input="extra" data-row="${index}" name="extraLabel" value="${extra.label}"
-                  list="extra-presets" placeholder="Videoke, corkage…" aria-label="Charge ${index + 1}" autocomplete="off">
+              <li class="extra-row ${extra.custom ? 'extra-row--custom' : ''}">
+                <select class="input ${extra.custom || extra.label ? '' : 'is-placeholder'}" data-input="extra" data-row="${index}"
+                  name="extraKind" aria-label="Charge ${index + 1}">
+                  <option value="" ${extra.custom || extra.label ? '' : 'selected'}>Choose a charge…</option>
+                  ${EXTRA_PRESETS.map((preset) => html`<option ${!extra.custom && extra.label === preset ? 'selected' : ''}>${preset}</option>`)}
+                  <option value="${EXTRA_OTHER}" ${extra.custom ? 'selected' : ''}>Other…</option>
+                </select>
                 <input class="input input--amount" data-input="extra" data-row="${index}" name="extraAmount" value="${formatDigits(extra.amount)}"
                   inputmode="numeric" placeholder="₱0" aria-label="Charge ${index + 1} amount" autocomplete="off">
                 <button class="guest-row__remove" type="button" data-action="remove-extra" data-row="${index}" aria-label="Remove charge ${index + 1}">×</button>
+                ${extra.custom ? html`
+                  <input class="input extra-row__label" data-input="extra" data-row="${index}" name="extraLabel" value="${extra.label}"
+                    placeholder="What is the charge for?" aria-label="Charge ${index + 1} name" autocomplete="off">` : ''}
               </li>`)}
           </ul>` : ''}
-        <datalist id="extra-presets">${EXTRA_PRESETS.map((preset) => html`<option value="${preset}"></option>`)}</datalist>
         <button class="btn btn--quiet btn--sm" type="button" data-action="add-extra">+ Add a charge</button>
-        <p class="small muted">From the registration sheet: videoke, corkage, extra heads, extra cottage or room. Type the amount.</p>
+        <p class="small muted">From the registration sheet: videoke, corkage, extra heads, extra cottage or room. Pick “Other…” to type anything else, then the amount.</p>
       </fieldset>`;
   }
 
@@ -392,11 +405,21 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
     },
 
     inputs: {
-      extra: ({ el, ctx, root }) => {
+      extra: ({ el, ctx, root, redraw }) => {
         if (!draft) return;
-        const field = el as HTMLInputElement;
-        const row = draft.extras[Number(field.dataset.row)];
+        const field = asField(el);
+        const index = Number(field.dataset.row);
+        const row = draft.extras[index];
         if (!row) return;
+        if (field.name === 'extraKind') {
+          // "Other…" swaps the dropdown for a box to type the charge in.
+          row.custom = field.value === EXTRA_OTHER;
+          row.label = row.custom ? '' : field.value;
+          error = '';
+          redraw();
+          if (row.custom) $maybe<HTMLInputElement>(`[name="extraLabel"][data-row="${index}"]`, root.ownerDocument.body)?.focus();
+          return;
+        }
         if (field.name === 'extraLabel') row.label = field.value;
         else {
           row.amount = parseDigits(field.value);
@@ -463,7 +486,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
     actions: {
       'add-extra': ({ redraw }) => {
         if (!draft) return;
-        draft.extras.push({ label: '', amount: 0 });
+        draft.extras.push({ label: '', amount: 0, custom: false });
         redraw();
       },
 

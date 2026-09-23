@@ -1970,9 +1970,25 @@ body.has-drawer {
 .extra-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 110px 32px;
+  grid-template-areas: "kind amount remove";
   gap: 6px;
   align-items: center;
 }
+
+/* "Other…" adds a second line to type the charge on. */
+.extra-row--custom {
+  grid-template-areas:
+    "kind amount remove"
+    "label label label";
+  row-gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.extra-row [name="extraKind"] { grid-area: kind; }
+.extra-row [name="extraAmount"] { grid-area: amount; }
+.extra-row .guest-row__remove { grid-area: remove; }
+.extra-row__label { grid-area: label; }
 
 .cal-chip--exclusive.cal-chip--hold {
   background: var(--surface);

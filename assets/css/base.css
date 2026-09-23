@@ -208,6 +208,17 @@ textarea.input {
   box-shadow: var(--focus-ring);
 }
 
+/* Hints read as hints: a typed value is the darker .input colour. */
+.input::placeholder {
+  color: var(--ink-hint);
+  opacity: 1;
+}
+
+/* A dropdown still showing its "Choose…" line reads like a placeholder too. */
+.input.is-placeholder {
+  color: var(--ink-hint);
+}
+
 /*
  * Dropdowns draw their own arrow so it can sit in from the edge; the browser's
  * built-in one hugs the border and ignores padding. Move it with

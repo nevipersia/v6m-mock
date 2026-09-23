@@ -18,7 +18,7 @@ export function guestListRows(list: Companion[], input: string, { remarks = true
           <span class="guest-row__number" aria-hidden="true">${index + 1}</span>
           <input class="input" data-input="${input}" data-row="${index}" name="companionName" value="${row.name}"
             placeholder="Full name" aria-label="Guest ${index + 1} name" autocomplete="off">
-          <select class="input" data-input="${input}" data-row="${index}" name="companionGender" aria-label="Guest ${index + 1} gender">
+          <select class="input ${row.gender ? '' : 'is-placeholder'}" data-input="${input}" data-row="${index}" name="companionGender" aria-label="Guest ${index + 1} gender">
             <option value="" ${row.gender ? '' : 'selected'}>Gender</option>
             <option ${row.gender === 'Female' ? 'selected' : ''}>Female</option>
             <option ${row.gender === 'Male' ? 'selected' : ''}>Male</option>
@@ -38,7 +38,10 @@ export function readGuestListField(list: Companion[], field: HTMLInputElement | 
   const row = list[Number(field.dataset.row)];
   if (!row) return null;
   if (field.name === 'companionName') row.name = field.value;
-  else if (field.name === 'companionGender') row.gender = field.value === 'Female' || field.value === 'Male' ? field.value : '';
+  else if (field.name === 'companionGender') {
+    row.gender = field.value === 'Female' || field.value === 'Male' ? field.value : '';
+    field.classList.toggle('is-placeholder', !row.gender);
+  }
   else if (field.name === 'companionRemarks') row.remarks = field.value;
   else if (field.name === 'companionAge') {
     const digits = field.value.replace(/\D/g, '').slice(0, 3);
