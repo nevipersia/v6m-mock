@@ -63,15 +63,25 @@ body {
 
 /* The "or do it the other way" line at the top of the booking drawers. */
 .form-aside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
   margin: 0;
   padding: 10px 12px;
   background: var(--sand);
   border-radius: 10px;
 }
 
-.form-aside .link-button {
-  font-size: inherit;
-  color: var(--orange-strong);
+.form-aside p {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.form-aside .btn {
+  flex: none;
+  background: var(--surface);
 }
 
 .inline-kind {

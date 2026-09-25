@@ -13,6 +13,7 @@ import type { Booking, BookingSource, Companion, ExtraCharge, PaymentMethod, Sta
 import { asField, type BookingPrefill, type DrawerContent } from '../types.js';
 import { blankCompanion, fitGuestList, guestListRows, namedGuests, readGuestListField } from '../../core/guest-list.js';
 import { blankDiscount, discountFields, readDiscountField, type DiscountDraft } from './discount-fields.js';
+import { icon } from './icons.js';
 
 const SOURCES: BookingSource[] = ['walk_in', 'phone', 'messenger', 'instagram', 'website', 'booking_link'];
 const NEW_SOURCES: BookingSource[] = ['walk_in', 'phone', 'messenger', 'instagram', 'website'];
@@ -288,10 +289,12 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         <form class="booking-form" data-submit="save-booking" novalidate>
           ${form.inquiryId ? html`<p class="notice">Linked to inquiry ${form.inquiryId}. It will be marked as booked.</p>` : ''}
           ${editing ? '' : html`
-            <p class="form-aside small muted">
-              Taking the details yourself. Rather have the guest fill them in and pay online?
-              <button class="link-button" type="button" data-action="send-booking-link">Send them a booking link</button>.
-            </p>`}
+            <div class="form-aside">
+              <p class="small muted">Taking the details yourself. Rather have the guest fill them in and pay online?</p>
+              <button class="btn btn--secondary btn--sm" type="button" data-action="send-booking-link">
+                ${icon('link')} Send a booking link
+              </button>
+            </div>`}
           ${editing ? html`<p class="small muted">Editing <span class="mono">${editing.id}</span>. Payments stay as they are; the price and downpayment are worked out again.</p>` : ''}
 
           <fieldset class="form-section">
