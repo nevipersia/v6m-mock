@@ -25,7 +25,7 @@ export interface DeskContext {
   redraw: () => void;
   openBooking: (bookingId: string) => void;
   newBooking: (prefill?: BookingPrefill) => void;
-  newBookingLink: () => void;
+  newBookingLink: (prefill?: BookingPrefill) => void;
   editBooking: (bookingId: string) => void;
   newEvent: () => void;
   closeDrawer: () => void;

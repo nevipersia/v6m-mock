@@ -170,6 +170,10 @@ interface FormOptions {
 
 export function createBookingForm(prefill: BookingPrefill = {}, { editId }: FormOptions = {}): DrawerContent {
   let draft: Draft | null = null;
+  // What the booking and date were actually chosen to be, as opposed to the
+  // form's own defaults. Handed on to the booking link, which leaves anything
+  // nobody picked for the guest to fill in.
+  const chosen = { product: prefill.product ?? '', date: prefill.date ?? '' };
   let error = '';
   let discount = blankDiscount();
   let startingDiscount = blankDiscount();
@@ -464,6 +468,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
           if (senderLabel) senderLabel.textContent = draft.method === 'gcash' ? 'GCash sender' : 'Sent by';
         } else if (TEXT_FIELDS.includes(field.name)) {
           draft[field.name as TextField] = field.value;
+          if (field.name === 'product' || field.name === 'date') chosen[field.name] = field.value;
         }
         error = '';
         refreshSummary(root, ctx.state);
@@ -471,7 +476,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
     },
 
     actions: {
-      'send-booking-link': ({ ctx }) => ctx.newBookingLink(),
+      'send-booking-link': ({ ctx }) => ctx.newBookingLink(chosen),
 
       'add-extra': ({ redraw }) => {
         if (!draft) return;

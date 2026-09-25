@@ -4,10 +4,10 @@
 import { cancelBookingLink, createBookingLink } from '../../core/actions.js';
 import { html, type SafeHTML } from '../../core/dom.js';
 import { formatDate, plural } from '../../core/format.js';
-import { productGroups } from '../../core/catalog.js';
+import { allProductIds, productGroups } from '../../core/catalog.js';
 import { findBooking, findStaff, productLabel } from '../../core/rules.js';
 import type { BookingLink, State } from '../../core/types.js';
-import { asField, type DrawerContent } from '../types.js';
+import { asField, type BookingPrefill, type DrawerContent } from '../types.js';
 import { icon } from './icons.js';
 
 const linkUrl = (code: string): string => new URL(`../book/?code=${encodeURIComponent(code)}`, window.location.href).href;
@@ -35,8 +35,11 @@ interface LinkDraft {
   expiresInDays: number;
 }
 
-export function createBookingLinkPanel(): DrawerContent {
-  const draft: LinkDraft = { product: '', date: '', note: '', expiresInDays: 7 };
+/** Carries over what staff already chose in the booking form they came from. */
+export function createBookingLinkPanel(prefill: BookingPrefill = {}): DrawerContent {
+  const draft: LinkDraft = {
+    product: prefill.product ?? '', date: prefill.date ?? '', note: '', expiresInDays: 7,
+  };
   const ui: { created: BookingLink | null; error: string } = { created: null, error: '' };
 
   function createdBlock(state: State): SafeHTML | '' {
@@ -64,6 +67,8 @@ export function createBookingLinkPanel(): DrawerContent {
     render(ctx) {
       const { state } = ctx;
       const open = sentLinks(state);
+      // A product that has since been retired would leave the select showing nothing.
+      if (draft.product && !allProductIds(state).includes(draft.product)) draft.product = '';
 
       return html`
         <div class="detail">
@@ -160,7 +165,7 @@ export function createBookingLinkPanel(): DrawerContent {
     },
 
     actions: {
-      'book-by-hand': ({ ctx }) => ctx.newBooking(),
+      'book-by-hand': ({ ctx }) => ctx.newBooking({ product: draft.product, date: draft.date }),
 
       'create-link': ({ ctx, redraw }) => {
         ui.created = createBookingLink(draft, ctx.staff.id);

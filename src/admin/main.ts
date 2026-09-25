@@ -46,7 +46,7 @@ function buildContext(state: State, staff: Staff): DeskContext {
     redraw: () => draw(),
     openBooking: (bookingId) => openDrawer(createBookingDetail(bookingId), ctx),
     newBooking: (prefill = {}) => openDrawer(createBookingForm(prefill), ctx),
-    newBookingLink: () => openDrawer(createBookingLinkPanel(), ctx),
+    newBookingLink: (prefill = {}) => openDrawer(createBookingLinkPanel(prefill), ctx),
     editBooking: (bookingId) => openDrawer(createBookingForm({}, { editId: bookingId }), ctx),
     newEvent: () => openDrawer(createEventForm(), ctx),
     closeDrawer,
@@ -142,7 +142,7 @@ const globalActions: HandlerMap = {
 
   'new-booking': ({ el, ctx }) => ctx.newBooking({ product: el.dataset.product, date: el.dataset.date }),
 
-  'new-booking-link': ({ ctx }) => ctx.newBookingLink(),
+  'new-booking-link': ({ el, ctx }) => ctx.newBookingLink({ product: el.dataset.product, date: el.dataset.date }),
 };
 
 type Kind = 'action' | 'input' | 'hover';
