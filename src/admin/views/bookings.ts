@@ -101,7 +101,6 @@ export function render(ctx: DeskContext): SafeHTML {
       title: 'Bookings',
       subtitle: `${plural(results.length, 'booking')} · ${peso(total)} total · ${peso(due)} still due`,
       actions: ctx.can('bookings.write') ? html`
-        <button class="btn btn--secondary" type="button" data-action="new-booking-link">${icon('link')} Send booking link</button>
         <button class="btn btn--primary" type="button" data-action="new-booking">${icon('plus')} New booking</button>` : '',
     })}
 

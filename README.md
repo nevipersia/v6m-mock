@@ -119,7 +119,9 @@ a real build.
 
 ## Sending a booking link
 
-From the dashboard or the bookings page, **Send booking link** creates a single-use URL. Give it to a
+**New booking** is the one way in. Taking the booking yourself is the default; if the guest would
+rather fill it in themselves, **Send them a booking link** at the top of that form opens the link
+panel, which links back the same way. The link is a single-use URL. Give it to a
 guest: they fill in their own details once, then pay the 50% downpayment by GCash QR. The booking
 appears on the calendar under the staff member who sent it, on hold until the downpayment is
 verified. If the guest leaves before paying, opening the link again goes straight to the payment step;

@@ -72,6 +72,10 @@ export function createBookingLinkPanel(): DrawerContent {
             50% downpayment by GCash QR. The booking lands on your calendar under your name, on hold
             until the downpayment is verified.
           </p>
+          <p class="form-aside small muted">
+            Guest on the phone or at the gate?
+            <button class="link-button" type="button" data-action="book-by-hand">Take the booking yourself</button>.
+          </p>
 
           ${createdBlock(state)}
 
@@ -154,6 +158,8 @@ export function createBookingLinkPanel(): DrawerContent {
     },
 
     actions: {
+      'book-by-hand': ({ ctx }) => ctx.newBooking(),
+
       'create-link': ({ ctx, redraw }) => {
         ui.created = createBookingLink(draft, ctx.staff.id);
         redraw();

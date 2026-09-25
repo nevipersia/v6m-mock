@@ -287,6 +287,11 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
       return html`
         <form class="booking-form" data-submit="save-booking" novalidate>
           ${form.inquiryId ? html`<p class="notice">Linked to inquiry ${form.inquiryId}. It will be marked as booked.</p>` : ''}
+          ${editing ? '' : html`
+            <p class="form-aside small muted">
+              Taking the details yourself. Rather have the guest fill them in and pay online?
+              <button class="link-button" type="button" data-action="send-booking-link">Send them a booking link</button>.
+            </p>`}
           ${editing ? html`<p class="small muted">Editing <span class="mono">${editing.id}</span>. Payments stay as they are; the price and downpayment are worked out again.</p>` : ''}
 
           <fieldset class="form-section">
@@ -484,6 +489,8 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
     },
 
     actions: {
+      'send-booking-link': ({ ctx }) => ctx.newBookingLink(),
+
       'add-extra': ({ redraw }) => {
         if (!draft) return;
         draft.extras.push({ label: '', amount: 0, custom: false });

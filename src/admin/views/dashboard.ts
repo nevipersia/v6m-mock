@@ -198,7 +198,6 @@ export function render(ctx: DeskContext): SafeHTML {
       title: 'Dashboard',
       subtitle: `${formatDate(today, 'long')} · ${plural(todays.length, 'booking')} today`,
       actions: canWrite ? html`
-        <button class="btn btn--secondary" type="button" data-action="new-booking-link">${icon('link')} Send booking link</button>
         <button class="btn btn--primary" type="button" data-action="new-booking">${icon('plus')} New booking</button>` : '',
     })}
 
