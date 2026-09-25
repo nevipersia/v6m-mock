@@ -372,6 +372,12 @@ export function render(ctx: DeskContext): SafeHTML {
   const days = daysInView(state);
   const first = days[0] ?? state.meta.asOf;
   const last = days[days.length - 1] ?? first;
+  // The day a new booking starts on: the day tapped in the strip, else the day
+  // the reader picked, else today, else the first day on screen.
+  const anchor = anchorOf(state);
+  const focused = (ui.pickedDay && days.includes(ui.pickedDay) && ui.pickedDay)
+    || (days.includes(anchor) && anchor)
+    || pickedDay(state, days);
   const isFollowingToday = ui.range === 'custom'
     ? days.includes(state.meta.asOf)
     : !ui.anchor || (ui.range === 'day' ? ui.anchor === state.meta.asOf : days.includes(state.meta.asOf));
@@ -380,7 +386,10 @@ export function render(ctx: DeskContext): SafeHTML {
     ${pageHead({
       title: 'Calendar',
       subtitle: datePicker(state, first, last),
-      actions: ctx.can('bookings.write') ? html`<button class="btn btn--primary" type="button" data-action="new-booking">${icon('plus')} New booking</button>` : '',
+      actions: ctx.can('bookings.write')
+        ? html`<button class="btn btn--primary" type="button" data-action="new-booking" data-date="${focused}"
+            title="New booking on ${formatDate(focused, 'long')}">${icon('plus')} New booking</button>`
+        : '',
     })}
 
     <div class="calendar-bar">
