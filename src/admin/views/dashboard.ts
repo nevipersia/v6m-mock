@@ -319,7 +319,7 @@ export function render(ctx: DeskContext): SafeHTML {
     .filter((b) => isActive(b) && b.date > today && b.date <= horizon)
     .slice(0, 6);
   const balancesDue = state.bookings
-    .filter((b) => isActive(b) && b.status !== 'checked_out' && b.date >= today)
+    .filter((b) => isActive(b) && b.status !== 'checked_out' && b.date === today)
     .reduce((sum, b) => sum + b.balance, 0);
   const closedFor = closingEvent(state, today);
   const attention = attentionItems(ctx);
@@ -344,7 +344,7 @@ export function render(ctx: DeskContext): SafeHTML {
       ${poolMetric(state, 'daytour')}
       ${poolMetric(state, 'overnight')}
       ${metric('Collected today', peso(collected))}
-      ${metric('Balances due', peso(balancesDue), 'Today and upcoming', balancesDue ? 'warn' : '')}
+      ${metric('Balances due', peso(balancesDue), "On today's bookings", balancesDue ? 'warn' : '')}
     </div>
 
     ${salesSection(ctx)}
