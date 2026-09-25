@@ -5,8 +5,8 @@
 import { bookingLinkStage, payByQr, useBookingLink } from '../core/actions.js';
 import { $, $maybe, on, render } from '../core/dom.js';
 import { DEFAULT_BOOKING_PAGE, loadBookingPage, readableInk } from '../core/booking-page.js';
-import { isPHMobile, parseDigits } from '../core/format.js';
-import { blankCompanion, fitGuestList, guestListProblem, namesAsked, readGuestListField } from '../core/guest-list.js';
+import { isEmail, isPHMobile, parseDigits } from '../core/format.js';
+import { blankCompanion, fitGuestList, guestListProblem, namesAsked, readGuestListField, updateGuestCount } from '../core/guest-list.js';
 import { VERIFY_DELAY_MS, type PaymentCardState } from '../core/payment-card.js';
 import { qrPaymentRequest, sampleReference } from '../core/qr-payment.js';
 import { checkAvailability, findBooking, findExclusive, findUnit } from '../core/rules.js';
@@ -28,8 +28,6 @@ const card: PaymentCardState = { reference: '', senderName: '', error: '', check
 
 type Screen = { name: 'form'; link: BookingLink } | { name: 'pay'; bookingId: string } | { name: 'other' };
 let screen: Screen = { name: 'other' };
-
-const isEmail = (value: string): boolean => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
 
 function applyTheme(page: BookingPageSettings): void {
   const { style } = document.body;
@@ -79,16 +77,6 @@ const redrawGuestList = () => {
   if (slot) render(slot, guestListBody(draft));
 };
 
-/** Just the "3 of 5 named" line, so typing a name doesn't rebuild the rows. */
-function refreshGuestCount(): void {
-  const label = $maybe('.guest-count', app);
-  if (!label) return;
-  const asked = namesAsked(draft.adults + draft.kids);
-  const named = draft.guestList.filter((row) => row.name.trim()).length;
-  label.textContent = `${named} of ${asked} named`;
-  label.classList.toggle('guest-count--short', named < asked);
-}
-
 function bind(page: BookingPageSettings): void {
   on<HTMLInputElement>(app, 'input', '[data-input]', (_event, field) => {
     if (field.name === 'reference' || field.name === 'senderName') {
@@ -102,7 +90,7 @@ function bind(page: BookingPageSettings): void {
     if (field.dataset.row !== undefined) {
       const shown = readGuestListField(draft.guestList, field);
       if (shown !== null && shown !== field.value) field.value = shown;
-      if (field.name === 'companionName') refreshGuestCount();
+      if (field.name === 'companionName') updateGuestCount(app, draft.guestList, namesAsked(draft.adults + draft.kids));
       return;
     }
     if (field.name === 'adults' || field.name === 'kids' || field.name === 'scPwd') {

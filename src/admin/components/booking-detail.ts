@@ -5,7 +5,7 @@ import {
   applyDiscount, cancelBooking, checkIn, checkOut, payByQr, recordPayment, removeDiscount, setGuestList,
 } from '../../core/actions.js';
 import { $, $maybe, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
-import { blankCompanion, fitGuestList, guestListRows, namedGuests, readGuestListField } from '../../core/guest-list.js';
+import { blankCompanion, fitGuestList, guestListEditor, readGuestListField } from '../../core/guest-list.js';
 import { VERIFY_DELAY_MS, paymentCard, type PaymentCardState } from '../../core/payment-card.js';
 import { qrPaymentRequest, sampleReference } from '../../core/qr-payment.js';
 import { formatDate, formatDateTime, peso, plural, timeOf } from '../../core/format.js';
@@ -175,11 +175,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         <section class="detail-section">
           <h3 class="detail-section__title">Guest list</h3>
           <form class="guest-list-form" data-submit="save-guest-list" novalidate>
-            ${guestListRows(ui.guestList, 'companion')}
-            <div class="guest-rows__foot">
-              <button class="btn btn--quiet btn--sm" type="button" data-action="add-companion">+ Add a guest</button>
-              <span class="guest-count ${namedGuests(ui.guestList).length < pax ? 'guest-count--short' : ''}">${namedGuests(ui.guestList).length} of ${pax} named</span>
-            </div>
+            ${guestListEditor(ui.guestList, pax)}
             <div class="button-row button-row--end">
               <button class="btn btn--quiet" type="button" data-action="cancel-guest-list">Cancel</button>
               <button class="btn btn--primary" type="submit">Save guest list</button>

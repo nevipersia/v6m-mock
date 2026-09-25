@@ -4,14 +4,14 @@
 import { createBooking, updateBooking, type NewBooking } from '../../core/actions.js';
 import { $, $maybe, html, render, type SafeHTML } from '../../core/dom.js';
 import { allProductIds, productGroups } from '../../core/catalog.js';
-import { formatDigits, isPHMobile, parseDigits, peso } from '../../core/format.js';
+import { formatDigits, isEmail, isPHMobile, parseDigits, peso } from '../../core/format.js';
 import {
   DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, checkAvailability, closingEvent, depositRequired, discountAmount,
   discountProblem, findBooking, findExclusive, findGuest, findUnit, quote,
 } from '../../core/rules.js';
 import type { Booking, BookingSource, Companion, ExtraCharge, PaymentMethod, State } from '../../core/types.js';
 import { asField, type BookingPrefill, type DrawerContent } from '../types.js';
-import { blankCompanion, fitGuestList, guestListRows, namedGuests, readGuestListField } from '../../core/guest-list.js';
+import { blankCompanion, fitGuestList, guestListEditor, namedGuests, readGuestListField, updateGuestCount } from '../../core/guest-list.js';
 import { blankDiscount, discountFields, readDiscountField, type DiscountDraft } from './discount-fields.js';
 import { icon } from './icons.js';
 
@@ -43,8 +43,6 @@ type Draft = Omit<NewBooking, 'extras'> & {
   address: string; email: string; scPwd: number; extras: ExtraDraft[]; sentTime: string; senderName: string;
   guestList: Companion[];
 };
-
-const isEmail = (value: string): boolean => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
 
 function initialDraft(state: State, prefill: BookingPrefill): Draft {
   const products = allProductIds(state);
@@ -162,16 +160,6 @@ function summaryTemplate(state: State, draft: Draft, { discount, editing }: Summ
     </div>`;
 }
 
-/** Updates just the "3 of 5 named" line while staff type into the rows. */
-function refreshGuestCount(root: HTMLElement, form: Draft): void {
-  const label = $maybe('.guest-count', root);
-  if (!label) return;
-  const pax = form.adults + form.kids;
-  const named = namedGuests(form.guestList).length;
-  label.textContent = `${named} of ${pax} named`;
-  label.classList.toggle('guest-count--short', named < pax);
-}
-
 const sameDiscount = (a: DiscountDraft, b: DiscountDraft): boolean =>
   a.kind === b.kind && a.value === b.value && a.note.trim() === b.note.trim();
 
@@ -203,16 +191,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
   };
 
   /** The rows and the counter: redrawn on their own when the headcount changes. */
-  function guestListBody(form: Draft): SafeHTML {
-    const pax = form.adults + form.kids;
-    const named = namedGuests(form.guestList).length;
-    return html`
-      ${guestListRows(form.guestList, 'companion')}
-      <div class="guest-rows__foot">
-        <button class="btn btn--quiet btn--sm" type="button" data-action="add-companion">+ Add a guest</button>
-        <span class="guest-count ${named < pax ? 'guest-count--short' : ''}">${named} of ${pax} named</span>
-      </div>`;
-  }
+  const guestListBody = (form: Draft): SafeHTML => guestListEditor(form.guestList, form.adults + form.kids);
 
   function guestListSection(form: Draft): SafeHTML {
     return html`
@@ -443,7 +422,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         const field = asField(el) as HTMLInputElement | HTMLSelectElement;
         const shown = readGuestListField(draft.guestList, field);
         if (shown !== null && shown !== field.value) field.value = shown;
-        if (field.name === 'companionName') refreshGuestCount(root, draft);
+        if (field.name === 'companionName') updateGuestCount(root, draft.guestList, draft.adults + draft.kids);
       },
 
       discount: ({ el, ctx, root }) => {

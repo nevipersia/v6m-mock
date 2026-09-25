@@ -184,49 +184,6 @@ body {
   line-height: 1.6;
 }
 
-.staff-list {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.staff-option {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 12px 14px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  text-align: left;
-  cursor: pointer;
-}
-
-.staff-option:hover {
-  border-color: var(--orange);
-}
-
-.staff-option__text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.staff-option__role {
-  font-size: 13px;
-  color: var(--ink-muted);
-}
-
-.login__back {
-  display: inline-block;
-  margin-top: 20px;
-  font-size: 14px;
-  color: var(--ink-muted);
-}
-
 /* ---------- Shell ---------- */
 
 .desk {
@@ -268,10 +225,6 @@ body {
 .sidebar__nav {
   display: grid;
   gap: 2px;
-}
-
-.sidebar__site {
-  margin-top: auto;
 }
 
 .nav-link {
@@ -564,12 +517,6 @@ body {
   gap: 16px;
   align-items: start;
 }
-
-.panel--wide {
-  grid-column: 1 / -1;
-}
-
-
 
 .rows {
   margin: 0;
@@ -1534,18 +1481,6 @@ body.has-drawer {
 
 .login__invite-toggle {
   margin-top: 16px;
-}
-
-.login__invite {
-  display: grid;
-  gap: 10px;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-}
-
-.staff-option .pill {
-  margin-left: auto;
 }
 
 /* ---------- Dashboard chart ---------- */

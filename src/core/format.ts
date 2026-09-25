@@ -67,6 +67,5 @@ export function formatDigits(value: string | number | null | undefined): string 
 export const parseDigits = (value: string | number | null | undefined): number =>
   Number(String(value ?? '').replace(/\D/g, '')) || 0;
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-
-export const weekdayName = (index: number): string => WEEKDAYS[index] ?? '';
+/** Loose check: something@something.something, the most a mock should insist on. */
+export const isEmail = (value: string): boolean => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());

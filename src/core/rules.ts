@@ -53,8 +53,6 @@ export const findPackage = (state: State, id: string | null | undefined) => stat
 export const findExclusive = (state: State, id: string | null | undefined): ExclusivePackage | undefined =>
   (state.exclusivePackages ?? []).find((pkg) => pkg.id === id);
 
-export const isExclusiveProduct = (state: State, product: string): boolean => Boolean(findExclusive(state, product));
-
 /** The pool session a regular product runs in: its own id for entrance, or the unit's session. */
 export function sessionFor(state: State, product: string): PoolSession {
   const unit = findUnit(state, product);
@@ -105,12 +103,6 @@ export const exclusiveOverlapping = (state: State, window: { startsAt: Timestamp
 export const exclusiveOn = (state: State, date: ISODate): Booking | undefined =>
   state.bookings.find((b) => isActive(b) && b.productType === 'exclusive' && b.date === date);
 
-export function periodDays(state: State): ISODate[] {
-  const days: ISODate[] = [];
-  for (let day = state.meta.period.from; day <= state.meta.period.to; day = addDays(day, 1)) days.push(day);
-  return days;
-}
-
 export const nightsOf = (booking: Booking): ISODate[] =>
   Array.from({ length: booking.nights }, (_, i) => addDays(booking.date, i));
 
@@ -128,11 +120,6 @@ export const poolGuests = (state: State, date: ISODate, sessionId: string, exclu
   state.bookings
     .filter((b) => b.id !== excludeId && isActive(b) && b.date === date && b.session === sessionId && b.productType !== 'exclusive')
     .reduce((sum, b) => sum + b.adults + b.kids, 0);
-
-export function poolSlotsLeft(state: State, date: ISODate, sessionId: string): number {
-  const session = findSession(state, sessionId);
-  return session ? Math.max(0, session.capacity - poolGuests(state, date, sessionId)) : 0;
-}
 
 export interface BookingRequest {
   product: string;
@@ -307,4 +294,3 @@ export function depositRequired(_state: State, _product: string, total: number):
 /** What is still needed to reach the downpayment; 0 once it is met. */
 export const downpaymentDue = (booking: Booking): number => Math.max(0, booking.depositRequired - booking.paid);
 
-export const hasDownpayment = (booking: Booking): boolean => downpaymentDue(booking) === 0;

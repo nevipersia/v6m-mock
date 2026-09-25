@@ -51,6 +51,30 @@ export function readGuestListField(list: Companion[], field: HTMLInputElement | 
   return null;
 }
 
+/**
+ * The rows plus the "+ Add a guest" button and the counter. `target` is how
+ * many names are wanted: the headcount at the desk, `namesAsked` on the
+ * booking page, where the list is required.
+ */
+export function guestListEditor(list: Companion[], target: number, { input = 'companion', remarks = true } = {}): SafeHTML {
+  const named = namedGuests(list).length;
+  return html`
+    ${guestListRows(list, input, { remarks })}
+    <div class="guest-rows__foot">
+      <button class="btn btn--quiet btn--sm" type="button" data-action="add-companion">+ Add a guest</button>
+      <span class="guest-count ${named < target ? 'guest-count--short' : ''}">${named} of ${target} named</span>
+    </div>`;
+}
+
+/** Updates just the counter while someone types, leaving the rows alone. */
+export function updateGuestCount(scope: ParentNode, list: Companion[], target: number): void {
+  const label = scope.querySelector('.guest-count');
+  if (!label) return;
+  const named = namedGuests(list).length;
+  label.textContent = `${named} of ${target} named`;
+  label.classList.toggle('guest-count--short', named < target);
+}
+
 /** Rows with a name typed in. */
 export const namedGuests = (list: Companion[]): Companion[] => list.filter((row) => row.name.trim());
 
