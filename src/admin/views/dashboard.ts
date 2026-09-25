@@ -3,10 +3,11 @@
 
 import { checkOut } from '../../core/actions.js';
 import { html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
-import { addDays, formatDate, formatDateTime, peso, plural, timeOf } from '../../core/format.js';
+import { addDays, formatDate, formatDateTime, peso, pesoShort, plural, timeOf } from '../../core/format.js';
 import {
   closingEvent, downpaymentDue, exclusiveOn, findSession, findStaff, findUnit, isActive, poolGuests, productLabel,
 } from '../../core/rules.js';
+import { SALES_RANGES, salesReport, type SalesReport, type SalesSlice } from '../../core/sales.js';
 import type { Booking, Staff, State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { kindDot, paymentPill, statusPill } from '../components/badges.js';
@@ -151,25 +152,104 @@ function attentionItems(ctx: DeskContext): SafeHTML[] {
   return items;
 }
 
-/** Revenue collected per day for the last week, as a small bar chart. */
-function revenueChart(state: State): SafeHTML {
-  const days = Array.from({ length: 7 }, (_, index) => addDays(state.meta.asOf, index - 6));
-  const totals = days.map((day) => state.payments
-    .filter((payment) => payment.receivedAt.startsWith(day))
-    .reduce((sum, payment) => sum + payment.amount, 0));
-  const peak = Math.max(1, ...totals);
+/** How many days of sales the dashboard is showing. Kept while the app is open. */
+let salesDays: number = SALES_RANGES[0];
+
+function salesStat(label: string, value: string, detail: TemplateValue = '', tone = ''): SafeHTML {
+  return html`
+    <div class="stat ${tone ? `stat--${tone}` : ''}">
+      <span class="stat__label">${label}</span>
+      <span class="stat__value">${value}</span>
+      ${detail ? html`<span class="stat__detail">${detail}</span>` : ''}
+    </div>`;
+}
+
+/** Sales taken and money collected per day (per week over longer windows). */
+function salesChart(report: SalesReport): SafeHTML {
+  const peak = Math.max(1, ...report.points.flatMap((point) => [point.booked, point.collected]));
+  const height = (value: number) => `${Math.max(value > 0 ? 2 : 0, Math.round((value / peak) * 100))}%`;
 
   return html`
-    <div class="chart" role="img" aria-label="Payments collected over the last seven days">
-      ${days.map((day, index) => html`
-        <div class="chart__col">
-          <div class="chart__bar-track">
-            <div class="chart__bar" style="height:${Math.round(((totals[index] ?? 0) / peak) * 100)}%" title="${formatDate(day)} · ${peso(totals[index] ?? 0)}"></div>
+    <div class="chart" role="img" aria-label="Sales taken and money collected over the last ${report.days} days">
+      ${report.points.map((point) => html`
+        <div class="chart__col ${point.isNow ? 'is-now' : ''}">
+          <div class="chart__bars">
+            <span class="chart__bar chart__bar--booked" style="height:${height(point.booked)}"
+              title="${point.title} · ${peso(point.booked)} booked"></span>
+            <span class="chart__bar chart__bar--collected" style="height:${height(point.collected)}"
+              title="${point.title} · ${peso(point.collected)} collected"></span>
           </div>
-          <span class="chart__label ${day === state.meta.asOf ? 'is-today' : ''}">${formatDate(day, 'weekday')}</span>
+          <span class="chart__label">${point.label}</span>
         </div>`)}
     </div>
-    <p class="small muted">Collected in the last 7 days: ${peso(totals.reduce((sum, value) => sum + value, 0))}</p>`;
+    <p class="chart__peak small muted">Tallest bar ${pesoShort(peak)}${report.weekly ? ' · one bar per week' : ' · one bar per day'}</p>`;
+}
+
+/** A ranked breakdown: cottages, GCash and so on, each with a share bar. */
+function breakdown(slices: SalesSlice[], empty: string, tone: string): SafeHTML {
+  if (!slices.length) return html`<p class="small muted">${empty}</p>`;
+  return html`
+    <ul class="breakdown">
+      ${slices.map((slice) => html`
+        <li class="breakdown__row">
+          <span class="breakdown__label">${slice.label}</span>
+          <span class="breakdown__amount">${peso(slice.amount)}</span>
+          <span class="meter meter--thin meter--${tone} breakdown__meter"><span style="width:${Math.round(slice.share * 100)}%"></span></span>
+          <span class="breakdown__share small muted">${Math.round(slice.share * 100)}% · ${slice.count}</span>
+        </li>`)}
+    </ul>`;
+}
+
+function salesSection(ctx: DeskContext): SafeHTML {
+  const report = salesReport(ctx.state, salesDays);
+  const changeTone = report.change === null ? '' : report.change < 0 ? 'down' : 'up';
+
+  return html`
+    <section class="sales" aria-label="Sales">
+      <header class="sales__head">
+        <div>
+          <h2 class="sales__title">Sales</h2>
+          <p class="small muted">${formatDate(report.from, 'monthDay')} – ${formatDate(report.to, 'monthDay')} · bookings taken in this window</p>
+        </div>
+        <div class="segmented" role="group" aria-label="Sales period">
+          ${SALES_RANGES.map((days) => html`
+            <button class="segmented__option ${days === salesDays ? 'is-active' : ''}" type="button"
+              data-action="sales-range" data-days="${days}" aria-pressed="${days === salesDays}">${days} days</button>`)}
+        </div>
+      </header>
+
+      <div class="stats">
+        ${salesStat('Sales booked', peso(report.booked), `${plural(report.bookings, 'booking')} taken`)}
+        ${salesStat('Collected', peso(report.collected), report.change === null
+          ? 'Nothing to compare with'
+          : html`<span class="stat__change stat__change--${changeTone}">${report.change > 0 ? '▲' : report.change < 0 ? '▼' : '='} ${Math.abs(report.change)}%</span> vs the ${report.days} days before`, changeTone === 'down' ? '' : '')}
+        ${salesStat('Average booking', peso(report.averageBooking), 'Per booking taken')}
+        ${salesStat('Still to collect', peso(report.outstanding), 'On these bookings', report.outstanding ? 'warn' : '')}
+      </div>
+
+      <div class="sales__grid">
+        <section class="panel sales__trend">
+          <header class="panel__head">
+            <h3 class="panel__title">Trend</h3>
+            <p class="chart__legend small muted">
+              <span class="chart__key chart__key--booked"></span>Booked
+              <span class="chart__key chart__key--collected"></span>Collected
+            </p>
+          </header>
+          ${salesChart(report)}
+        </section>
+
+        <section class="panel">
+          <header class="panel__head"><h3 class="panel__title">What sold</h3></header>
+          ${breakdown(report.byProduct, 'No bookings taken in this window.', 'blue')}
+        </section>
+
+        <section class="panel">
+          <header class="panel__head"><h3 class="panel__title">How guests paid</h3></header>
+          ${breakdown(report.byMethod, 'No payments in this window.', 'green')}
+        </section>
+      </div>
+    </section>`;
 }
 
 export function render(ctx: DeskContext): SafeHTML {
@@ -214,8 +294,10 @@ export function render(ctx: DeskContext): SafeHTML {
       ${metric('Balances due', peso(balancesDue), 'Today and upcoming', balancesDue ? 'warn' : '')}
     </div>
 
+    ${salesSection(ctx)}
+
     <div class="dashboard-grid">
-      <section class="panel">
+      <section class="panel dashboard-grid__arriving">
         <header class="panel__head">
           <h2 class="panel__title">Arriving today</h2>
           <span class="panel__count">${arriving.length}</span>
@@ -228,7 +310,7 @@ export function render(ctx: DeskContext): SafeHTML {
           </ul>` : emptyState('No more arrivals today', 'Walk-ins can be added with New booking.')}
       </section>
 
-      <section class="panel">
+      <section class="panel dashboard-grid__attention">
         <header class="panel__head">
           <h2 class="panel__title">Needs attention</h2>
           <span class="panel__count">${attention.length}</span>
@@ -236,7 +318,7 @@ export function render(ctx: DeskContext): SafeHTML {
         ${attention.length ? html`<ul class="attention">${attention}</ul>` : emptyState('All clear', 'No holds, balances or open inquiries.')}
       </section>
 
-      <section class="panel">
+      <section class="panel dashboard-grid__inhouse">
         <header class="panel__head">
           <h2 class="panel__title">In house</h2>
           <span class="panel__count">${inHouse.length}</span>
@@ -249,7 +331,7 @@ export function render(ctx: DeskContext): SafeHTML {
           </ul>` : emptyState('Nobody checked in yet', 'Guests appear here after check-in.')}
       </section>
 
-      <section class="panel">
+      <section class="panel dashboard-grid__upcoming">
         <header class="panel__head">
           <h2 class="panel__title">Next ${LOOKAHEAD_DAYS} days</h2>
           <a class="small" href="#/calendar">Open calendar</a>
@@ -268,12 +350,7 @@ export function render(ctx: DeskContext): SafeHTML {
           </ul>` : emptyState('Nothing booked yet', 'The week ahead is open.')}
       </section>
 
-      <section class="panel">
-        <header class="panel__head"><h2 class="panel__title">Payments this week</h2></header>
-        ${revenueChart(state)}
-      </section>
-
-      <section class="panel">
+      <section class="panel dashboard-grid__activity">
         <header class="panel__head"><h2 class="panel__title">Recent activity</h2></header>
         <ul class="timeline">
           ${recent.map((entry) => html`
@@ -287,6 +364,11 @@ export function render(ctx: DeskContext): SafeHTML {
 }
 
 export const actions: HandlerMap = {
+  'sales-range': ({ el, ctx }) => {
+    salesDays = Number(el.dataset.days) || SALES_RANGES[0];
+    ctx.redraw();
+  },
+
   'check-out': ({ el, ctx }) => {
     const booking = checkOut(el.dataset.id ?? '', ctx.staff.id);
     const unit = findUnit(ctx.state, booking.product);

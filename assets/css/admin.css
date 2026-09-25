@@ -460,9 +460,9 @@ body {
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .metric {
@@ -513,10 +513,46 @@ body {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
+  /* Named on one column too, so the panels never share an implicit cell. */
+  grid-template-areas:
+    "arriving"
+    "attention"
+    "inhouse"
+    "upcoming"
+    "activity";
   gap: 16px;
   align-items: start;
 }
+
+/*
+ * Laid out by hand rather than auto-fit: the short panels sit under each
+ * other so a tall "Needs attention" doesn't leave a hole beside it.
+ */
+@media (min-width: 760px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "arriving attention"
+      "inhouse  attention"
+      "upcoming activity";
+  }
+}
+
+@media (min-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      "arriving attention upcoming"
+      "inhouse  attention activity";
+  }
+}
+
+.dashboard-grid__arriving { grid-area: arriving; }
+.dashboard-grid__attention { grid-area: attention; }
+.dashboard-grid__inhouse { grid-area: inhouse; }
+.dashboard-grid__upcoming { grid-area: upcoming; }
+.dashboard-grid__activity { grid-area: activity; }
 
 .rows {
   margin: 0;
@@ -1483,47 +1519,224 @@ body.has-drawer {
   margin-top: 16px;
 }
 
-/* ---------- Dashboard chart ---------- */
+/* ---------- Sales ---------- */
+
+.sales {
+  margin-bottom: 24px;
+}
+
+.sales__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 14px;
+}
+
+.sales__title {
+  font-size: 20px;
+}
+
+.sales__head .segmented {
+  margin-bottom: 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.stat__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.stat__value {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat__detail {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.stat__change {
+  font-weight: 600;
+}
+
+.stat__change--up { color: var(--green-ink); }
+.stat__change--down { color: var(--terra-ink); }
+
+.stat--warn {
+  background: var(--terra-soft);
+  border-color: transparent;
+}
+
+.stat--warn .stat__label,
+.stat--warn .stat__value,
+.stat--warn .stat__detail {
+  color: var(--terra-ink);
+}
+
+.sales__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* ---------- Trend chart ---------- */
 
 .chart {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 8px;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 4px;
   align-items: end;
-  height: 120px;
-  margin-bottom: 8px;
+  height: 150px;
+  margin-bottom: 6px;
 }
 
 .chart__col {
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 6px;
-  align-content: end;
   height: 100%;
+  min-width: 0;
+  padding: 0 2px;
+  border-radius: var(--radius-sm);
 }
 
-.chart__bar-track {
+.chart__col.is-now {
+  background: var(--sand);
+}
+
+.chart__bars {
   display: flex;
   align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
   height: 100%;
 }
 
 .chart__bar {
-  width: 100%;
-  min-height: 2px;
-  background: var(--blue);
-  border-radius: 4px 4px 0 0;
+  display: block;
+  flex: 1 1 0;
+  max-width: 16px;
+  min-height: 0;
+  border-radius: 3px 3px 0 0;
 }
+
+.chart__bar--booked { background: var(--blue); }
+.chart__bar--collected { background: var(--green); }
 
 .chart__label {
   font-size: 11px;
   color: var(--ink-muted);
   text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.chart__label.is-today {
+.chart__col.is-now .chart__label {
   color: var(--orange-strong);
   font-weight: 600;
+}
+
+.chart__legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart__key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.chart__key--booked { background: var(--blue); }
+.chart__key--collected { background: var(--green); margin-left: 6px; }
+
+.chart__peak {
+  margin-top: 4px;
+}
+
+/* ---------- Breakdown bars ---------- */
+
+.breakdown {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breakdown__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
+  align-items: baseline;
+}
+
+.breakdown__label {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breakdown__amount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown__meter {
+  grid-column: 1 / -1;
+}
+
+.breakdown__share {
+  grid-column: 1 / -1;
+  font-variant-numeric: tabular-nums;
+}
+
+.meter--green > span { background: var(--green); }
+.meter--blue > span { background: var(--blue); }
+
+@media (min-width: 760px) {
+  .sales__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sales__trend {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1100px) {
+  .chart {
+    height: 190px;
+  }
 }
 
 /* ---------- Calendar controls ---------- */

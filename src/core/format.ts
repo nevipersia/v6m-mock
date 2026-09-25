@@ -5,6 +5,14 @@ import type { ISODate, Timestamp } from './types.js';
 
 export const peso = (amount: number): string => `₱${Math.round(amount).toLocaleString('en-PH')}`;
 
+/** Short money for chart labels and tight tiles: ₱9,800 · ₱24.5k · ₱1.2M. */
+export function pesoShort(amount: number): string {
+  const value = Math.round(amount);
+  if (value >= 1_000_000) return `₱${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`;
+  if (value >= 10_000) return `₱${(value / 1000).toFixed(value >= 100_000 ? 0 : 1)}k`;
+  return peso(value);
+}
+
 export function parseDate(iso: ISODate | Timestamp): Date {
   const [year = 1970, month = 1, day = 1] = iso.slice(0, 10).split('-').map(Number);
   return new Date(year, month - 1, day);

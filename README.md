@@ -51,6 +51,24 @@ single-use code and picks their own password.
 The owner can invite more accounts, tick or untick individual permissions, suspend someone, or revoke
 an invite before it is used. Each invite code works once.
 
+## Sales on the dashboard
+
+The dashboard opens with today at a glance — arrivals, who is in house, how full each pool session
+is, collected today, balances due — then a **Sales** section over the last **7, 30 or 90 days**:
+
+- **Sales booked**, the total of the bookings taken in that window, with how many were taken.
+- **Collected**, the payments received, against the same length of time before it (▲ or ▼ percent).
+- **Average booking** and **Still to collect** on those bookings.
+- A **trend** chart with two bars per period: what was booked and what was collected. Seven days
+  charts a bar per day; the longer windows switch to a bar per week so the chart stays readable.
+- **What sold**, ranked by money: exclusive rentals, cottages, rooms, each entrance session and
+  events, with each one's share and booking count.
+- **How guests paid**: GCash, cash and bank transfer, with shares.
+
+"Booked" counts a booking on the day it was taken, not the day of the stay, so the figures answer
+"how are we selling?" rather than "who is here?". Cancelled bookings are left out. Every account can
+see this section; it is not behind a permission.
+
 ## What can be booked
 
 - **Entrance per head**, in four sessions from the resort's guest registration template: day tour

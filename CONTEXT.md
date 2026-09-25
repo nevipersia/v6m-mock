@@ -158,6 +158,10 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   (new and edit; `updateBooking` takes an optional `guestList`) as well as its own section in the
   booking drawer. The Bookings list shows how many are named and carries per-row Edit and Sheet
   (PDF) buttons.
+- Sales analytics on the dashboard come from `core/sales.ts` (`salesReport(state, days)`): bookings
+  are counted by `createdAt` (what was sold), payments by `receivedAt` (what came in), over 7, 30 or
+  90 days back from `meta.asOf`. Windows longer than 14 days bucket the trend into weeks. The report
+  also breaks sales down by product kind and payments by method. No permission gates it.
 - The booking PDF is the guest registration sheet (companions template): details, guest list with
   signature column, charges, total / downpayment / overall amount, "Received by". Multi-page.
 - Every booking needs a 50% downpayment (`depositRequired`, rounded up to the peso)
