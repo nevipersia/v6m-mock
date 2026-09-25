@@ -2,15 +2,16 @@
 // through store.update(), which saves to localStorage and re-renders subscribers.
 
 import { update } from './store.js';
-import { addDays, peso } from './format.js';
+import { addDays, formatDate, peso, plural } from './format.js';
 import {
-  METHOD_LABELS, bookingWindow, checkAvailability, depositRequired, discountAmount, discountProblem, downpaymentDue,
-  findBooking, findExclusive, findStaff, findUnit, isEditable, productLabel, quote, sessionFor, type DiscountInput,
+  DOWNPAYMENT_RATE, METHOD_LABELS, STAGE_LABELS, bookingWindow, checkAvailability, depositRequired, discountAmount,
+  discountProblem, downpaymentDue, findBooking, findExclusive, findGuest, findPackage, findStaff, findUnit, isActive,
+  isEditable, productLabel, quote, sessionFor, type DiscountInput,
 } from './rules.js';
 import { formatReference, referenceProblem } from './qr-payment.js';
 import type {
-  Booking, BookingLink, BookingSource, Companion, ExtraCharge, Guest, ISODate, Inquiry, Invite, Payment, PaymentMethod, Permission, Role,
-  Staff, StaffStatus, State, Timestamp,
+  Booking, BookingLink, BookingSource, Companion, EventPackage, EventStage, ExtraCharge, Guest, ISODate, Inquiry, Invite,
+  Payment, PaymentMethod, Permission, PriceLine, ResortEvent, Role, Staff, StaffStatus, State, Timestamp,
 } from './types.js';
 
 const pad = (n: number, width = 2): string => String(n).padStart(width, '0');
@@ -476,6 +477,186 @@ export function cancelBooking(bookingId: string, reason: string, staffId: string
 }
 
 // ---------- Inbox ----------
+
+// ---------- Private events ----------
+
+export interface NewEvent {
+  title: string;
+  date: ISODate;
+  packageId: string;
+  addOns: { item: string; amount: number }[];
+  guests: number;
+  /** Closes the resort for the day: no other bookings can be taken. */
+  exclusive: boolean;
+  stage: EventStage;
+  contactName: string;
+  contactMobile: string;
+  coordinatorId: string;
+  ocularDate: ISODate;
+  notes: string;
+  /** Recorded against the booking, for events that are already reserved. */
+  deposit: number;
+  method: PaymentMethod;
+}
+
+export type EventResult = { error: string } | { error?: undefined; event: ResortEvent; booking: Booking | null };
+
+/** Stages that mean the date is taken, so the event carries a booking. */
+const BOOKED_STAGES: EventStage[] = ['reserved', 'paid', 'done'];
+
+const eventTotal = (event: Pick<ResortEvent, 'packagePrice' | 'addOns'>): number =>
+  event.packagePrice + event.addOns.reduce((sum, addOn) => sum + addOn.amount, 0);
+
+/** "14:00-06:00" from the package, as the day's start and end. */
+function eventWindow(pkg: EventPackage, date: ISODate): { startsAt: Timestamp; endsAt: Timestamp } {
+  const [start = '14:00', end = '06:00'] = pkg.hours.split('-');
+  const endDate = end <= start ? addDays(date, 1) : date;
+  return { startsAt: `${date}T${start}:00+08:00`, endsAt: `${endDate}T${end}:00+08:00` };
+}
+
+/** Bookings already on that date that an all-day event would clash with. */
+const clashesOn = (state: State, date: ISODate): Booking[] =>
+  state.bookings.filter((booking) => isActive(booking) && booking.date === date && booking.product !== 'event');
+
+function makeEventBooking(state: State, event: ResortEvent, contactName: string, staffId: string): Booking {
+  const pkg = must(findPackage(state, event.packageId), 'Event package');
+  const guest = findOrCreateGuest(state, { name: contactName, mobile: null });
+  const lines: PriceLine[] = [
+    { label: pkg.name, qty: 1, unitPrice: event.packagePrice, amount: event.packagePrice },
+    ...event.addOns.map((addOn) => ({ label: addOn.item, qty: 1, unitPrice: addOn.amount, amount: addOn.amount })),
+  ];
+  const total = lines.reduce((sum, line) => sum + line.amount, 0);
+  const window = eventWindow(pkg, event.date);
+
+  const booking: Booking = {
+    id: `BK-${event.date.slice(5, 7)}${event.date.slice(8, 10)}-${pad(nextSequence(state.bookings), 3)}`,
+    guestId: guest.id,
+    guestName: guest.name,
+    product: 'event',
+    productType: 'event',
+    date: event.date,
+    nights: 1,
+    session: 'exclusive',
+    startsAt: window.startsAt,
+    endsAt: window.endsAt,
+    adults: event.guests,
+    kids: 0,
+    pets: null,
+    source: 'messenger',
+    status: 'hold',
+    pricing: { lines, subtotal: total, promoId: null, discount: 0, total },
+    total,
+    depositRequired: Math.ceil(total * DOWNPAYMENT_RATE),
+    paid: 0,
+    balance: total,
+    idVerified: false,
+    eventId: event.id,
+    createdAt: demoNow(state),
+    createdBy: staffId,
+    checkedInAt: null,
+    checkedOutAt: null,
+    cancelledAt: null,
+    cancelReason: null,
+    notes: event.notes,
+    discount: null,
+    scPwd: 0,
+    extras: [],
+    guestList: [],
+  };
+
+  state.bookings.push(booking);
+  sortBookings(state);
+  event.bookingId = booking.id;
+  logActivity(state, staffId, 'booking.created', booking.id, `${event.title} · event · ${event.date}`);
+  return booking;
+}
+
+/**
+ * Puts a private event in the pipeline. An event that is already reserved also
+ * gets its booking, which is what closes the date on the calendar.
+ */
+export function createEvent(input: NewEvent, staffId: string): EventResult {
+  return update((state): EventResult => {
+    const staff = findStaff(state, staffId);
+    if (!staff?.permissions.includes('events.manage')) return { error: 'Your account cannot manage events.' };
+
+    const pkg = findPackage(state, input.packageId);
+    if (!pkg) return { error: 'Pick an event package.' };
+    if (!input.title.trim()) return { error: 'Give the event a name.' };
+    if (!input.contactName.trim()) return { error: 'Enter who is arranging it.' };
+    if (!input.date) return { error: 'Pick the event date.' };
+    if (input.guests < 1) return { error: 'Add how many guests are coming.' };
+    if (input.guests > pkg.maxGuests) return { error: `${pkg.name} takes up to ${pkg.maxGuests} guests.` };
+
+    const taken = BOOKED_STAGES.includes(input.stage);
+    const closes = input.exclusive;
+    const existing = state.events.find((event) => event.date === input.date && event.blocksCalendar);
+    if (taken && closes && existing) return { error: `${existing.title} already closes the resort on ${formatDate(input.date)}.` };
+    const clashes = taken && closes ? clashesOn(state, input.date) : [];
+    if (clashes.length) {
+      return { error: `${plural(clashes.length, 'booking')} already on ${formatDate(input.date)}. Move or cancel ${clashes.length === 1 ? 'it' : 'them'} before closing the resort.` };
+    }
+
+    const addOns = input.addOns.filter((addOn) => addOn.item.trim() && addOn.amount > 0)
+      .map((addOn) => ({ item: addOn.item.trim(), amount: Math.round(addOn.amount) }));
+    const contact = findOrCreateGuest(state, { name: input.contactName, mobile: input.contactMobile || null });
+
+    const event: ResortEvent = {
+      id: nextId(state.events, 'EV', 3),
+      title: input.title.trim(),
+      type: pkg.id.replace('PKG-', '').toLowerCase(),
+      date: input.date,
+      packageId: pkg.id,
+      packagePrice: pkg.price,
+      addOns,
+      total: 0,
+      guests: Math.round(input.guests),
+      exclusive: closes,
+      blocksCalendar: taken && closes,
+      stage: input.stage,
+      contactGuestId: contact.id,
+      coordinatorId: input.coordinatorId || staffId,
+      ocularDate: input.ocularDate || input.date,
+      bookingId: null,
+      notes: input.notes.trim() || null,
+    };
+    event.total = eventTotal(event);
+    state.events.push(event);
+    state.events.sort((a, b) => a.date.localeCompare(b.date));
+    logActivity(state, staffId, 'event.created', event.id, `${event.title} · ${formatDate(event.date)} · ${STAGE_LABELS[event.stage]}`);
+
+    let booking: Booking | null = null;
+    if (taken) {
+      booking = makeEventBooking(state, event, contact.name, staffId);
+      if (input.deposit > 0) applyPayment(state, booking, { amount: Math.min(input.deposit, booking.total), method: input.method }, staffId);
+    }
+    return { event, booking };
+  });
+}
+
+/** Turns a pipeline event into a booking: the date is taken from now on. */
+export function bookEvent(eventId: string, staffId: string): EventResult {
+  return update((state): EventResult => {
+    const staff = findStaff(state, staffId);
+    if (!staff?.permissions.includes('events.manage')) return { error: 'Your account cannot manage events.' };
+    const event = state.events.find((item) => item.id === eventId);
+    if (!event) return { error: 'This event no longer exists.' };
+    if (event.bookingId) return { error: 'This event already has a booking.' };
+
+    const clashes = event.exclusive ? clashesOn(state, event.date) : [];
+    if (clashes.length) {
+      return { error: `${plural(clashes.length, 'booking')} already on ${formatDate(event.date)}. Move or cancel ${clashes.length === 1 ? 'it' : 'them'} before closing the resort.` };
+    }
+
+    const contact = findGuest(state, event.contactGuestId);
+    const booking = makeEventBooking(state, event, contact?.name ?? event.title, staffId);
+    event.bookingId = booking.id;
+    event.blocksCalendar = event.exclusive;
+    if (event.stage === 'inquiry' || event.stage === 'ocular') event.stage = 'reserved';
+    logActivity(state, staffId, 'event.booked', event.id, `${event.title} · ${peso(booking.total)}`);
+    return { event, booking };
+  });
+}
 
 export function markInquiryReplied(inquiryId: string, staffId: string): Inquiry {
   return update((state) => {

@@ -27,6 +27,8 @@ export interface DeskContext {
   newBooking: (prefill?: BookingPrefill) => void;
   newBookingLink: () => void;
   editBooking: (bookingId: string) => void;
+  newEvent: () => void;
+  closeDrawer: () => void;
 }
 
 /**
@@ -46,6 +48,8 @@ export interface ViewModule {
   render: (ctx: DeskContext) => SafeHTML;
   actions?: HandlerMap;
   inputs?: HandlerMap;
+  /** Pointer and focus moving over an element, for read-outs that don't change state. */
+  hovers?: HandlerMap;
 }
 
 export interface Route {

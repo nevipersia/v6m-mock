@@ -10,6 +10,13 @@ export interface SafeHTML {
 /** Anything a template can interpolate. Nullish and booleans render as nothing. */
 export type TemplateValue = SafeHTML | string | number | boolean | null | undefined | TemplateValue[];
 
+/**
+ * "true" or "false" for ARIA attributes. A bare boolean renders as nothing in
+ * these templates, which would leave aria-pressed="" and tell a screen reader
+ * nothing, so state attributes go through here.
+ */
+export const flag = (value: boolean): string => (value ? 'true' : 'false');
+
 /** Marks a string as trusted HTML so html`` does not escape it. */
 export function raw(value: unknown): SafeHTML {
   return { [RAW]: String(value ?? '') };

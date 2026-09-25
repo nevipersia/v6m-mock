@@ -2,7 +2,7 @@
 // where it came from. Windows are counted back from the demo's frozen "today".
 
 import { addDays, formatDate } from './format.js';
-import { METHOD_LABELS, findSession, isActive, productKind } from './rules.js';
+import { METHOD_LABELS, isActive, productKind } from './rules.js';
 import type { Booking, ISODate, PaymentMethod, State } from './types.js';
 
 /** One bar of the trend chart: a day, or a week when the window is long. */
@@ -27,7 +27,8 @@ export interface SalesSlice {
   share: number;
 }
 
-export interface SalesReport {
+/** Figures for one stretch of days. */
+export interface SalesSummary {
   from: ISODate;
   to: ISODate;
   days: number;
@@ -43,11 +44,15 @@ export interface SalesReport {
   change: number | null;
   /** Still owed on the bookings taken in the window. */
   outstanding: number;
+  byProduct: SalesSlice[];
+  byMethod: SalesSlice[];
+}
+
+/** A summary of the whole window, plus the bars that make it up. */
+export interface SalesReport extends SalesSummary {
   /** True when the bars are weeks rather than days. */
   weekly: boolean;
   points: SalesPoint[];
-  byProduct: SalesSlice[];
-  byMethod: SalesSlice[];
 }
 
 /** Ranges the dashboard offers. */
@@ -57,18 +62,28 @@ export type SalesRange = (typeof SALES_RANGES)[number];
 /** Above this many days the trend is bucketed into weeks so the bars stay readable. */
 const DAILY_LIMIT = 14;
 
-const KIND_LABELS: Record<string, string> = {
-  room: 'Rooms and villas',
+/**
+ * What a sale is grouped under in the breakdown chart. Five groups, each with a
+ * colour of its own: more than that and the slices stop being tellable apart,
+ * so the four entrance sessions share one group and the legend counts them.
+ */
+export type SalesGroup = 'entrance' | 'cottage' | 'room' | 'exclusive' | 'event';
+
+const GROUP_LABELS: Record<SalesGroup, string> = {
+  entrance: 'Entrance per head',
   cottage: 'Cottages',
+  room: 'Rooms and villas',
   exclusive: 'Exclusive rentals',
   event: 'Events',
 };
 
-/** "Cottages", "Day tour entrance" — what a product kind is called in a report. */
-function kindLabel(state: State, kind: string): string {
-  const session = findSession(state, kind);
-  if (session) return `${session.label} entrance`;
-  return KIND_LABELS[kind] ?? kind;
+/** Fixed order, so a group keeps its place and its colour whatever it sold. */
+const GROUP_ORDER: SalesGroup[] = ['entrance', 'cottage', 'room', 'exclusive', 'event'];
+
+function groupOf(state: State, product: string): SalesGroup {
+  const kind = productKind(state, product);
+  if (kind === 'cottage' || kind === 'room' || kind === 'exclusive' || kind === 'event') return kind;
+  return 'entrance';
 }
 
 const sum = (values: number[]): number => values.reduce((total, value) => total + value, 0);
@@ -76,6 +91,13 @@ const sum = (values: number[]): number => values.reduce((total, value) => total 
 const dayOf = (timestamp: string): ISODate => timestamp.slice(0, 10);
 
 const within = (day: ISODate, from: ISODate, to: ISODate): boolean => day >= from && day <= to;
+
+/** Days in a window, counting both ends. */
+function daysBetween(from: ISODate, to: ISODate): number {
+  let days = 1;
+  for (let day = from; day < to; day = addDays(day, 1)) days += 1;
+  return days;
+}
 
 /** Bookings taken (created) between two dates, cancelled ones left out. */
 const bookedBetween = (state: State, from: ISODate, to: ISODate): Booking[] =>
@@ -113,19 +135,21 @@ function trend(state: State, from: ISODate, to: ISODate, days: number): { points
   return { points, weekly };
 }
 
-export function salesReport(state: State, days: number): SalesReport {
-  const to = state.meta.asOf;
-  const from = addDays(to, -(days - 1));
-
+/**
+ * The figures for any stretch of days: the whole window the dashboard is
+ * showing, or one bar of its trend when a reader pins it.
+ */
+export function salesBetween(state: State, from: ISODate, to: ISODate): SalesSummary {
+  const days = daysBetween(from, to);
   const taken = bookedBetween(state, from, to);
   const booked = sum(taken.map((booking) => booking.total));
   const collected = collectedBetween(state, from, to);
   const collectedBefore = collectedBetween(state, addDays(from, -days), addDays(from, -1));
 
-  const products = new Map<string, SalesSlice>();
+  const products = new Map<SalesGroup, SalesSlice>();
   taken.forEach((booking) => {
-    const key = productKind(state, booking.product);
-    const slice = products.get(key) ?? { key, label: kindLabel(state, key), amount: 0, count: 0, share: 0 };
+    const key = groupOf(state, booking.product);
+    const slice = products.get(key) ?? { key, label: GROUP_LABELS[key], amount: 0, count: 0, share: 0 };
     slice.amount += booking.total;
     slice.count += 1;
     products.set(key, slice);
@@ -153,8 +177,13 @@ export function salesReport(state: State, days: number): SalesReport {
     collectedBefore,
     change: collectedBefore ? Math.round(((collected - collectedBefore) / collectedBefore) * 100) : null,
     outstanding: sum(taken.map((booking) => booking.balance)),
-    ...trend(state, from, to, days),
-    byProduct: rank([...products.values()]),
+    byProduct: rank(GROUP_ORDER.flatMap((group) => products.get(group) ?? [])),
     byMethod: rank([...methods.values()]),
   };
+}
+
+export function salesReport(state: State, days: number): SalesReport {
+  const to = state.meta.asOf;
+  const from = addDays(to, -(days - 1));
+  return { ...salesBetween(state, from, to), ...trend(state, from, to, days) };
 }

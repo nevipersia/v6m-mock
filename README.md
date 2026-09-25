@@ -61,13 +61,63 @@ is, collected today, balances due — then a **Sales** section over the last **7
 - **Average booking** and **Still to collect** on those bookings.
 - A **trend** chart with two bars per period: what was booked and what was collected. Seven days
   charts a bar per day; the longer windows switch to a bar per week so the chart stays readable.
-- **What sold**, ranked by money: exclusive rentals, cottages, rooms, each entrance session and
-  events, with each one's share and booking count.
-- **How guests paid**: GCash, cash and bank transfer, with shares.
+  Point at a bar (or tab to it) and the line underneath reads out its figures; on a phone, tap it.
+- **What sold** and **How guests paid**, each a stacked bar of the whole, with a legend naming every
+  slice, its money, its share and how many. Pointing at a slice or its legend row reads it out.
+
+**Click a bar in the trend** and the whole section re-cuts to that day — the tiles, both charts and
+the comparison ("vs the day before"). The trend keeps showing the full window, so you can click
+straight to another day. Click it again, or **Show all 7 days**, to go back.
 
 "Booked" counts a booking on the day it was taken, not the day of the stay, so the figures answer
 "how are we selling?" rather than "who is here?". Cancelled bookings are left out. Every account can
 see this section; it is not behind a permission.
+
+What sold groups into five: entrance per head (all four sessions together), cottages, rooms and
+villas, exclusive rentals and events. Five is deliberate — each group keeps one colour for good, and
+the set was checked so that no two are hard to tell apart, including for the three kinds of colour
+blindness. A sixth colour fails that check.
+
+## Private events
+
+**Events** is the pipeline: Inquiry → Ocular visit → Reserved → Paid → Done, with the four packages
+priced (Debut ₱45,000, Intimate wedding ₱60,000, Birthday pool party ₱25,000, Prenup ₱8,000).
+
+**New event** takes the name, the package, the date and headcount, who is arranging it, the
+coordinator, any add-ons with amounts, the stage and an ocular date. The stage decides what happens:
+
+- **Inquiry** or **Ocular visit** keeps it in the pipeline only. Nothing is booked and the date stays
+  open for ordinary guests.
+- **Reserved** or **Paid** also writes the booking, which is what takes the date. Tick *Closes the
+  resort for the day* (packages that are exclusive tick it for you) and the calendar shows that day
+  as Closed, and any other booking for it is refused.
+
+An event sitting in the pipeline without a booking carries a **Book this event** button on its card,
+which is the move a coordinator makes once the family commits. Either way the booking is on hold
+until the 50% downpayment is paid, and you can record it on the form.
+
+An event cannot close a day that already has bookings — it says how many are in the way so you can
+move or cancel them first. The page and the button need the **Manage events** permission; owners and
+managers have it.
+
+## Picking dates
+
+**Calendar** puts its dates under the heading. The line that says what is on screen — "September 14
+– September 20" — is a button; open it and pick either:
+
+- **A day**, which moves the view there and keeps its shape: Week lands on that week, Month on that
+  month, and a range collapses to that single day. Picking one closes the panel.
+- **A range of days**, a start and an end, laid out as columns in the same grid, so a long weekend or
+  "the next ten days" is one view. The panel stays open until you have both ends.
+
+There is no separate date box in the toolbar. The arrows still step by whatever is on screen — a day,
+a week, a month, or a range by its own length — and **Today** comes back. An end before its start
+collapses to a single day, and a range longer than 31 days shows its first 31.
+
+**Bookings** filters by a **staying between** pair. Either end can be left blank — a start alone
+means "from then on", an end alone means "up to then". Underneath are one-tap windows: Today, Next 7
+days, Next 30 days and Past 30 days; tapping the one already on clears it. The heading says which
+window you are looking at.
 
 ## What can be booked
 

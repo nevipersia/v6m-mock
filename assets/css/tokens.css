@@ -36,6 +36,18 @@
   --sand: #EDEAE2;
   --sand-ink: #6B6452;
 
+  /*
+   * Chart series colours. Checked as a set with the dataviz validator against
+   * the white chart surface: every pair stays apart for normal vision and for
+   * the three kinds of colour blindness. Assigned to a group for good, never
+   * by rank. Keep the set to five; a sixth hue fails the checks.
+   */
+  --cat-1: #2E86C1; /* blue   — entrance, GCash */
+  --cat-2: #F2782B; /* orange — rooms and villas */
+  --cat-3: #3E7D3A; /* green  — cottages, cash */
+  --cat-4: #7A3E9D; /* plum   — exclusive rentals, bank transfer */
+  --cat-5: #C94F76; /* pink   — events */
+
   /* Surfaces and text */
   --cream: #FBF5EA;
   --cream-deep: #F3EAD8;

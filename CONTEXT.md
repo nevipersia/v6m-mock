@@ -158,10 +158,30 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   (new and edit; `updateBooking` takes an optional `guestList`) as well as its own section in the
   booking drawer. The Bookings list shows how many are named and carries per-row Edit and Sheet
   (PDF) buttons.
-- Sales analytics on the dashboard come from `core/sales.ts` (`salesReport(state, days)`): bookings
-  are counted by `createdAt` (what was sold), payments by `receivedAt` (what came in), over 7, 30 or
-  90 days back from `meta.asOf`. Windows longer than 14 days bucket the trend into weeks. The report
-  also breaks sales down by product kind and payments by method. No permission gates it.
+- Sales analytics on the dashboard come from `core/sales.ts`: bookings are counted by `createdAt`
+  (what was sold), payments by `receivedAt` (what came in), over 7, 30 or 90 days back from
+  `meta.asOf`. `salesBetween(state, from, to)` does any window; `salesReport(state, days)` adds the
+  trend bars, bucketed into weeks past 14 days. Clicking a bar re-cuts the section by running
+  `salesBetween` over that bar alone. Sales group into five fixed `SalesGroup`s so the share charts
+  never need a sixth colour; the five hues are `--cat-1`…`--cat-5` in `tokens.css`, checked as a set
+  with the dataviz validator (all pairs, light surface). No permission gates the section.
+- Views can export `hovers` beside `actions` and `inputs` (`ViewModule` in `admin/types.ts`), wired
+  in `admin/main.ts` for mouseover/mouseout/focusin/focusout. It drives the read-out lines under the
+  trend and the share charts. Handlers read `event.type` to tell arriving from leaving.
+- `flag()` in `core/dom.ts` renders "true"/"false" for ARIA state attributes: a bare boolean renders
+  as nothing in these templates, which would leave `aria-pressed=""`.
+- Private events: `createEvent` and `bookEvent` in `core/actions.ts`, form in
+  `admin/components/event-form.ts`. Stage decides whether a booking is written: `reserved`, `paid`
+  and `done` take the date, `inquiry` and `ocular` do not. Event bookings skip `quote`/`schedule`
+  (both throw on the `event` product) — `makeEventBooking` prices the package plus add-ons and takes
+  its hours from `EventPackage.hours`. `blocksCalendar` is set only when the event is both exclusive
+  and booked, and an event cannot close a day that already has active bookings.
+- Date ranges: the calendar has a fourth range, `custom` (`ui.from`/`ui.to`, capped at
+  `MAX_RANGE_DAYS`), drawn with the same grid as the week. Both date controls live in the popover
+  under the heading (`datePicker` in `views/calendar.ts`, `ui.datesOpen`): `jump` for one day,
+  `range-from`/`range-to` for a stretch, which switches the view to `custom`. The popover dismisses
+  through a fixed backdrop button rather than a document listener, so it needs no global state. The bookings filter holds `from`/`to`,
+  either end optional, with one-tap shortcut chips.
 - The booking PDF is the guest registration sheet (companions template): details, guest list with
   signature column, charges, total / downpayment / overall amount, "Received by". Multi-page.
 - Every booking needs a 50% downpayment (`depositRequired`, rounded up to the peso)

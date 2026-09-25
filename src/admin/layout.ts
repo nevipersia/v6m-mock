@@ -71,7 +71,8 @@ export function renderShell(ctx: DeskContext, route: Route, content: TemplateVal
 interface PageHeadOptions {
   eyebrow?: string;
   title: string;
-  subtitle?: string;
+  /** Plain text, or markup when a view puts a control here. */
+  subtitle?: TemplateValue;
   actions?: TemplateValue;
 }
 

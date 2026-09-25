@@ -2,12 +2,14 @@
 // attention, who arrives today and what is coming up.
 
 import { checkOut } from '../../core/actions.js';
-import { html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
+import { flag, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { addDays, formatDate, formatDateTime, peso, pesoShort, plural, timeOf } from '../../core/format.js';
 import {
   closingEvent, downpaymentDue, exclusiveOn, findSession, findStaff, findUnit, isActive, poolGuests, productLabel,
 } from '../../core/rules.js';
-import { SALES_RANGES, salesReport, type SalesReport, type SalesSlice } from '../../core/sales.js';
+import {
+  SALES_RANGES, salesBetween, salesReport, type SalesPoint, type SalesReport, type SalesSlice, type SalesSummary,
+} from '../../core/sales.js';
 import type { Booking, Staff, State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { kindDot, paymentPill, statusPill } from '../components/badges.js';
@@ -34,6 +36,8 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'user.updated': 'User updated',
   'user.status': 'User status changed',
   'user.invite_revoked': 'Invite revoked',
+  'event.created': 'Event added',
+  'event.booked': 'Event booked',
   'link.created': 'Booking link sent',
   'link.cancelled': 'Booking link cancelled',
   'link.used': 'Booking link used',
@@ -154,6 +158,8 @@ function attentionItems(ctx: DeskContext): SafeHTML[] {
 
 /** How many days of sales the dashboard is showing. Kept while the app is open. */
 let salesDays: number = SALES_RANGES[0];
+/** The trend bar the reader pinned by clicking or tapping it, by start date. */
+let pinnedPoint: string | null = null;
 
 function salesStat(label: string, value: string, detail: TemplateValue = '', tone = ''): SafeHTML {
   return html`
@@ -164,67 +170,108 @@ function salesStat(label: string, value: string, detail: TemplateValue = '', ton
     </div>`;
 }
 
+/** "Wed, Sep 16 · ₱42,300 booked · ₱8,900 collected" — one bar, read out in full. */
+const pointReadout = (point: SalesPoint): string =>
+  `${point.title} · ${peso(point.booked)} booked · ${peso(point.collected)} collected`;
+
 /** Sales taken and money collected per day (per week over longer windows). */
 function salesChart(report: SalesReport): SafeHTML {
   const peak = Math.max(1, ...report.points.flatMap((point) => [point.booked, point.collected]));
   const height = (value: number) => `${Math.max(value > 0 ? 2 : 0, Math.round((value / peak) * 100))}%`;
+  const pinned = report.points.find((point) => point.from === pinnedPoint);
+  // What the line under the chart says when nothing is hovered.
+  const resting = pinned
+    ? pointReadout(pinned)
+    : `Tallest bar ${pesoShort(peak)}${report.weekly ? ' · one bar per week' : ' · one bar per day'}`;
 
   return html`
-    <div class="chart" role="img" aria-label="Sales taken and money collected over the last ${report.days} days">
+    <p class="sr-only">Sales taken and money collected over the last ${report.days} days. Each bar reads out below the chart.</p>
+    <div class="chart">
       ${report.points.map((point) => html`
-        <div class="chart__col ${point.isNow ? 'is-now' : ''}">
-          <div class="chart__bars">
-            <span class="chart__bar chart__bar--booked" style="height:${height(point.booked)}"
-              title="${point.title} · ${peso(point.booked)} booked"></span>
-            <span class="chart__bar chart__bar--collected" style="height:${height(point.collected)}"
-              title="${point.title} · ${peso(point.collected)} collected"></span>
-          </div>
+        <button class="chart__col ${point.isNow ? 'is-now' : ''} ${point.from === pinnedPoint ? 'is-pinned' : ''}"
+          type="button" data-action="pin-point" data-hover="chart-point" data-point="${point.from}"
+          data-readout="${pointReadout(point)}" aria-pressed="${flag(point.from === pinnedPoint)}"
+          aria-label="${pointReadout(point)}">
+          <span class="chart__bars">
+            <span class="chart__bar chart__bar--booked" style="height:${height(point.booked)}"></span>
+            <span class="chart__bar chart__bar--collected" style="height:${height(point.collected)}"></span>
+          </span>
           <span class="chart__label">${point.label}</span>
-        </div>`)}
+        </button>`)}
     </div>
-    <p class="chart__peak small muted">Tallest bar ${pesoShort(peak)}${report.weekly ? ' · one bar per week' : ' · one bar per day'}</p>`;
+    <p class="chart__readout small ${pinned ? '' : 'muted'}" data-slot="chart-readout" data-resting="${resting}" aria-live="polite">${resting}</p>`;
 }
 
-/** A ranked breakdown: cottages, GCash and so on, each with a share bar. */
-function breakdown(slices: SalesSlice[], empty: string, tone: string): SafeHTML {
+/**
+ * Part-to-whole: one stacked bar, then the legend that names every slice. The
+ * slice keys carry the colour, so a group keeps its colour whatever it sold
+ * and wherever it lands in the ranking.
+ */
+function shareChart(slices: SalesSlice[], total: number, empty: string, name: string): SafeHTML {
   if (!slices.length) return html`<p class="small muted">${empty}</p>`;
+  const readout = (slice: SalesSlice) => `${slice.label} · ${peso(slice.amount)} · ${Math.round(slice.share * 100)}% of ${peso(total)}`;
+
   return html`
-    <ul class="breakdown">
-      ${slices.map((slice) => html`
-        <li class="breakdown__row">
-          <span class="breakdown__label">${slice.label}</span>
-          <span class="breakdown__amount">${peso(slice.amount)}</span>
-          <span class="meter meter--thin meter--${tone} breakdown__meter"><span style="width:${Math.round(slice.share * 100)}%"></span></span>
-          <span class="breakdown__share small muted">${Math.round(slice.share * 100)}% · ${slice.count}</span>
-        </li>`)}
-    </ul>`;
+    <figure class="share">
+      <div class="share__bar" role="img" aria-label="${name}: ${slices.map((slice) => `${slice.label} ${Math.round(slice.share * 100)}%`).join(', ')}">
+        ${slices.map((slice) => html`
+          <span class="share__seg share__seg--${slice.key}" style="flex-basis:${(slice.share * 100).toFixed(2)}%"
+            data-hover="share-slice" data-readout="${readout(slice)}"></span>`)}
+      </div>
+      <figcaption class="share__readout small muted" data-slot="share-readout"
+        data-resting="${peso(total)} across ${plural(slices.length, 'group', 'groups')}">${peso(total)} across ${plural(slices.length, 'group', 'groups')}</figcaption>
+      <ul class="share__legend">
+        ${slices.map((slice) => html`
+          <li class="share__row" data-hover="share-slice" data-readout="${readout(slice)}">
+            <span class="share__key share__key--${slice.key}" aria-hidden="true"></span>
+            <span class="share__label">${slice.label}</span>
+            <span class="share__amount">${peso(slice.amount)}</span>
+            <span class="share__meta small muted">${Math.round(slice.share * 100)}% · ${slice.count}</span>
+          </li>`)}
+      </ul>
+    </figure>`;
 }
+
+/** "vs the 7 days before", "vs the day before". */
+const comparedWith = (days: number): string => `vs the ${days === 1 ? 'day' : `${days} days`} before`;
 
 function salesSection(ctx: DeskContext): SafeHTML {
   const report = salesReport(ctx.state, salesDays);
-  const changeTone = report.change === null ? '' : report.change < 0 ? 'down' : 'up';
+  // Clicking a bar re-cuts the whole section to that day or week; the chart
+  // itself keeps showing the full window so there is a way back.
+  const focus = report.points.find((point) => point.from === pinnedPoint) ?? null;
+  const shown: SalesSummary = focus ? salesBetween(ctx.state, focus.from, focus.to) : report;
+  const changeTone = shown.change === null ? '' : shown.change < 0 ? 'down' : 'up';
 
   return html`
     <section class="sales" aria-label="Sales">
       <header class="sales__head">
         <div>
           <h2 class="sales__title">Sales</h2>
-          <p class="small muted">${formatDate(report.from, 'monthDay')} – ${formatDate(report.to, 'monthDay')} · bookings taken in this window</p>
+          <p class="small muted">
+            ${focus
+              ? html`<strong>${focus.title}</strong> · ${report.weekly ? 'this week' : 'this day'} only`
+              : `${formatDate(report.from, 'monthDay')} – ${formatDate(report.to, 'monthDay')} · bookings taken in this window`}
+          </p>
         </div>
-        <div class="segmented" role="group" aria-label="Sales period">
-          ${SALES_RANGES.map((days) => html`
-            <button class="segmented__option ${days === salesDays ? 'is-active' : ''}" type="button"
-              data-action="sales-range" data-days="${days}" aria-pressed="${days === salesDays}">${days} days</button>`)}
+        <div class="sales__controls">
+          ${focus ? html`
+            <button class="btn btn--quiet btn--sm" type="button" data-action="clear-point">Show all ${salesDays} days</button>` : ''}
+          <div class="segmented" role="group" aria-label="Sales period">
+            ${SALES_RANGES.map((days) => html`
+              <button class="segmented__option ${days === salesDays ? 'is-active' : ''}" type="button"
+                data-action="sales-range" data-days="${days}" aria-pressed="${flag(days === salesDays)}">${days} days</button>`)}
+          </div>
         </div>
       </header>
 
-      <div class="stats">
-        ${salesStat('Sales booked', peso(report.booked), `${plural(report.bookings, 'booking')} taken`)}
-        ${salesStat('Collected', peso(report.collected), report.change === null
+      <div class="stats ${focus ? 'is-focused' : ''}">
+        ${salesStat('Sales booked', peso(shown.booked), `${plural(shown.bookings, 'booking')} taken`)}
+        ${salesStat('Collected', peso(shown.collected), shown.change === null
           ? 'Nothing to compare with'
-          : html`<span class="stat__change stat__change--${changeTone}">${report.change > 0 ? '▲' : report.change < 0 ? '▼' : '='} ${Math.abs(report.change)}%</span> vs the ${report.days} days before`, changeTone === 'down' ? '' : '')}
-        ${salesStat('Average booking', peso(report.averageBooking), 'Per booking taken')}
-        ${salesStat('Still to collect', peso(report.outstanding), 'On these bookings', report.outstanding ? 'warn' : '')}
+          : html`<span class="stat__change stat__change--${changeTone}">${shown.change > 0 ? '▲' : shown.change < 0 ? '▼' : '='} ${Math.abs(shown.change)}%</span> ${comparedWith(shown.days)}`)}
+        ${salesStat('Average booking', peso(shown.averageBooking), 'Per booking taken')}
+        ${salesStat('Still to collect', peso(shown.outstanding), 'On these bookings', shown.outstanding ? 'warn' : '')}
       </div>
 
       <div class="sales__grid">
@@ -240,13 +287,19 @@ function salesSection(ctx: DeskContext): SafeHTML {
         </section>
 
         <section class="panel">
-          <header class="panel__head"><h3 class="panel__title">What sold</h3></header>
-          ${breakdown(report.byProduct, 'No bookings taken in this window.', 'blue')}
+          <header class="panel__head">
+            <h3 class="panel__title">What sold</h3>
+            ${focus ? html`<span class="pill pill--info">${focus.label}</span>` : ''}
+          </header>
+          ${shareChart(shown.byProduct, shown.booked, focus ? 'Nothing was booked then.' : 'No bookings taken in this window.', 'What sold')}
         </section>
 
         <section class="panel">
-          <header class="panel__head"><h3 class="panel__title">How guests paid</h3></header>
-          ${breakdown(report.byMethod, 'No payments in this window.', 'green')}
+          <header class="panel__head">
+            <h3 class="panel__title">How guests paid</h3>
+            ${focus ? html`<span class="pill pill--info">${focus.label}</span>` : ''}
+          </header>
+          ${shareChart(shown.byMethod, shown.collected, focus ? 'Nothing came in then.' : 'No payments in this window.', 'How guests paid')}
         </section>
       </div>
     </section>`;
@@ -363,9 +416,41 @@ export function render(ctx: DeskContext): SafeHTML {
     </div>`;
 }
 
+export const hovers: HandlerMap = {
+  // Each figure has its own read-out line, so write into the one this slice sits in.
+  'share-slice': ({ el, event }) => {
+    const readout = el.closest('.share')?.querySelector<HTMLElement>('[data-slot="share-readout"]');
+    if (!readout) return;
+    const arriving = event.type === 'mouseover' || event.type === 'focusin';
+    readout.textContent = arriving ? el.dataset.readout ?? '' : readout.dataset.resting ?? '';
+    readout.classList.toggle('muted', !arriving);
+  },
+
+  // Arriving shows that bar's figures; leaving puts the resting line back.
+  'chart-point': ({ el, event }) => {
+    const readout = document.querySelector<HTMLElement>('[data-slot="chart-readout"]');
+    if (!readout) return;
+    const arriving = event.type === 'mouseover' || event.type === 'focusin';
+    readout.textContent = arriving ? el.dataset.readout ?? '' : readout.dataset.resting ?? '';
+    readout.classList.toggle('muted', !arriving && !pinnedPoint);
+  },
+};
+
 export const actions: HandlerMap = {
   'sales-range': ({ el, ctx }) => {
     salesDays = Number(el.dataset.days) || SALES_RANGES[0];
+    pinnedPoint = null;
+    ctx.redraw();
+  },
+
+  // Clicking a bar cuts the section down to it; clicking it again undoes that.
+  'pin-point': ({ el, ctx }) => {
+    pinnedPoint = pinnedPoint === el.dataset.point ? null : el.dataset.point ?? null;
+    ctx.redraw();
+  },
+
+  'clear-point': ({ ctx }) => {
+    pinnedPoint = null;
     ctx.redraw();
   },
 

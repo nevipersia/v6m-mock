@@ -1,7 +1,7 @@
 // Bookings: searchable, filterable list of every booking in the data period.
 
-import { html, type SafeHTML } from '../../core/dom.js';
-import { formatDate, peso, plural, timeOf } from '../../core/format.js';
+import { flag, html, type SafeHTML } from '../../core/dom.js';
+import { addDays, formatDate, peso, plural, timeOf } from '../../core/format.js';
 import {
   STATUS_LABELS, findBooking, isActive, isEditable, productLabel,
 } from '../../core/rules.js';
@@ -17,10 +17,12 @@ interface Filters {
   /** 'open', 'all' or a booking status. */
   status: string;
   product: string;
-  date: string;
+  /** Stay dates to show, either end optional; '' means open-ended. */
+  from: string;
+  to: string;
 }
 
-const DEFAULT_FILTERS: Filters = { query: '', status: 'open', product: 'all', date: 'all' };
+const DEFAULT_FILTERS: Filters = { query: '', status: 'open', product: 'all', from: '', to: '' };
 let filters = { ...DEFAULT_FILTERS };
 
 const OPEN_STATUSES: BookingStatus[] = ['hold', 'confirmed', 'checked_in'];
@@ -31,7 +33,8 @@ function matches(booking: Booking): boolean {
   if (filters.status === 'open' && !OPEN_STATUSES.includes(booking.status)) return false;
   if (!['open', 'all'].includes(filters.status) && booking.status !== filters.status) return false;
   if (filters.product !== 'all' && booking.product !== filters.product) return false;
-  if (filters.date !== 'all' && booking.date !== filters.date) return false;
+  if (filters.from && booking.date < filters.from) return false;
+  if (filters.to && booking.date > filters.to) return false;
   return true;
 }
 
@@ -82,10 +85,44 @@ function filterBar(state: State): SafeHTML {
       </label>
       ${select('status', 'Status', statuses)}
       ${select('product', 'Type', products)}
-      <label class="field">
-        <span class="field__label">Date</span>
-        <input class="input" type="date" data-input="filter" name="date" value="${filters.date === 'all' ? '' : filters.date}">
-      </label>
+      <div class="field filters__range">
+        <span class="field__label">Staying between</span>
+        <div class="date-range">
+          <input class="input" type="date" data-input="filter" name="from" value="${filters.from}" aria-label="Staying from" max="${filters.to || ''}">
+          <span class="date-range__to" aria-hidden="true">–</span>
+          <input class="input" type="date" data-input="filter" name="to" value="${filters.to}" aria-label="Staying until" min="${filters.from || ''}">
+        </div>
+      </div>
+    </div>
+    ${rangeShortcuts(state)}`;
+}
+
+/** " staying Sep 18 – Sep 24", for the page subtitle. */
+function rangeSummary(): string {
+  if (!filters.from && !filters.to) return '';
+  if (filters.from && filters.to) {
+    return filters.from === filters.to
+      ? ` staying ${formatDate(filters.from)}`
+      : ` staying ${formatDate(filters.from)} – ${formatDate(filters.to)}`;
+  }
+  return filters.from ? ` staying from ${formatDate(filters.from)}` : ` staying until ${formatDate(filters.to)}`;
+}
+
+/** One-tap windows, since typing two dates for "this week" is a chore. */
+function rangeShortcuts(state: State): SafeHTML {
+  const today = state.meta.asOf;
+  const shortcuts: { label: string; from: string; to: string }[] = [
+    { label: 'Today', from: today, to: today },
+    { label: 'Next 7 days', from: today, to: addDays(today, 6) },
+    { label: 'Next 30 days', from: today, to: addDays(today, 29) },
+    { label: 'Past 30 days', from: addDays(today, -30), to: addDays(today, -1) },
+  ];
+  return html`
+    <div class="chips">
+      ${shortcuts.map((shortcut) => html`
+        <button class="chip ${filters.from === shortcut.from && filters.to === shortcut.to ? 'is-active' : ''}" type="button"
+          data-action="date-shortcut" data-from="${shortcut.from}" data-to="${shortcut.to}"
+          aria-pressed="${flag(filters.from === shortcut.from && filters.to === shortcut.to)}">${shortcut.label}</button>`)}
     </div>`;
 }
 
@@ -99,7 +136,7 @@ export function render(ctx: DeskContext): SafeHTML {
   return html`
     ${pageHead({
       title: 'Bookings',
-      subtitle: `${plural(results.length, 'booking')} · ${peso(total)} total · ${peso(due)} still due`,
+      subtitle: `${plural(results.length, 'booking')}${rangeSummary()} · ${peso(total)} total · ${peso(due)} still due`,
       actions: ctx.can('bookings.write') ? html`
         <button class="btn btn--primary" type="button" data-action="new-booking">${icon('plus')} New booking</button>` : '',
     })}
@@ -152,12 +189,20 @@ export const inputs: HandlerMap = {
   filter: ({ el, ctx }) => {
     const { name, value } = el as HTMLInputElement | HTMLSelectElement;
     if (!(name in filters)) return;
-    filters = { ...filters, [name]: name === 'date' ? (value || 'all') : value };
+    filters = { ...filters, [name]: value };
     ctx.redraw();
   },
 };
 
 export const actions: HandlerMap = {
+  'date-shortcut': ({ el, ctx }) => {
+    const { from = '', to = '' } = el.dataset;
+    // Tapping the chip that is already on clears it again.
+    const same = filters.from === from && filters.to === to;
+    filters = { ...filters, from: same ? '' : from, to: same ? '' : to };
+    ctx.redraw();
+  },
+
   'edit-booking-row': ({ el, ctx }) => {
     if (el.dataset.id) ctx.editBooking(el.dataset.id);
   },

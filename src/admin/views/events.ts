@@ -1,10 +1,14 @@
-// Events: private events by stage, plus the package price list.
+// Events: private events by stage, plus the package price list. Staff add one
+// here; it takes the date once it is reserved.
+
+import { bookEvent } from '../../core/actions.js';
 
 import { html, type SafeHTML } from '../../core/dom.js';
 import { formatDate, formatTime, peso, plural } from '../../core/format.js';
 import { STAGE_LABELS, findBooking, findGuest, findPackage, findStaff } from '../../core/rules.js';
 import type { EventStage, ResortEvent } from '../../core/types.js';
-import type { DeskContext } from '../types.js';
+import type { DeskContext, HandlerMap } from '../types.js';
+import { icon } from '../components/icons.js';
 import { emptyState, pageHead } from '../layout.js';
 
 const STAGES: EventStage[] = ['inquiry', 'ocular', 'reserved', 'paid', 'done'];
@@ -35,7 +39,11 @@ function eventCard(ctx: DeskContext, event: ResortEvent): SafeHTML {
 
       <footer class="event-card__foot">
         <span class="small muted">${contact?.name ?? 'Unknown contact'}${coordinator ? ` · ${coordinator.name}` : ''}</span>
-        ${booking ? html`<button class="btn btn--secondary btn--sm" type="button" data-action="open-booking" data-id="${booking.id}">Open booking</button>` : ''}
+        ${booking
+          ? html`<button class="btn btn--secondary btn--sm" type="button" data-action="open-booking" data-id="${booking.id}">Open booking</button>`
+          : ctx.can('events.manage')
+            ? html`<button class="btn btn--secondary btn--sm" type="button" data-action="book-event" data-id="${event.id}">Book this event</button>`
+            : ''}
       </footer>
     </article>`;
 }
@@ -46,7 +54,12 @@ export function render(ctx: DeskContext): SafeHTML {
   const usedStages = STAGES.filter((stage) => stage !== 'inquiry' || events.some((event) => event.stage === 'inquiry'));
 
   return html`
-    ${pageHead({ title: 'Events', subtitle: `${plural(events.length, 'event')} in this period` })}
+    ${pageHead({
+      title: 'Events',
+      subtitle: `${plural(events.length, 'event')} in this period`,
+      actions: ctx.can('events.manage') ? html`
+        <button class="btn btn--primary" type="button" data-action="new-event">${icon('plus')} New event</button>` : '',
+    })}
 
     ${events.length ? html`
       <div class="pipeline">
@@ -95,3 +108,17 @@ export function render(ctx: DeskContext): SafeHTML {
       </div>
     </section>`;
 }
+
+export const actions: HandlerMap = {
+  'new-event': ({ ctx }) => ctx.newEvent(),
+
+  'book-event': ({ el, ctx }) => {
+    const result = bookEvent(el.dataset.id ?? '', ctx.staff.id);
+    if (result.error !== undefined) {
+      ctx.toast(result.error);
+      return;
+    }
+    ctx.toast(`${result.event.title} booked · ${peso(result.booking?.total ?? 0)} · on hold until the downpayment`);
+    if (result.booking) ctx.openBooking(result.booking.id);
+  },
+};

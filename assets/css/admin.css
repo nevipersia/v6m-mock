@@ -20,6 +20,20 @@ body {
 
 .table-scroll {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /*
+   * Shadows on whichever edge has more table beyond it. The covering panels
+   * scroll with the content ("local"), the shadows do not, so each shadow is
+   * hidden until that side is actually scrolled away from.
+   */
+  background:
+    linear-gradient(to right, var(--surface) 40%, rgba(255, 253, 250, 0)) left center,
+    linear-gradient(to left, var(--surface) 40%, rgba(255, 253, 250, 0)) right center,
+    radial-gradient(farthest-side at 0 50%, rgba(31, 45, 92, 0.14), rgba(31, 45, 92, 0)) left center,
+    radial-gradient(farthest-side at 100% 50%, rgba(31, 45, 92, 0.14), rgba(31, 45, 92, 0)) right center;
+  background-repeat: no-repeat;
+  background-size: 28px 100%, 28px 100%, 12px 100%, 12px 100%;
+  background-attachment: local, local, scroll, scroll;
 }
 
 .notice {
@@ -836,9 +850,21 @@ button.cal-pool:hover {
 
 .filters {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr));
+  /* Search, two pickers, then the date pair, which needs room for two fields. */
+  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)) minmax(0, 1.7fr);
   gap: 12px;
   margin-bottom: 12px;
+  align-items: end;
+}
+
+@media (max-width: 1100px) {
+  .filters {
+    grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
+  }
+
+  .filters__range {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 860px) {
@@ -1542,6 +1568,19 @@ body.has-drawer {
   margin-bottom: 0;
 }
 
+.sales__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Cut down to one bar: the tiles say so at a glance. */
+.stats.is-focused .stat {
+  border-color: var(--blue);
+  box-shadow: inset 0 0 0 1px var(--blue-soft);
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
@@ -1622,11 +1661,33 @@ body.has-drawer {
   height: 100%;
   min-width: 0;
   padding: 0 2px;
+  border: 0;
+  background: none;
   border-radius: var(--radius-sm);
+  cursor: pointer;
 }
 
 .chart__col.is-now {
   background: var(--sand);
+}
+
+.chart__col:hover {
+  background: var(--cream-deep);
+}
+
+.chart__col.is-pinned {
+  background: var(--blue-soft);
+}
+
+.chart__col.is-pinned .chart__label {
+  color: var(--blue-ink);
+  font-weight: 600;
+}
+
+.chart__readout {
+  margin-top: 4px;
+  min-height: 20px;
+  font-variant-numeric: tabular-nums;
 }
 
 .chart__bars {
@@ -1678,50 +1739,100 @@ body.has-drawer {
 .chart__key--booked { background: var(--blue); }
 .chart__key--collected { background: var(--green); margin-left: 6px; }
 
-.chart__peak {
-  margin-top: 4px;
+/* ---------- Share chart: one stacked bar plus its legend ---------- */
+
+.share {
+  margin: 0;
 }
 
-/* ---------- Breakdown bars ---------- */
+.share__bar {
+  display: flex;
+  /* The 2px surface gap is what separates the slices — no borders. */
+  gap: 2px;
+  height: 18px;
+  margin-bottom: 8px;
+}
 
-.breakdown {
+.share__seg {
+  flex-grow: 0;
+  flex-shrink: 1;
+  min-width: 4px;
+  background: var(--sand);
+}
+
+.share__seg:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.share__seg:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.share__seg:only-child {
+  border-radius: 4px;
+}
+
+.share__readout {
+  margin: 0 0 10px;
+  min-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.share__legend {
   display: grid;
-  gap: 10px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.breakdown__row {
+.share__row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
   gap: 2px 10px;
-  align-items: baseline;
+  align-items: center;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  border-radius: var(--radius-sm);
 }
 
-.breakdown__label {
-  font-size: 14px;
+.share__row:hover {
+  background: var(--cream-deep);
+}
+
+.share__key {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--sand);
+}
+
+.share__label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 14px;
 }
 
-.breakdown__amount {
+.share__amount {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.breakdown__meter {
-  grid-column: 1 / -1;
-}
-
-.breakdown__share {
-  grid-column: 1 / -1;
+.share__meta {
+  grid-column: 2 / -1;
   font-variant-numeric: tabular-nums;
 }
 
-.meter--green > span { background: var(--green); }
-.meter--blue > span { background: var(--blue); }
+/* Colour belongs to the group, not to its place in the ranking. */
+.share__seg--entrance, .share__key--entrance,
+.share__seg--gcash, .share__key--gcash { background: var(--cat-1); }
+.share__seg--room, .share__key--room { background: var(--cat-2); }
+.share__seg--cottage, .share__key--cottage,
+.share__seg--cash, .share__key--cash { background: var(--cat-3); }
+.share__seg--exclusive, .share__key--exclusive,
+.share__seg--bank_transfer, .share__key--bank_transfer { background: var(--cat-4); }
+.share__seg--event, .share__key--event { background: var(--cat-5); }
 
 @media (min-width: 760px) {
   .sales__grid {
@@ -1753,9 +1864,79 @@ body.has-drawer {
   margin-bottom: 0;
 }
 
-.calendar-bar__jump {
-  margin-left: auto;
-  width: 170px;
+@media (max-width: 720px) {
+  .calendar-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  /* Full-width range toggle: thumb-sized targets instead of small ones. */
+  .calendar-bar .segmented {
+    display: grid;
+    width: 100%;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+  }
+
+  .calendar-bar .segmented__option {
+    min-height: 40px;
+  }
+
+  .calendar-bar .button-row {
+    justify-content: space-between;
+  }
+}
+
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* Two date fields need about this much; wider just makes them look odd. */
+  max-width: 400px;
+}
+
+.date-range .input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.date-range__to {
+  color: var(--ink-muted);
+}
+
+.filters__range {
+  min-width: 0;
+}
+
+/* One-tap date windows under the filters. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.chip {
+  padding: 5px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.chip.is-active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
 }
 
 .btn.is-off-today {
@@ -1768,6 +1949,192 @@ body.has-drawer {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 16px;
   align-items: start;
+}
+
+/* ---------- Week on a narrow screen: a day strip over the day itself ---------- */
+
+.week-narrow {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .week-wide {
+    display: none;
+  }
+
+  .week-narrow {
+    display: block;
+  }
+
+  /* The legend explains the grid's chips, and the grid is not on screen here. */
+  .legend {
+    display: none;
+  }
+
+  /* Availability lines are short: keep the name and the button on one line. */
+  .day-grid .row {
+    flex-wrap: nowrap;
+  }
+
+  .day-grid .row__main {
+    flex-basis: auto;
+  }
+}
+
+.day-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(46px, 1fr);
+  gap: 6px;
+  margin-bottom: 16px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+
+.day-strip__day {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-height: 64px;
+  padding: 8px 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  scroll-snap-align: center;
+}
+
+.day-strip__weekday {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.day-strip__date {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+/* The busy-ness mark: how many bookings, or × when the day is closed. */
+.day-strip__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--blue-ink);
+  background: var(--blue-soft);
+}
+
+.day-strip__mark:empty {
+  background: none;
+}
+
+.day-strip__mark.is-closed {
+  background: var(--pink-soft);
+  color: var(--pink-ink);
+}
+
+.day-strip__day.is-today .day-strip__date {
+  color: var(--orange-strong);
+}
+
+.day-strip__day.is-picked {
+  border-color: var(--navy);
+  box-shadow: inset 0 0 0 1px var(--navy);
+}
+
+/* ---------- The dates under the Calendar heading ---------- */
+
+.date-picker {
+  position: relative;
+  display: inline-block;
+}
+
+.date-picker__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px 2px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.date-picker__toggle:hover {
+  color: var(--ink);
+}
+
+.date-picker__toggle svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.date-picker__toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+/* Catches the click that closes the panel, without a document listener. */
+.date-picker__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  border: 0;
+  background: none;
+  cursor: default;
+}
+
+.date-picker__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 21;
+  display: grid;
+  gap: 8px;
+  width: max-content;
+  min-width: 280px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
+}
+
+.date-picker__panel .date-range {
+  max-width: none;
+}
+
+.date-picker__or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.date-picker__or::before,
+.date-picker__or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
 }
 
 /* ---------- Month view ---------- */
@@ -1802,6 +2169,51 @@ body.has-drawer {
   border-color: transparent;
 }
 
+.month__count {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .month {
+    gap: 4px;
+    padding: 8px;
+  }
+
+  .month .month__cell {
+    min-height: 58px;
+    padding: 4px;
+  }
+
+  /* 47px cells have no room for "3 bookings" or a second button: tapping the
+     date opens the day, and booking happens from there. */
+  .month .month__add,
+  .month .month__summary-text {
+    display: none;
+  }
+
+  .month .month__count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 20px;
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .month .month__head {
+    justify-content: center;
+  }
+
+  /* The event name does not fit; it becomes a marker bar you can tap. */
+  .month .month__event {
+    font-size: 0;
+    min-height: 7px;
+    padding: 0;
+  }
+}
+
 .month__cell.is-today {
   border-color: var(--orange);
   background: rgba(242, 120, 43, 0.06);
@@ -1814,7 +2226,7 @@ body.has-drawer {
 }
 
 .month__date {
-  padding: 0;
+  padding: 2px 6px;
   border: 0;
   background: none;
   font-family: var(--font-serif);

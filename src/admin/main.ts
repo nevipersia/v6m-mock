@@ -6,6 +6,7 @@ import type { Staff, State } from '../core/types.js';
 import { can, canView, currentStaff, homePage, signOut } from './auth.js';
 import { createBookingDetail } from './components/booking-detail.js';
 import { createBookingForm } from './components/booking-form.js';
+import { createEventForm } from './components/event-form.js';
 import { createBookingLinkPanel } from './components/booking-link.js';
 import { closeDrawer, openDrawer, syncDrawer } from './components/drawer.js';
 import { showToast } from './components/toast.js';
@@ -47,6 +48,8 @@ function buildContext(state: State, staff: Staff): DeskContext {
     newBooking: (prefill = {}) => openDrawer(createBookingForm(prefill), ctx),
     newBookingLink: () => openDrawer(createBookingLinkPanel(), ctx),
     editBooking: (bookingId) => openDrawer(createBookingForm({}, { editId: bookingId }), ctx),
+    newEvent: () => openDrawer(createEventForm(), ctx),
+    closeDrawer,
   };
   return ctx;
 }
@@ -142,7 +145,7 @@ const globalActions: HandlerMap = {
   'new-booking-link': ({ ctx }) => ctx.newBookingLink(),
 };
 
-type Kind = 'action' | 'input';
+type Kind = 'action' | 'input' | 'hover';
 
 function dispatch(kind: Kind, name: string | undefined, payload: Omit<HandlerPayload, 'ctx'>): void {
   if (!name) return;
@@ -153,7 +156,9 @@ function dispatch(kind: Kind, name: string | undefined, payload: Omit<HandlerPay
   }
   const handler = kind === 'input'
     ? activeRoute?.view.inputs?.[name]
-    : globalActions[name] ?? activeRoute?.view.actions?.[name];
+    : kind === 'hover'
+      ? activeRoute?.view.hovers?.[name]
+      : globalActions[name] ?? activeRoute?.view.actions?.[name];
   void handler?.({ ...payload, ctx: context });
 }
 
@@ -165,6 +170,12 @@ on<HTMLFormElement>(app, 'submit', 'form[data-submit]', (event, form) => {
 });
 
 on(app, 'input', '[data-input]', (event, el) => dispatch('input', el.dataset.input, { el, event }));
+
+// Pointer or keyboard moving across something that shows a read-out. The
+// handler reads event.type to tell arriving from leaving.
+(['mouseover', 'mouseout', 'focusin', 'focusout'] as const).forEach((type) => {
+  on(app, type, '[data-hover]', (event, el) => dispatch('hover', el.dataset.hover, { el, event }));
+});
 
 window.addEventListener('hashchange', draw);
 

@@ -2,7 +2,7 @@
 // saved replies and a shortcut to turn an inquiry into a booking.
 
 import { markInquiryReplied } from '../../core/actions.js';
-import { html, type SafeHTML } from '../../core/dom.js';
+import { flag, html, type SafeHTML } from '../../core/dom.js';
 import { formatDate, formatDateTime, plural } from '../../core/format.js';
 import { SOURCE_LABELS, findBooking, findGuest, findStaff, productLabel } from '../../core/rules.js';
 import type { Inquiry, InquiryStatus, State } from '../../core/types.js';
@@ -115,8 +115,8 @@ export function render(ctx: DeskContext): SafeHTML {
     ${pageHead({ title: 'Inbox', subtitle: `${plural(newCount, 'new inquiry', 'new inquiries')} · ${state.inquiries.length} total` })}
 
     <div class="segmented" role="group" aria-label="Filter inquiries">
-      <button class="segmented__option ${ui.filter === 'new' ? 'is-active' : ''}" type="button" data-action="filter-inbox" data-filter="new" aria-pressed="${ui.filter === 'new'}">New (${newCount})</button>
-      <button class="segmented__option ${ui.filter === 'all' ? 'is-active' : ''}" type="button" data-action="filter-inbox" data-filter="all" aria-pressed="${ui.filter === 'all'}">All (${state.inquiries.length})</button>
+      <button class="segmented__option ${ui.filter === 'new' ? 'is-active' : ''}" type="button" data-action="filter-inbox" data-filter="new" aria-pressed="${flag(ui.filter === 'new')}">New (${newCount})</button>
+      <button class="segmented__option ${ui.filter === 'all' ? 'is-active' : ''}" type="button" data-action="filter-inbox" data-filter="all" aria-pressed="${flag(ui.filter === 'all')}">All (${state.inquiries.length})</button>
     </div>
 
     <div class="inbox">
