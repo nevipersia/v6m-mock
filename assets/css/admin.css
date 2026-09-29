@@ -369,6 +369,60 @@ body {
   color: var(--ink-muted);
 }
 
+/* ---------- Jump between the parts of a long page ---------- */
+
+.jump {
+  position: fixed;
+  right: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  display: grid;
+  gap: 1px;
+  padding: 1px;
+  background: var(--line);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-float);
+  overflow: hidden;
+}
+
+.jump[hidden] {
+  display: none;
+}
+
+/* The drawer takes the whole screen's attention, and the page behind it is frozen. */
+body.has-drawer .jump {
+  display: none;
+}
+
+.jump__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 38px;
+  border: 0;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.jump__btn:first-child {
+  border-radius: var(--radius-pill) var(--radius-pill) 0 0;
+}
+
+.jump__btn:last-child {
+  border-radius: 0 0 var(--radius-pill) var(--radius-pill);
+}
+
+.jump__btn:hover:not(:disabled) {
+  background: var(--cream-deep);
+}
+
+.jump__btn:disabled {
+  color: var(--ink-hint);
+  cursor: default;
+}
+
 .tabbar {
   display: none;
 }
@@ -403,6 +457,12 @@ body {
     padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0px));
     background: var(--surface);
     border-top: 1px solid var(--line);
+  }
+
+  /* Clear of the bottom tab bar, and off the thumb's way on the right. */
+  .jump {
+    right: 12px;
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
   }
 
   .tab {

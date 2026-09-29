@@ -11,6 +11,7 @@ import { createEventForm } from './components/event-form.js';
 import { createExpenseForm } from './components/expense-form.js';
 import { createBookingLinkPanel } from './components/booking-link.js';
 import { closeDrawer, openDrawer, syncDrawer } from './components/drawer.js';
+import { jumpBy, refreshJump } from './components/jump.js';
 import { showToast } from './components/toast.js';
 import { renderShell } from './layout.js';
 import { findRoute } from './routes.js';
@@ -131,6 +132,8 @@ function draw(): void {
   render(app, renderShell(context, route, route.view.render(context)));
   restoreFocus(focus);
   syncDrawer(context);
+  // A new page has its own parts, and may not be long enough to need the buttons.
+  refreshJump();
 }
 
 const globalActions: HandlerMap = {
@@ -155,6 +158,10 @@ const globalActions: HandlerMap = {
   'new-booking': ({ el, ctx }) => ctx.newBooking({ product: el.dataset.product, date: el.dataset.date }),
 
   'new-booking-link': ({ el, ctx }) => ctx.newBookingLink({ product: el.dataset.product, date: el.dataset.date }),
+
+  'jump-up': () => jumpBy(-1),
+
+  'jump-down': () => jumpBy(1),
 };
 
 type Kind = 'action' | 'input' | 'hover';
@@ -190,6 +197,16 @@ on(app, 'input', '[data-input]', (event, el) => dispatch('input', el.dataset.inp
 });
 
 window.addEventListener('hashchange', draw);
+
+// Which part is on screen changes as the page moves under it, so the jump
+// buttons are told after the browser has settled rather than on every pixel.
+let jumpPending = 0;
+const scheduleJumpRefresh = (): void => {
+  cancelAnimationFrame(jumpPending);
+  jumpPending = requestAnimationFrame(refreshJump);
+};
+window.addEventListener('scroll', scheduleJumpRefresh, { passive: true });
+window.addEventListener('resize', scheduleJumpRefresh);
 
 async function start(): Promise<void> {
   subscribe(draw);

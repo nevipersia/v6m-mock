@@ -7,6 +7,7 @@ import type { State } from '../core/types.js';
 import { ROLE_LABELS, canView } from './auth.js';
 import { avatar } from './components/badges.js';
 import { icon } from './components/icons.js';
+import { jumpControl } from './components/jump.js';
 import { ROUTES } from './routes.js';
 import type { DeskContext, Route } from './types.js';
 
@@ -68,6 +69,7 @@ export function renderShell(ctx: DeskContext, route: Route, content: TemplateVal
         <main class="page" id="main">${content}</main>
       </div>
 
+      ${jumpControl()}
       <nav class="tabbar" aria-label="Sections">${navLinks(ctx, route.id, 'tab')}</nav>
     </div>`;
 }

@@ -301,7 +301,7 @@ function salesSection(ctx: DeskContext): SafeHTML {
   const changeTone = shown.change === null ? '' : shown.change < 0 ? 'down' : 'up';
 
   return html`
-    <section class="sales" aria-label="Sales">
+    <section class="sales" aria-label="Sales" data-part="Sales">
       <header class="sales__head">
         <div>
           <h2 class="sales__title">Sales</h2>
@@ -402,7 +402,7 @@ function moneySection(ctx: DeskContext): SafeHTML {
   const canTrack = ctx.can('expenses.manage');
 
   return html`
-    <section class="sales money" aria-label="Profit and loss">
+    <section class="sales money" aria-label="Profit and loss" data-part="Profit and loss">
       <header class="sales__head">
         <div>
           <h2 class="sales__title">Profit and loss</h2>
@@ -514,7 +514,7 @@ export function render(ctx: DeskContext): SafeHTML {
     ${exclusiveOn(state, today) ? html`
       <p class="notice notice--exclusive">Exclusive rental today: ${exclusiveOn(state, today)?.guestName} has ${productLabel(state, exclusiveOn(state, today)?.product ?? '')}. No other guests during their time.</p>` : ''}
 
-    <div class="metrics">
+    <div class="metrics" data-part="Today at a glance">
       ${metric('Arriving today', arriving.length, plural(arriving.reduce((sum, b) => sum + b.adults + b.kids, 0), 'guest'))}
       ${metric('In house', inHouse.length, 'Checked in now')}
       ${poolMetric(state, 'daytour')}
@@ -528,7 +528,7 @@ export function render(ctx: DeskContext): SafeHTML {
     ${ctx.can('expenses.manage') ? moneySection(ctx) : ''}
 
     <div class="dashboard-grid">
-      <section class="panel dashboard-grid__arriving">
+      <section class="panel dashboard-grid__arriving" data-part="Arriving today">
         <header class="panel__head">
           <h2 class="panel__title">Arriving today</h2>
           <span class="panel__count">${arriving.length}</span>
@@ -541,7 +541,7 @@ export function render(ctx: DeskContext): SafeHTML {
           </ul>` : emptyState('No more arrivals today', 'Walk-ins can be added with New booking.')}
       </section>
 
-      <section class="panel dashboard-grid__attention">
+      <section class="panel dashboard-grid__attention" data-part="Needs attention">
         <header class="panel__head">
           <h2 class="panel__title">Needs attention</h2>
           <span class="panel__count">${attention.length}</span>
@@ -549,7 +549,7 @@ export function render(ctx: DeskContext): SafeHTML {
         ${attention.length ? html`<ul class="attention">${attention}</ul>` : emptyState('All clear', 'No holds, balances or open inquiries.')}
       </section>
 
-      <section class="panel dashboard-grid__inhouse">
+      <section class="panel dashboard-grid__inhouse" data-part="In house">
         <header class="panel__head">
           <h2 class="panel__title">In house</h2>
           <span class="panel__count">${inHouse.length}</span>
@@ -562,7 +562,7 @@ export function render(ctx: DeskContext): SafeHTML {
           </ul>` : emptyState('Nobody checked in yet', 'Guests appear here after check-in.')}
       </section>
 
-      <section class="panel dashboard-grid__upcoming">
+      <section class="panel dashboard-grid__upcoming" data-part="The week ahead">
         <header class="panel__head">
           <h2 class="panel__title">Next ${LOOKAHEAD_DAYS} days</h2>
           <a class="small" href="#/calendar">Open calendar</a>
@@ -581,7 +581,7 @@ export function render(ctx: DeskContext): SafeHTML {
           </ul>` : emptyState('Nothing booked yet', 'The week ahead is open.')}
       </section>
 
-      <section class="panel dashboard-grid__activity">
+      <section class="panel dashboard-grid__activity" data-part="Recent activity">
         <header class="panel__head"><h2 class="panel__title">Recent activity</h2></header>
         <ul class="timeline">
           ${recent.map((entry) => html`
