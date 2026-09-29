@@ -84,7 +84,8 @@ export const asField = (el: HTMLElement): Field => el as Field;
 
 /** What the signed-out screen receives: data, a redraw and a hand-over once signed in. */
 export interface LoginContext {
-  readonly state: State;
+  /** Null in a Supabase build until someone signs in: nothing loads before that. */
+  readonly state: State | null;
   redraw: () => void;
   toast: (message: string) => void;
   signedIn: (staff: Staff) => void;

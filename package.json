@@ -3,15 +3,18 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "V6M Desk, the V6M Resort staff tool, and its single-use guest booking page. TypeScript, no framework, driven by local mock data.",
+  "description": "V6M Desk, the V6M Resort staff tool, and its single-use guest booking page. TypeScript, no framework. Runs on local mock data, or on Supabase when configured (see DEPLOY.md).",
   "scripts": {
     "build": "tsc && node scripts/build-site.mjs",
+    "build:functions": "tsc && node scripts/build-functions.mjs",
+    "seed:make": "node scripts/make-seed.mjs",
     "watch": "tsc --watch --preserveWatchOutput",
     "typecheck": "tsc --noEmit",
     "serve": "serve -l 4789 .",
     "start": "tsc && serve -l 4789 ."
   },
   "devDependencies": {
+    "@supabase/supabase-js": "2.117.2",
     "serve": "^14.2.6",
     "typescript": "^7.0.2"
   }

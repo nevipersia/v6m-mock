@@ -1,5 +1,6 @@
 // App shell: sidebar, top bar, mobile tab bar, and the shared page header.
 
+import { isMock } from '../core/config.js';
 import { html, type SafeHTML, type TemplateValue } from '../core/dom.js';
 import { formatDate } from '../core/format.js';
 import type { State } from '../core/types.js';
@@ -42,12 +43,15 @@ export function renderShell(ctx: DeskContext, route: Route, content: TemplateVal
 
       <div class="desk__main">
         <header class="topbar">
-          <span class="pill pill--brand" title="The mock data is frozen on this date">Demo date · ${formatDate(state.meta.asOf, 'short')}</span>
+          ${isMock
+            ? html`<span class="pill pill--brand" title="The mock data is frozen on this date">Demo date · ${formatDate(state.meta.asOf, 'short')}</span>`
+            : html`<span class="pill pill--brand">Today · ${formatDate(state.meta.asOf, 'short')}</span>`}
           ${staff.demo ? html`<span class="pill pill--warning topbar__hide-sm" title="Sample data only, no real bookings or guests">Demo account</span>` : ''}
           <div class="topbar__actions">
-            <button class="btn btn--quiet btn--sm" type="button" data-action="reset-data">
-              ${icon('refresh')}<span class="topbar__hide-sm">Reset data</span>
-            </button>
+            ${isMock ? html`
+              <button class="btn btn--quiet btn--sm" type="button" data-action="reset-data">
+                ${icon('refresh')}<span class="topbar__hide-sm">Reset data</span>
+              </button>` : ''}
             <div class="topbar__user">
               ${avatar(staff.name)}
               <span class="topbar__who">

@@ -1,53 +1,73 @@
 // Shared data store for V6M Desk and the booking page.
 //
-// Loads data/mock-data.json, then keeps changes (new bookings, payments,
-// invites, booking links) in localStorage so both pages see the same state.
-// Changes are discarded automatically if the mock data file is regenerated
-// with a new seed.
+// Holds the whole state in memory. Every change goes through update(), which
+// re-renders subscribers straight away and hands the change to the backend:
+// the demo keeps it in localStorage (backends/local.ts), a Supabase build
+// writes the changed rows (backends/supabase.ts). config.ts picks which.
 
-import type { State } from './types.js';
+import type { Backend } from './backend.js';
+import { createLocalBackend } from './backends/local.js';
+import { createSupabaseBackend } from './backends/supabase.js';
+import { config } from './config.js';
+import { supabaseClient } from './supabase-client.js';
+import type { Role, State } from './types.js';
 
 type Listener = (state: State) => void;
+type ErrorListener = (error: Error) => void;
 
-const STORAGE_KEY = 'v6m-mock-state';
-const DATA_URL = new URL('../../../data/mock-data.json', import.meta.url);
-
+let backend: Backend | null = null;
 let state: State | null = null;
-let baseSeed: number | null = null;
+let saving: Promise<void> = Promise.resolve();
 const listeners = new Set<Listener>();
+const errorListeners = new Set<ErrorListener>();
 
-function readSaved(): State | null {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as State | null;
-  } catch {
-    return null;
-  }
-}
+const ROLES: Role[] = ['owner', 'manager'];
 
-function persist(): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // Storage blocked or full: changes stay in memory for this tab.
+/** Tidies data saved by older versions so the rest of the app can trust its shape. */
+function normalize(loaded: State): State {
+  for (const person of loaded.staff ?? []) {
+    // The Staff role was removed; anyone saved with it keeps their permissions as a Manager.
+    if (!ROLES.includes(person.role)) person.role = 'manager';
   }
+  loaded.bookingLinks ??= [];
+  loaded.invites ??= [];
+  return loaded;
 }
 
 function notify(): void {
   if (state) listeners.forEach((listener) => listener(state as State));
 }
 
-async function fetchBaseData(): Promise<State> {
-  const response = await fetch(DATA_URL, { cache: 'no-store' });
-  if (!response.ok) throw new Error(`Could not load mock data (HTTP ${response.status})`);
-  return response.json() as Promise<State>;
+/** Use a specific backend instead of the one config.ts picks (server functions, tests). */
+export function useBackend(next: Backend): void {
+  backend = next;
+  state = null;
+}
+
+async function resolveBackend(): Promise<Backend> {
+  if (backend) return backend;
+  backend = config.backend === 'supabase'
+    ? createSupabaseBackend(await supabaseClient(), { realtime: true })
+    : createLocalBackend();
+  return backend;
 }
 
 export async function loadStore(): Promise<State> {
   if (state) return state;
-  const base = await fetchBaseData();
-  baseSeed = base.meta.seed;
-  const saved = readSaved();
-  state = saved?.meta?.seed === baseSeed ? saved : base;
+  const source = await resolveBackend();
+  state = normalize(await source.load());
+  source.watch?.((changed) => {
+    state = normalize(changed);
+    notify();
+  });
+  return state;
+}
+
+/** Reads everything again from the backend, dropping what is in memory. */
+export async function reloadStore(): Promise<State> {
+  const source = await resolveBackend();
+  state = normalize(await source.load());
+  notify();
   return state;
 }
 
@@ -65,34 +85,41 @@ export function subscribe(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
+/** Hears about changes the backend could not save. The store reloads right after. */
+export function onSaveError(listener: ErrorListener): () => void {
+  errorListeners.add(listener);
+  return () => errorListeners.delete(listener);
+}
+
 /** Runs a mutation against the state, saves it and notifies subscribers. */
 export function update<T>(mutate: (state: State) => T): T {
-  const result = mutate(requireState());
-  persist();
+  const current = requireState();
+  const result = mutate(current);
+  const source = backend;
+  if (source) {
+    saving = saving
+      .then(() => source.commit(current))
+      .catch(async (error: Error) => {
+        errorListeners.forEach((listener) => listener(error));
+        // What is on screen no longer matches what was saved: start again from the server.
+        await reloadStore().catch(() => {});
+      });
+  }
   notify();
   return result;
 }
 
+/** Resolves once every change so far has been saved (or has failed). */
+export const flush = (): Promise<void> => saving;
+
+/** Only the demo can throw its changes away. */
+export const canReset = (): boolean => Boolean(backend?.reset);
+
 /** Throws away local changes and reloads the original mock data. */
 export async function resetStore(): Promise<void> {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Nothing saved to remove.
-  }
-  state = await fetchBaseData();
+  const source = await resolveBackend();
+  if (!source.reset) return;
+  await flush();
+  state = normalize(await source.reset());
   notify();
 }
-
-// Keep tabs in sync, e.g. a booking sent from a link appears in an open V6M Desk tab.
-window.addEventListener('storage', async (event) => {
-  if (event.key !== STORAGE_KEY || !state) return;
-  if (event.newValue === null) {
-    state = await fetchBaseData();
-  } else {
-    const saved = readSaved();
-    if (saved?.meta?.seed !== baseSeed) return;
-    state = saved;
-  }
-  notify();
-});

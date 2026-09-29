@@ -2,16 +2,18 @@
 // in once, pays the 50% downpayment by GCash QR, and the booking appears on
 // the V6M Desk calendar (on hold until the downpayment is verified).
 
-import { bookingLinkStage, payByQr, useBookingLink } from '../core/actions.js';
+import { guestBookingProblem } from '../core/actions.js';
+import { isMock } from '../core/config.js';
 import { $, $maybe, on, render } from '../core/dom.js';
 import { DEFAULT_BOOKING_PAGE, loadBookingPage, readableInk } from '../core/booking-page.js';
-import { isEmail, isPHMobile, parseDigits } from '../core/format.js';
-import { blankCompanion, fitGuestList, guestListProblem, namesAsked, readGuestListField, updateGuestCount } from '../core/guest-list.js';
+import { parseDigits } from '../core/format.js';
+import { blankCompanion, fitGuestList, namesAsked, readGuestListField, updateGuestCount } from '../core/guest-list.js';
 import { VERIFY_DELAY_MS, type PaymentCardState } from '../core/payment-card.js';
 import { qrPaymentRequest, sampleReference } from '../core/qr-payment.js';
-import { checkAvailability, findBooking, findExclusive, findUnit } from '../core/rules.js';
-import { loadStore, requireState } from '../core/store.js';
+import { findBooking, findUnit } from '../core/rules.js';
+import { requireState } from '../core/store.js';
 import type { Booking, BookingLink, BookingPageSettings, State } from '../core/types.js';
+import { openLink, payDownpayment, submitBooking, type OpenResult } from './api.js';
 import {
   bookableIds, doneScreen, formScreen, guestListBody, payScreen, problemScreen, productCard, summary, type Draft,
 } from './screens.js';
@@ -37,26 +39,8 @@ function applyTheme(page: BookingPageSettings): void {
 }
 
 function validate(state: State, page: BookingPageSettings): string {
-  const guests = draft.adults + draft.kids;
-  const availability = draft.date ? checkAvailability(state, draft) : { ok: false, reason: 'Pick a date.' };
-  const unit = findUnit(state, draft.product);
-  const pkg = findExclusive(state, draft.product);
-
-  if (!draft.guestName.trim()) return 'Enter your name.';
-  if (!isPHMobile(draft.mobile)) return 'Enter a PH mobile number, like 0917 123 4567.';
-  if (page.fields.email && draft.email.trim() && !isEmail(draft.email)) return 'Enter an email address like maria@example.com, or leave it blank.';
-  if (!draft.address.trim()) return 'Enter your complete address.';
-  if (!draft.date) return 'Pick a date.';
-  if (guests === 0) return 'Add at least one guest.';
-  if (page.fields.guestList) {
-    const listProblem = guestListProblem(draft.guestList, guests);
-    if (listProblem) return listProblem;
-  }
-  if (draft.scPwd > guests) return 'Senior / PWD can\'t be more than the number of guests.';
-  if (!availability.ok) return availability.reason ?? 'That date is not available.';
-  if (unit && guests > unit.capacityMax) return `${unit.name} fits up to ${unit.capacityMax} guests.`;
-  if (pkg && guests > pkg.maxGuests) return `Exclusive rentals take up to ${pkg.maxGuests} guests.`;
-  return '';
+  if (!page.fields.email && draft.email) draft.email = '';
+  return guestBookingProblem(state, draft, { guestListRequired: page.fields.guestList });
 }
 
 function showPay(page: BookingPageSettings, booking: Booking): void {
@@ -124,20 +108,36 @@ function bind(page: BookingPageSettings): void {
     redrawGuestList();
   });
 
-  on<HTMLFormElement>(app, 'submit', 'form[data-form]', (event) => {
+  let submitting = false;
+  on<HTMLFormElement>(app, 'submit', 'form[data-form]', async (event, form) => {
     event.preventDefault();
-    if (screen.name !== 'form') return;
+    if (screen.name !== 'form' || submitting) return;
     error = validate(requireState(), page);
     if (error) {
       $('[data-slot="error"]', app).textContent = error;
       return;
     }
-    const result = useBookingLink(screen.link.code, { ...draft, guestList: page.fields.guestList ? draft.guestList : [] });
-    if (result.error !== undefined) {
-      render(app, problemScreen(page, result.error));
-      return;
+    submitting = true;
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (button) button.disabled = true;
+    try {
+      const result = await submitBooking(screen.link.code, { ...draft, guestList: page.fields.guestList ? draft.guestList : [] });
+      if (result.error !== undefined && result.retry) {
+        $('[data-slot="error"]', app).textContent = result.error;
+        return;
+      }
+      if (result.error !== undefined) {
+        render(app, problemScreen(page, result.error));
+        return;
+      }
+      showPay(page, result.booking);
+    } catch (submitError) {
+      // Keep what they typed; they can press the button again.
+      $('[data-slot="error"]', app).textContent = (submitError as Error).message;
+    } finally {
+      submitting = false;
+      if (button?.isConnected) button.disabled = false;
     }
-    showPay(page, result.booking);
   });
 
   on<HTMLFormElement>(app, 'submit', 'form[data-pay-form]', (event) => {
@@ -151,9 +151,14 @@ function bind(page: BookingPageSettings): void {
     card.error = '';
     showPay(page, booking);
     // Mock verification: pretend to check the reference with GCash.
-    setTimeout(() => {
+    setTimeout(async () => {
+      let result;
+      try {
+        result = await payDownpayment(code, bookingId, card.reference, card.senderName);
+      } catch (payError) {
+        result = { error: (payError as Error).message };
+      }
       card.checking = false;
-      const result = payByQr(bookingId, card.reference, null, card.senderName);
       if (result.error !== undefined) {
         card.error = result.error;
         const current = findBooking(requireState(), bookingId);
@@ -179,16 +184,17 @@ async function start(): Promise<void> {
   const page = await loadBookingPage();
   applyTheme(page);
 
-  let state: State;
+  let opened: OpenResult;
   try {
-    state = await loadStore();
+    opened = await openLink(code);
   } catch (loadError) {
-    render(app, problemScreen(DEFAULT_BOOKING_PAGE, `${(loadError as Error).message}. Start the local server with npm start and open it from there.`));
+    const hint = isMock ? ' Start the local server with npm start and open it from there.' : ' Reload the page to try again.';
+    render(app, problemScreen(DEFAULT_BOOKING_PAGE, `${(loadError as Error).message.replace(/\.$/, '')}.${hint}`));
     return;
   }
 
   bind(page);
-  const stage = bookingLinkStage(state, code);
+  const { state, stage } = opened;
   if (stage.stage === 'problem') {
     render(app, problemScreen(page, stage.message));
     return;

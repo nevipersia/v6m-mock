@@ -1,14 +1,15 @@
 // Sign-in: email and password. V6M Desk is invite only, so new accounts come
 // from an invite code, which is also where the person sets their password.
 
-import { redeemInvite } from '../../core/actions.js';
+import { isMock } from '../../core/config.js';
 import { html, type SafeHTML } from '../../core/dom.js';
 import type { State } from '../../core/types.js';
-import { ROLE_LABELS, signIn, signInWithPassword } from '../auth.js';
+import { ROLE_LABELS, redeemInvite, signInWithPassword, type SignInResult } from '../auth.js';
 import { icon } from '../components/icons.js';
 import type { HandlerMap, LoginContext } from '../types.js';
 
-const ui: { mode: 'password' | 'invite'; email: string; password: string; code: string; newPassword: string; error: string } = {
+const ui: { mode: 'password' | 'invite'; email: string; password: string; code: string; newPassword: string; error: string; busy: boolean } = {
+  busy: false,
   mode: 'password',
   email: '',
   password: '',
@@ -17,7 +18,8 @@ const ui: { mode: 'password' | 'invite'; email: string; password: string; code: 
   error: '',
 };
 
-function demoHints(state: State): SafeHTML | '' {
+function demoHints(state: State | null): SafeHTML | '' {
+  if (!isMock || !state) return '';
   const demoAccounts = state.staff.filter((person) => person.demo && person.password);
   if (!demoAccounts.length) return '';
 
@@ -42,7 +44,7 @@ function demoHints(state: State): SafeHTML | '' {
     </div>`;
 }
 
-export function renderLogin(state: State): SafeHTML {
+export function renderLogin(state: State | null): SafeHTML {
   return html`
     <main class="login">
       <div class="login__card">
@@ -56,8 +58,9 @@ export function renderLogin(state: State): SafeHTML {
 
         ${ui.mode === 'password' ? html`
           <p class="login__intro">
-            Sign in with your work email, or use a demo account below to look around. Accounts are
-            created by the owner.
+            ${isMock
+              ? 'Sign in with your work email, or use a demo account below to look around. Accounts are created by the owner.'
+              : 'Sign in with your work email. Accounts are created by the owner.'}
           </p>
 
           <form class="login__form" data-submit="sign-in" novalidate>
@@ -72,7 +75,7 @@ export function renderLogin(state: State): SafeHTML {
                 placeholder="Your password" autocomplete="current-password">
             </label>
             <p class="form-error">${ui.error}</p>
-            <button class="btn btn--primary btn--block" type="submit">Sign in</button>
+            <button class="btn btn--primary btn--block" type="submit" ${ui.busy ? 'disabled' : ''}>${ui.busy ? 'Signing in…' : 'Sign in'}</button>
           </form>
 
           ${demoHints(state)}
@@ -96,31 +99,44 @@ export function renderLogin(state: State): SafeHTML {
             <p class="form-error">${ui.error}</p>
             <div class="button-row button-row--end">
               <button class="btn btn--quiet" type="button" data-action="hide-invite">Back</button>
-              <button class="btn btn--primary" type="submit">Join the desk</button>
+              <button class="btn btn--primary" type="submit" ${ui.busy ? 'disabled' : ''}>${ui.busy ? 'Joining…' : 'Join the desk'}</button>
             </div>
           </form>`}
       </div>
     </main>`;
 }
 
+/** Runs a sign-in attempt with the button disabled, then reports the result. */
+async function attempt(ctx: LoginContext, run: () => Promise<SignInResult>): Promise<void> {
+  if (ui.busy) return;
+  ui.busy = true;
+  ui.error = '';
+  ctx.redraw();
+  const { staff, error } = await run();
+  ui.busy = false;
+  if (!staff) {
+    ui.error = error;
+    ctx.redraw();
+    return;
+  }
+  ui.mode = 'password';
+  ui.email = '';
+  ui.password = '';
+  ui.code = '';
+  ui.newPassword = '';
+  ctx.signedIn(staff);
+}
+
 export const loginActions: HandlerMap<LoginContext> = {
   'demo-sign-in': ({ el, ctx }) => {
-    const person = ctx.state.staff.find((staff) => staff.id === el.dataset.staff);
+    const person = ctx.state?.staff.find((staff) => staff.id === el.dataset.staff);
     if (!person?.password) return;
-    const { staff, error } = signInWithPassword(ctx.state, person.email, person.password);
-    if (!staff) {
-      ui.error = error;
-      ctx.redraw();
-      return;
-    }
-    ui.email = '';
-    ui.password = '';
-    ui.error = '';
-    ctx.signedIn(staff);
+    const password = person.password;
+    return attempt(ctx, () => signInWithPassword(person.email, password));
   },
 
   'use-demo': ({ el, ctx }) => {
-    const person = ctx.state.staff.find((staff) => staff.id === el.dataset.staff);
+    const person = ctx.state?.staff.find((staff) => staff.id === el.dataset.staff);
     if (!person) return;
     ui.email = person.email;
     ui.password = person.password ?? '';
@@ -134,15 +150,7 @@ export const loginActions: HandlerMap<LoginContext> = {
       ctx.redraw();
       return;
     }
-    const { staff, error } = signInWithPassword(ctx.state, ui.email, ui.password);
-    if (!staff) {
-      ui.error = error;
-      ctx.redraw();
-      return;
-    }
-    ui.password = '';
-    ui.error = '';
-    ctx.signedIn(staff);
+    return attempt(ctx, () => signInWithPassword(ui.email, ui.password));
   },
 
   'show-invite': ({ ctx }) => {
@@ -170,20 +178,7 @@ export const loginActions: HandlerMap<LoginContext> = {
       ctx.redraw();
       return;
     }
-
-    const staff = redeemInvite(ui.code, ui.newPassword);
-    if (!staff) {
-      ui.error = 'That code is not valid, or it has already been used.';
-      ctx.redraw();
-      return;
-    }
-
-    ui.mode = 'password';
-    ui.code = '';
-    ui.newPassword = '';
-    ui.password = '';
-    signIn(staff.id);
-    ctx.signedIn(staff);
+    return attempt(ctx, () => redeemInvite(ui.code, ui.newPassword));
   },
 };
 

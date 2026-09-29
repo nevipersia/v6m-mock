@@ -1,0 +1,12 @@
+# Supabase CLI settings for this project. `supabase link` connects it to the
+# hosted project; the project ref is not stored here.
+project_id = "v6m-desk"
+
+# Guests (booking links) and people redeeming an invite have no login yet, so
+# these two functions accept calls without a user token. Each one checks the
+# booking code or invite code itself.
+[functions.booking-link]
+verify_jwt = false
+
+[functions.redeem-invite]
+verify_jwt = false

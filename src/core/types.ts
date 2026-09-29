@@ -15,7 +15,7 @@ export type ProductType = 'entrance' | UnitKind | 'exclusive' | 'event';
 export type InquiryStatus = 'new' | 'replied' | 'booked' | 'lost';
 export type InquiryChannel = Extract<BookingSource, 'messenger' | 'instagram' | 'phone' | 'website'>;
 
-export type Role = 'owner' | 'manager' | 'staff';
+export type Role = 'owner' | 'manager';
 export type StaffStatus = 'active' | 'invited' | 'suspended';
 export type Permission =
   | 'bookings.write'
@@ -44,8 +44,10 @@ export interface Staff {
   permissions: Permission[];
   status: StaffStatus;
   demo: boolean;
-  /** Plain text because this is a mock; a real build would hash on a server. */
+  /** Demo only, in plain text. A Supabase build keeps passwords in Supabase Auth and this is null. */
   password: string | null;
+  /** The Supabase Auth user this account signs in as; null in the demo and until the invite is redeemed. */
+  userId?: string | null;
 }
 
 export interface Invite {
@@ -296,6 +298,8 @@ export interface BookingLink {
 }
 
 export interface ActivityEntry {
+  /** Set when the entry is saved to Supabase; the demo data has none. */
+  id?: string;
   at: Timestamp;
   staffId: string | null;
   action: string;

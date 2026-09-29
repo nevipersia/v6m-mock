@@ -1,9 +1,10 @@
 // V6M Desk entry point: sign-in, hash routing, and event dispatch to views.
 
+import { isMock } from '../core/config.js';
 import { $, html, on, render } from '../core/dom.js';
-import { getState, loadStore, requireState, resetStore, subscribe } from '../core/store.js';
+import { canReset, getState, loadStore, onSaveError, resetStore, subscribe } from '../core/store.js';
 import type { Staff, State } from '../core/types.js';
-import { can, canView, currentStaff, homePage, signOut } from './auth.js';
+import { can, canView, currentStaff, hasSession, homePage, restoreSession, signOut } from './auth.js';
 import { createBookingDetail } from './components/booking-detail.js';
 import { createBookingForm } from './components/booking-form.js';
 import { createEventForm } from './components/event-form.js';
@@ -29,7 +30,7 @@ function goHome(staff: Staff): void {
 
 const loginContext: LoginContext = {
   get state() {
-    return requireState();
+    return getState();
   },
   redraw: () => draw(),
   toast: showToast,
@@ -91,19 +92,27 @@ function restoreFocus(saved: SavedFocus | null): void {
   }
 }
 
+function drawLogin(state: State | null): void {
+  activeRoute = null;
+  context = null;
+  closeDrawer();
+  document.title = 'Sign in · V6M Desk';
+  const focus = rememberFocus();
+  render(app, renderLogin(state));
+  restoreFocus(focus);
+}
+
 function draw(): void {
   const state = getState();
-  if (!state) return; // a hash change can land before the data finishes loading
+  // Supabase builds load nothing until someone signs in.
+  if (!state) {
+    if (!hasSession()) drawLogin(null);
+    return; // otherwise a hash change landed before the data finished loading
+  }
   const staff = currentStaff(state);
 
   if (!staff) {
-    activeRoute = null;
-    context = null;
-    closeDrawer();
-    document.title = 'Sign in · V6M Desk';
-    const focus = rememberFocus();
-    render(app, renderLogin(state));
-    restoreFocus(focus);
+    drawLogin(state);
     return;
   }
 
@@ -123,14 +132,15 @@ function draw(): void {
 }
 
 const globalActions: HandlerMap = {
-  'sign-out': () => {
-    signOut();
+  'sign-out': async () => {
     closeDrawer();
     history.replaceState(null, '', location.pathname);
+    await signOut(); // a Supabase build reloads the page from here
     draw();
   },
 
   'reset-data': async () => {
+    if (!canReset()) return;
     const confirmed = window.confirm('Reset the demo? Bookings, payments, invites and booking links you added in this browser will be removed.');
     if (!confirmed) return;
     closeDrawer();
@@ -180,17 +190,21 @@ on(app, 'input', '[data-input]', (event, el) => dispatch('input', el.dataset.inp
 window.addEventListener('hashchange', draw);
 
 async function start(): Promise<void> {
+  subscribe(draw);
+  onSaveError((error) => showToast(`Not saved: ${error.message}. Reloaded the latest data.`));
   try {
-    await loadStore();
+    await restoreSession();
+    if (hasSession()) await loadStore();
   } catch (error) {
     render(app, html`
       <div class="app-status">
         <p><strong>${(error as Error).message}.</strong></p>
-        <p>Start the local server with <code>npm start</code> and open http://localhost:4789/admin/.</p>
+        ${isMock
+          ? html`<p>Start the local server with <code>npm start</code> and open http://localhost:4789/admin/.</p>`
+          : html`<p>Check your connection and reload the page. If it keeps happening, the database may be unreachable.</p>`}
       </div>`);
     return;
   }
-  subscribe(draw);
   draw();
 }
 

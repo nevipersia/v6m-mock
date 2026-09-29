@@ -7,7 +7,8 @@ A clickable prototype of the internal tool for V6M Resort (Lipa City, Batangas):
 
 Opening `/` redirects to the desk.
 
-Everything runs in the browser. Nothing is booked, paid or sent.
+Out of the box everything runs in the browser on sample data: nothing is booked, paid or sent. The
+same code runs on Supabase for real use; see [DEPLOY.md](DEPLOY.md).
 
 ## Run it
 
@@ -30,6 +31,11 @@ types without writing files.
 `data/`, `assets/`) into `dist/`. `vercel.json` tells Vercel to run that build and serve `dist/`; any
 static host works the same way.
 
+Without environment variables that is the demo. With `SUPABASE_URL` and `SUPABASE_ANON_KEY` set, the
+build points at a Supabase project instead: real sign-in, a shared database, live updates between
+desks, and guests' booking links handled by an Edge Function. [DEPLOY.md](DEPLOY.md) walks through
+setting that up.
+
 ## Signing in
 
 Sign in with an email and password. Two demo accounts sit on the sign-in page so anyone can open the
@@ -42,8 +48,12 @@ guests, and the top bar shows a "Demo account" badge while you use one.
 | Liza Manalo | liza@v6mresort.example | `owner1234` | Everything, including cancellations and user accounts |
 | Joy Dimaculangan | joy@v6mresort.example | `manager1234` | Bookings, payments, inbox and events |
 
-Passwords sit in `data/mock-data.json` in plain text because this is a mock. A real build would hash
-them on a server and never ship them to the browser.
+Passwords sit in `data/mock-data.json` in plain text because this is the demo. A Supabase build has
+no demo accounts: logins live in Supabase Auth, and the first owner is set up as described in
+[DEPLOY.md](DEPLOY.md).
+
+There are two roles, **Owner** and **Manager**; each account's permissions can be ticked on or off
+beyond its role.
 
 New accounts are invite only: the owner creates one on the Users page, and the person redeems the
 single-use code and picks their own password.

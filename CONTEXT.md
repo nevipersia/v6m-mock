@@ -95,7 +95,13 @@ data/
 src/                        TypeScript sources (compiled to assets/js/, which is not committed)
   core/                     Shared by every page
     types.ts                Types for everything in the data files
-    store.ts                Loads data, saves changes to localStorage, syncs tabs
+    store.ts                Holds the state; update() re-renders and hands each change to the backend
+    backend.ts              The Backend contract, plus a read-only one for the booking page
+    backends/local.ts       Demo: mock-data.json + localStorage, syncs tabs
+    backends/supabase.ts    Supabase: loads the tables, saves the rows each change touched, Realtime
+    tables.ts               Collection ↔ table mapping, camelCase ↔ snake_case, +08:00 timestamps
+    config.ts               Demo or Supabase, from assets/config.js
+    supabase-client.ts      The browser's Supabase client (library via the import map)
     rules.ts                Availability, pricing, lookups, labels
     actions.ts              Every state change (bookings, payments, invites, links…)
     booking-page.ts         Loads and validates booking-page.json
@@ -107,6 +113,7 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     dom.ts                  Safe html`` templates and event delegation
   book/
     main.ts                 Booking page: load, validate, submit
+    api.ts                  Demo: actions in the browser; Supabase: the booking-link Edge Function
     screens.ts              Form, downpayment, thank-you and problem screens
   admin/
     main.ts                 Sign-in, hash routing, event dispatch, focus restore
@@ -259,3 +266,30 @@ Everything except the rates and the resort's own details is fictional: guests, s
   `core/actions.js`, which are the only places that touch data.
 - Meta inbox integration, SMS reminders, reports and CSV export.
 - A public booking flow with real payments; the current site only records inquiries.
+
+## Supabase
+
+The same build runs on Supabase when `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set at build time
+(`scripts/build-site.mjs` writes `dist/assets/config.js`; the repo's `assets/config.js` says
+`mock`). Setup and launch checklist: `DEPLOY.md`.
+
+- Every action still mutates the in-memory state through `store.update()`. The Supabase backend
+  diffs each collection against the last load or save (JSON per row) and inserts new rows, upserts
+  changed ones and deletes removed ones, parents first. A refused save fires `onSaveError` (the
+  desk toasts) and the store reloads from the server. Realtime pushes other desks' rows in.
+- Schema: `supabase/migrations/`. One table per collection, snake_case columns, nested values as
+  jsonb, `meta` and `amenities` in `settings`. Postgres returns timestamps in UTC; `fromRow`
+  rewrites them as `+08:00` because the app slices them as strings. `meta.asOf` is today in Manila.
+- Sign-in (`admin/auth.ts`): Supabase Auth; `Staff.userId` links a login to its staff row.
+  `my_staff_status()` is checked before loading, since an unlinked or suspended login reads nothing.
+  Invites are redeemed by the `redeem-invite` Edge Function, which creates the login.
+- RLS: active staff read everything and write day-to-day tables; `users.manage` is needed for
+  staff, invites, catalog and settings. Anon gets nothing. Finer permissions are enforced by the UI.
+- Guests: `book/api.ts` calls `supabase/functions/booking-link`, which runs the compiled core
+  (`npm run build:functions` copies it) with the service role and returns bookings with personal
+  fields blanked. `useBookingLink` keeps only guest fields (`guestBookingInput`) and re-checks them
+  (`guestBookingProblem`, shared with the page); `retry: true` errors go back to the form.
+- Roles are Owner and Manager. The Staff role was removed; `store.normalize()` loads any saved
+  account with an unknown role as a Manager.
+- Guests are matched on name and mobile (`findOrCreateGuest`), so two guests sharing a name keep
+  their own details.

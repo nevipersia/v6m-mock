@@ -22,7 +22,7 @@ interface UserDraft {
   permissions: Permission[];
 }
 
-const blankDraft = (): UserDraft => ({ name: '', email: '', role: 'staff', permissions: [...ROLE_DEFAULTS.staff] });
+const blankDraft = (): UserDraft => ({ name: '', email: '', role: 'manager', permissions: [...ROLE_DEFAULTS.manager] });
 
 const ui: { adding: boolean; draft: UserDraft; editingId: string | null; error: string; lastInvite: Invite | null } = {
   adding: false, draft: blankDraft(), editingId: null, error: '', lastInvite: null,

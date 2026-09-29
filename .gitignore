@@ -2,3 +2,10 @@ node_modules/
 # Compiled from src/ by `npm run build`
 assets/js/
 dist/
+# Built from src/core by `npm run build:functions`
+supabase/functions/_shared/core/
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+.env
+.env.*

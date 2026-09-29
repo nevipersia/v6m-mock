@@ -2,7 +2,8 @@
 // through store.update(), which saves to localStorage and re-renders subscribers.
 
 import { update } from './store.js';
-import { addDays, formatDate, peso, plural } from './format.js';
+import { addDays, formatDate, isEmail, isPHMobile, peso, plural } from './format.js';
+import { guestListProblem } from './guest-list.js';
 import {
   DOWNPAYMENT_RATE, METHOD_LABELS, STAGE_LABELS, bookingWindow, checkAvailability, depositRequired, discountAmount,
   discountProblem, downpaymentDue, findBooking, findExclusive, findGuest, findPackage, findStaff, findUnit, isActive,
@@ -45,10 +46,18 @@ interface GuestDetails {
   email?: string | null;
 }
 
-/** Finds the guest by name or adds them; any details given fill in or update the record. */
+const digits = (value: string | null | undefined): string => String(value ?? '').replace(/\D/g, '').replace(/^63/, '0');
+
+/**
+ * Finds the guest or adds them; any details given fill in or update the record.
+ * With a mobile number the number must match too, so two guests who share a
+ * name never overwrite each other's contact details.
+ */
 function findOrCreateGuest(state: State, { name, mobile, address, email }: GuestDetails): Guest {
   const cleanName = name.trim();
-  let guest = state.guests.find((g) => g.name.toLowerCase() === cleanName.toLowerCase());
+  const phone = digits(mobile);
+  let guest = state.guests.find((g) => g.name.toLowerCase() === cleanName.toLowerCase()
+    && (!phone || !g.mobile || digits(g.mobile) === phone));
   if (!guest) {
     guest = { id: nextId(state.guests, 'GU'), name: cleanName, mobile: mobile || null, address: null, email: null };
     state.guests.push(guest);
@@ -824,14 +833,82 @@ export function bookingLinkStage(state: State, code: string | null | undefined):
 
 export type GuestBooking = Pick<NewBooking, 'guestName' | 'mobile' | 'product' | 'date' | 'adults' | 'kids' | 'notes' | 'address' | 'email' | 'scPwd' | 'guestList'>;
 
-export type BookingLinkResult = { error: string } | { error?: undefined; booking: Booking; link: BookingLink };
+/**
+ * `retry` means the guest can fix the form and send it again (the date filled
+ * up meanwhile, say); without it the link itself is the problem.
+ */
+export type BookingLinkResult = { error: string; retry?: boolean } | { error?: undefined; booking: Booking; link: BookingLink };
+
+const text = (value: unknown, max = 500): string => (typeof value === 'string' ? value.slice(0, max) : '');
+const count = (value: unknown): number => (Number.isInteger(value) && (value as number) >= 0 ? Math.min(value as number, 500) : 0);
+
+/**
+ * Keeps only what a guest may set. Anything else a request carries (a
+ * discount, a deposit, extra charges) is dropped, because a guest's browser
+ * can send whatever it likes.
+ */
+export function guestBookingInput(raw: unknown): GuestBooking {
+  const input = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const list = Array.isArray(input.guestList) ? input.guestList.slice(0, 200) : [];
+  return {
+    guestName: text(input.guestName, 120),
+    mobile: text(input.mobile, 40),
+    email: text(input.email, 200),
+    address: text(input.address, 300),
+    product: text(input.product, 60),
+    date: text(input.date, 10),
+    adults: count(input.adults),
+    kids: count(input.kids),
+    scPwd: count(input.scPwd),
+    notes: text(input.notes, 1000),
+    guestList: list.map((row): Companion => {
+      const item = (row && typeof row === 'object' ? row : {}) as Record<string, unknown>;
+      const gender = item.gender === 'Female' || item.gender === 'Male' ? item.gender : '';
+      return { name: text(item.name, 120), gender, age: count(item.age) || null, remarks: text(item.remarks, 200) };
+    }),
+  };
+}
+
+const isGuestProduct = (state: State, product: string): boolean =>
+  state.poolSessions.some((session) => session.id === product) || Boolean(findUnit(state, product)) || Boolean(findExclusive(state, product));
+
+/**
+ * Everything a guest's booking must satisfy, checked on the booking page and
+ * again by whoever saves it. @returns the first problem, or '' when it is fine.
+ */
+export function guestBookingProblem(state: State, input: GuestBooking, { guestListRequired = false } = {}): string {
+  const guests = input.adults + input.kids;
+  if (!input.guestName?.trim()) return 'Enter your name.';
+  if (!isPHMobile(input.mobile ?? '')) return 'Enter a PH mobile number, like 0917 123 4567.';
+  if (input.email?.trim() && !isEmail(input.email)) return 'Enter an email address like maria@example.com, or leave it blank.';
+  if (!input.address?.trim()) return 'Enter your complete address.';
+  if (!/^\d{4}-\d\d-\d\d$/.test(input.date)) return 'Pick a date.';
+  if (input.date < state.meta.asOf) return 'Pick a date from today on.';
+  if (!isGuestProduct(state, input.product)) return 'Pick what you are booking.';
+  if (guests === 0) return 'Add at least one guest.';
+  if (guestListRequired || input.guestList?.some((row) => row.name.trim())) {
+    const listProblem = guestListProblem(input.guestList ?? [], guests);
+    if (listProblem) return listProblem;
+  }
+  if ((input.scPwd ?? 0) > guests) return 'Senior / PWD can\'t be more than the number of guests.';
+  const availability = checkAvailability(state, input);
+  if (!availability.ok) return availability.reason ?? 'That date is not available.';
+  const unit = findUnit(state, input.product);
+  if (unit && guests > unit.capacityMax) return `${unit.name} fits up to ${unit.capacityMax} guests.`;
+  const pkg = findExclusive(state, input.product);
+  if (pkg && guests > pkg.maxGuests) return `Exclusive rentals take up to ${pkg.maxGuests} guests.`;
+  return '';
+}
 
 /** Guest-side submit: creates the booking for the staff member who sent the link. */
-export function useBookingLink(code: string, input: GuestBooking): BookingLinkResult {
+export function useBookingLink(code: string, raw: GuestBooking): BookingLinkResult {
+  const input = guestBookingInput(raw);
   return update((state): BookingLinkResult => {
     const link = findBookingLink(state, code);
     const problem = bookingLinkProblem(state, link);
     if (problem || !link) return { error: problem ?? 'This booking link is not valid.' };
+    const inputProblem = guestBookingProblem(state, input);
+    if (inputProblem) return { error: inputProblem, retry: true };
 
     const booking = createBookingInState(state, { ...input, source: 'booking_link', deposit: 0, method: 'cash' }, link.createdBy);
     link.status = 'used';

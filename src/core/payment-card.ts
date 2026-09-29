@@ -1,6 +1,7 @@
 // The GCash QR payment card, shared by the guest booking page and the booking
 // drawer in V6M Desk. The caller supplies the form wrapper and handlers.
 
+import { isMock } from './config.js';
 import { html, raw, type SafeHTML } from './dom.js';
 import { peso } from './format.js';
 import { qrSvg } from './qr.js';
@@ -57,11 +58,12 @@ export function paymentCard(request: QrPaymentRequest, card: PaymentCardState, {
         <button class="btn btn--primary" type="submit" ${card.checking ? 'disabled' : ''}>
           ${card.checking ? 'Checking with GCash…' : 'Verify payment'}
         </button>
-        <button class="btn btn--quiet btn--sm" type="button" data-action="simulate-payment" ${card.checking ? 'disabled' : ''}>
-          Simulate a GCash payment
-        </button>
+        ${isMock ? html`
+          <button class="btn btn--quiet btn--sm" type="button" data-action="simulate-payment" ${card.checking ? 'disabled' : ''}>
+            Simulate a GCash payment
+          </button>` : ''}
       </div>
-      <p class="small muted">Demo QR: phones cannot scan it and nothing is charged. “Simulate” fills in a test reference.</p>
+      ${isMock ? html`<p class="small muted">Demo QR: phones cannot scan it and nothing is charged. “Simulate” fills in a test reference.</p>` : ''}
     </div>`;
 }
 
