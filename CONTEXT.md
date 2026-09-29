@@ -157,7 +157,9 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   `guestListProblem` is the validation message. Desk-side the list is part of `booking-form.ts`
   (new and edit; `updateBooking` takes an optional `guestList`) as well as its own section in the
   booking drawer. The Bookings list shows how many are named and carries per-row Edit and Sheet
-  (PDF) buttons.
+  (PDF) buttons. Under 640px the table gives way to a day-grouped list of short rows
+  (`mobileList` in `views/bookings.ts`) whose tap opens the drawer, and the filter pickers fold
+  behind a Filters button (`filtersOpen`).
 - Sales analytics on the dashboard come from `core/sales.ts`: bookings are counted by `createdAt`
   (what was sold), payments by `receivedAt` (what came in), over 7, 30 or 90 days back from
   `meta.asOf`. `salesBetween(state, from, to)` does any window; `salesReport(state, days)` adds the

@@ -24,6 +24,8 @@ interface Filters {
 
 const DEFAULT_FILTERS: Filters = { query: '', status: 'open', product: 'all', from: '', to: '' };
 let filters = { ...DEFAULT_FILTERS };
+/** Phones fold the pickers away behind a Filters button; desktop always shows them. */
+let filtersOpen = false;
 
 const OPEN_STATUSES: BookingStatus[] = ['hold', 'confirmed', 'checked_in'];
 
@@ -77,12 +79,17 @@ function filterBar(state: State): SafeHTML {
       </select>
     </label>`;
 
+  const hidden = (['status', 'product', 'from', 'to'] as const).filter((key) => filters[key] !== DEFAULT_FILTERS[key]).length;
+
   return html`
-    <div class="filters">
+    <div class="filters ${filtersOpen ? 'is-open' : ''}">
       <label class="field filters__search">
         <span class="field__label">Search</span>
         <input class="input" type="search" data-input="filter" name="query" value="${filters.query}" placeholder="Guest name or booking ID">
       </label>
+      <button class="btn btn--secondary filters__toggle" type="button" data-action="toggle-filters" aria-expanded="${flag(filtersOpen)}">
+        ${icon('filter')} Filters${hidden ? html` <span class="filters__count">${hidden}</span>` : ''}
+      </button>
       ${select('status', 'Status', statuses)}
       ${select('product', 'Type', products)}
       <div class="field filters__range">
@@ -126,6 +133,57 @@ function rangeShortcuts(state: State): SafeHTML {
     </div>`;
 }
 
+/** "Today", "Tomorrow", else "Sat, Sep 19", for the phone list's day headings. */
+function dayHeading(date: string, today: string): string {
+  if (date === today) return 'Today';
+  if (date === addDays(today, 1)) return 'Tomorrow';
+  if (date === addDays(today, -1)) return 'Yesterday';
+  return formatDate(date);
+}
+
+/** What the right side of a phone row says about money. */
+function moneyNote(booking: Booking): SafeHTML {
+  if (isActive(booking) && booking.balance > 0) return html`<span class="booking-item__due">${peso(booking.balance)} due</span>`;
+  if (isActive(booking)) return html`<span class="booking-item__paid">Paid</span>`;
+  return html`<span class="booking-item__paid">${peso(booking.total)}</span>`;
+}
+
+/**
+ * Phones: the same results as the table, grouped by day, one short tappable
+ * row per booking. The booking panel it opens has Edit and the sheet download.
+ */
+function mobileList(state: State, results: Booking[]): SafeHTML {
+  const sorted = [...results].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const days = new Map<string, Booking[]>();
+  for (const booking of sorted) days.set(booking.date, [...(days.get(booking.date) ?? []), booking]);
+
+  return html`
+    <div class="booking-list">
+      ${[...days].map(([date, bookings]) => html`
+        <section class="booking-list__day">
+          <h2 class="booking-list__heading">
+            <span>${dayHeading(date, state.meta.asOf)}</span>
+            <span class="booking-list__count">${plural(bookings.length, 'booking')}</span>
+          </h2>
+          <ul class="booking-list__items">
+            ${bookings.map((b) => html`
+              <li>
+                <button class="booking-item" type="button" data-action="open-booking" data-id="${b.id}">
+                  <span class="booking-item__main">
+                    <strong class="booking-item__name">${b.guestName}</strong>
+                    <span class="booking-item__meta">${kindDot(state, b.product)} ${timeOf(b.startsAt)} · ${b.adults + b.kids} pax · ${productLabel(state, b.product)}</span>
+                  </span>
+                  <span class="booking-item__side">
+                    ${statusPill(b)}
+                    ${moneyNote(b)}
+                  </span>
+                </button>
+              </li>`)}
+          </ul>
+        </section>`)}
+    </div>`;
+}
+
 export function render(ctx: DeskContext): SafeHTML {
   const { state } = ctx;
   const results = state.bookings.filter(matches);
@@ -144,7 +202,9 @@ export function render(ctx: DeskContext): SafeHTML {
     ${filterBar(state)}
     ${isFiltered ? html`<button class="btn btn--quiet btn--sm filters__clear" type="button" data-action="clear-filters">Clear filters</button>` : ''}
 
-    <div class="panel panel--flush">
+    ${results.length ? mobileList(state, results) : ''}
+
+    <div class="panel panel--flush bookings-table">
       ${results.length ? html`
         <div class="table-scroll">
           <table class="data-table">
@@ -195,6 +255,11 @@ export const inputs: HandlerMap = {
 };
 
 export const actions: HandlerMap = {
+  'toggle-filters': ({ ctx }) => {
+    filtersOpen = !filtersOpen;
+    ctx.redraw();
+  },
+
   'date-shortcut': ({ el, ctx }) => {
     const { from = '', to = '' } = el.dataset;
     // Tapping the chip that is already on clears it again.
