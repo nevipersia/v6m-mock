@@ -82,7 +82,7 @@ function filterBar(state: State): SafeHTML {
   const hidden = (['status', 'product', 'from', 'to'] as const).filter((key) => filters[key] !== DEFAULT_FILTERS[key]).length;
 
   return html`
-    <div class="filters ${filtersOpen ? 'is-open' : ''}">
+    <div class="filters ${filtersOpen ? 'is-open' : ''}" data-part="Search and filters">
       <label class="field filters__search">
         <span class="field__label">Search</span>
         <input class="input" type="search" data-input="filter" name="query" value="${filters.query}" placeholder="Guest name or booking ID">
@@ -160,7 +160,7 @@ function mobileList(state: State, results: Booking[]): SafeHTML {
   return html`
     <div class="booking-list">
       ${[...days].map(([date, bookings]) => html`
-        <section class="booking-list__day">
+        <section class="booking-list__day" data-part="${dayHeading(date, state.meta.asOf)}">
           <h2 class="booking-list__heading">
             <span>${dayHeading(date, state.meta.asOf)}</span>
             <span class="booking-list__count">${plural(bookings.length, 'booking')}</span>
@@ -204,7 +204,7 @@ export function render(ctx: DeskContext): SafeHTML {
 
     ${results.length ? mobileList(state, results) : ''}
 
-    <div class="panel panel--flush bookings-table">
+    <div class="panel panel--flush bookings-table" data-part="The list">
       ${results.length ? html`
         <div class="table-scroll">
           <table class="data-table">

@@ -99,7 +99,7 @@ function dayView(ctx: DeskContext, day: ISODate): SafeHTML {
       </p>` : ''}
 
     <div class="day-grid">
-      <section class="panel">
+      <section class="panel" data-part="Bookings that day">
         <header class="panel__head">
           <h2 class="panel__title">Bookings</h2>
           <span class="panel__count">${bookings.length}</span>
@@ -117,7 +117,7 @@ function dayView(ctx: DeskContext, day: ISODate): SafeHTML {
           </ul>` : emptyState('Nothing booked', 'This day is completely open.')}
       </section>
 
-      <section class="panel">
+      <section class="panel" data-part="What is still free">
         <header class="panel__head"><h2 class="panel__title">Availability</h2></header>
         <ul class="rows">
           ${state.poolSessions.map((session) => {
@@ -230,12 +230,12 @@ function weekView(ctx: DeskContext, days: ISODate[]): SafeHTML {
   const picked = pickedDay(state, days);
 
   return html`
-    <div class="week-narrow">
+    <div class="week-narrow" data-part="Pick a day">
       ${weekStrip(ctx, days, picked)}
       ${dayView(ctx, picked)}
     </div>
 
-    <div class="panel panel--flush week-wide">
+    <div class="panel panel--flush week-wide" data-part="The grid">
       <div class="table-scroll">
         <table class="calendar">
           <caption class="sr-only">Bookings by unit and day</caption>
@@ -294,7 +294,7 @@ function monthView(ctx: DeskContext, days: ISODate[]): SafeHTML {
   const leading = (parseDate(days[0] ?? state.meta.asOf).getDay() + 6) % 7; // Monday-first grid
 
   return html`
-    <div class="panel panel--flush">
+    <div class="panel panel--flush" data-part="The month">
       <div class="month">
         ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((label) => html`<span class="month__weekday">${label}</span>`)}
         ${Array.from({ length: leading }, () => html`<span class="month__cell month__cell--blank"></span>`)}
@@ -413,7 +413,7 @@ export function render(ctx: DeskContext): SafeHTML {
     ${ui.range === 'day' ? dayView(ctx, first) : ui.range === 'month' ? monthView(ctx, days) : weekView(ctx, days)}
 
     ${ui.range === 'month' ? '' : html`
-      <ul class="legend">
+      <ul class="legend" data-part="What the colours mean">
         <li><span class="legend__swatch legend__swatch--room"></span>Rooms</li>
         <li><span class="legend__swatch legend__swatch--cottage"></span>Cottages</li>
         <li><span class="legend__swatch legend__swatch--exclusive"></span>Exclusive rental</li>

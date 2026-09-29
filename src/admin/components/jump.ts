@@ -15,15 +15,20 @@ const TOP_GAP = 84;
 /** Parts whose tops are this close together are on the same row. */
 const ROW_SLACK = 12;
 
-/** A page shorter than this much extra does not need the buttons at all. */
-const WORTH_IT = 200;
+/** A page with less than half a screen to scroll does not need the buttons. */
+const WORTH_IT = 400;
 
 interface Landing {
   el: HTMLElement;
   name: string;
   /** Distance from the top of the page, so it does not move as the page does. */
   top: number;
+  /** The foot of the page rather than a part of it: nothing to focus there. */
+  foot?: boolean;
 }
+
+/** A part hidden at this width — the phone list beside the desktop table — is not a stop. */
+const onScreen = (el: HTMLElement): boolean => el.getClientRects().length > 0;
 
 const atBottom = (): boolean =>
   window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
@@ -36,6 +41,7 @@ const atBottom = (): boolean =>
  */
 function landings(): Landing[] {
   const found = [...document.querySelectorAll<HTMLElement>('[data-part]')]
+    .filter(onScreen)
     .map((el) => ({ el, name: el.dataset.part || 'the next part', top: Math.round(el.getBoundingClientRect().top + window.scrollY) }))
     .sort((a, b) => a.top - b.top);
 
@@ -45,13 +51,27 @@ function landings(): Landing[] {
     if (last && landing.top - last.top <= ROW_SLACK) return;
     list.push(landing);
   });
-  return list;
+
+  // A last part that runs on for screens — a long table of bookings — needs a
+  // stop at its end, or the button would give up with the page still moving.
+  const last = list[list.length - 1];
+  const page = document.documentElement.scrollHeight;
+  if (last && page - last.top > window.innerHeight * 1.5) {
+    list.push({ el: last.el, name: 'the end of the page', top: page, foot: true });
+  }
+
+  // Everything inside the last screenful lands in the same place, because the
+  // page cannot scroll any further. Keep the first of them — reaching it means
+  // reaching the rest — and drop the others, so stepping always moves.
+  const furthest = Math.max(0, page - window.innerHeight);
+  const beyond = list.findIndex((landing) => landing.top - TOP_GAP >= furthest);
+  return beyond === -1 ? list : list.slice(0, beyond + 1);
 }
 
 /** The landing being read: the last one whose top has passed the top bar. */
 function currentIndex(list: Landing[]): number {
-  // The last landing may be too short to ever reach the line, so the foot of
-  // the page counts as having arrived at it.
+  // The foot of the page is the last landing by definition: nothing below it
+  // can be scrolled to, which is why the list stops there.
   if (atBottom()) return list.length - 1;
   const line = window.scrollY + TOP_GAP + 1;
   let index = 0;
@@ -61,22 +81,34 @@ function currentIndex(list: Landing[]): number {
   return index;
 }
 
-function goTo({ el, top }: Landing, first: boolean): void {
+function goTo({ el, top, foot }: Landing, first: boolean): void {
   const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Going all the way up should show the page's own heading, not just the
   // first part sitting under the top bar.
   window.scrollTo({ top: first ? 0 : Math.max(0, top - TOP_GAP), behavior: still ? 'auto' : 'smooth' });
+  if (foot) return;
   // Take the keyboard and the screen reader along, not just the view.
   el.setAttribute('tabindex', '-1');
   el.focus({ preventScroll: true });
 }
 
+/**
+ * Where each button would go, or undefined when it has nowhere left. Down is
+ * spent at the foot of the page however many landings are left: the last few
+ * can share the final screenful, and there is nothing to scroll to when they
+ * are already on it.
+ */
+function targets(list: Landing[]): { at: number; up?: Landing; down?: Landing } {
+  const at = currentIndex(list);
+  return { at, up: list[at - 1], down: atBottom() ? undefined : list[at + 1] };
+}
+
 /** Moves one landing up (-1) or down (1). */
 export function jumpBy(step: -1 | 1): void {
   const list = landings();
-  const at = currentIndex(list) + step;
-  const target = list[at];
-  if (target) goTo(target, at === 0);
+  const { at, up, down } = targets(list);
+  const target = step === -1 ? up : down;
+  if (target) goTo(target, at + step === 0);
 }
 
 /**
@@ -88,11 +120,13 @@ export function refreshJump(): void {
   if (!nav) return;
   const list = landings();
   const enoughToScroll = document.documentElement.scrollHeight > window.innerHeight + WORTH_IT;
-  nav.hidden = list.length < 2 || !enoughToScroll;
+  const { up, down } = targets(list);
+  // Two dead buttons are worse than none: that happens when the only landing
+  // left to reach is already on screen.
+  nav.hidden = list.length < 2 || !enoughToScroll || (!up && !down);
   if (nav.hidden) return;
 
-  const at = currentIndex(list);
-  ([['jump-up', list[at - 1]], ['jump-down', list[at + 1]]] as const).forEach(([action, target]) => {
+  ([['jump-up', up], ['jump-down', down]] as const).forEach(([action, target]) => {
     const button = nav.querySelector<HTMLButtonElement>(`[data-action="${action}"]`);
     if (!button) return;
     const where = action === 'jump-up' ? 'Up' : 'Down';
