@@ -47,6 +47,7 @@ export const PERMISSIONS: PermissionInfo[] = [
   { id: 'inbox.write', label: 'Use the inbox', detail: 'Reply to inquiries and turn them into bookings' },
   { id: 'events.manage', label: 'Manage events', detail: 'See the event pipeline and packages' },
   { id: 'discounts.apply', label: 'Give discounts', detail: 'Owners can skip the note; everyone else must say why' },
+  { id: 'expenses.manage', label: 'Track expenses', detail: 'Records spending and sees the profit and loss figures' },
   { id: 'users.manage', label: 'Manage users', detail: 'Invite accounts and change what they can do' },
 ];
 
@@ -54,7 +55,7 @@ export const PERMISSION_IDS: Permission[] = PERMISSIONS.map((permission) => perm
 
 export const ROLE_DEFAULTS: Record<Role, Permission[]> = {
   owner: [...PERMISSION_IDS],
-  manager: ['bookings.write', 'payments.write', 'inbox.write', 'events.manage', 'discounts.apply'],
+  manager: ['bookings.write', 'payments.write', 'inbox.write', 'events.manage', 'discounts.apply', 'expenses.manage'],
 };
 
 /** Pages everyone can open, and the permission each restricted page needs. */

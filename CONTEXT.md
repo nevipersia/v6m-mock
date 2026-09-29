@@ -103,6 +103,9 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     config.ts               Demo or Supabase, from assets/config.js
     supabase-client.ts      The browser's Supabase client (library via the import map)
     rules.ts                Availability, pricing, lookups, labels
+    period.ts               A window of days: its length, its chart bars, ranked slices
+    sales.ts                What was sold and collected over a window
+    finance.ts              Profit and loss: money in against money out
     actions.ts              Every state change (bookings, payments, invites, links…)
     booking-page.ts         Loads and validates booking-page.json
     qr-payment.ts           Mock GCash QR payment: request, check code, reference checks
@@ -120,7 +123,8 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     types.ts                DeskContext, view and drawer contracts
     auth.ts                 Roles, page access, permissions
     routes.ts, layout.ts    Navigation, shell, page header
-    components/             drawer, booking-detail, booking-form, booking-link, booking-pdf, badges, icons, toast
+    components/             drawer, booking-detail, booking-form, booking-link, booking-pdf,
+                            event-form, expense-form, badges, icons, toast
     views/                  login, dashboard, calendar, bookings, inbox, events, users
 assets/
   img/                      Logo
@@ -174,6 +178,20 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   `salesBetween` over that bar alone. Sales group into five fixed `SalesGroup`s so the share charts
   never need a sixth colour; the five hues are `--cat-1`…`--cat-5` in `tokens.css`, checked as a set
   with the dataviz validator (all pairs, light surface). No permission gates the section.
+- Expenses and profit and loss (`core/finance.ts`, section in `views/dashboard.ts`, form in
+  `components/expense-form.ts`): `state.expenses` is what the resort spent, dated on the day the
+  money went out. Five categories (payroll, utilities, supplies, upkeep, other) so the breakdown
+  never needs a sixth colour. The section sets payments received against expenses over 7, 30 or 90
+  days — both sides are cash, so a booking that is still owed for counts under Sales, not here. Its
+  own range and pinned bar are separate from the sales ones; `financeBetween` re-cuts it to one bar
+  the same way. `profitBefore` is null when the window before had no money moving at all, which
+  reads as "nothing to compare with". The `expenses.manage` permission gates both recording and
+  seeing the figures; owners and managers have it by default. An expense is the one day-to-day
+  record staff can delete (behind a confirm step), because it can simply be typed in wrong.
+- `core/period.ts` holds what the sales and finance figures share: `daysBetween`, `buckets` (a
+  window's chart bars, one per day up to `DAILY_LIMIT` and one per week past it), `rankSlices` and
+  the `Slice` shape. `trendChart` in the dashboard draws any two-series trend from those buckets,
+  which is why both trends hover, read out and pin the same way.
 - Views can export `hovers` beside `actions` and `inputs` (`ViewModule` in `admin/types.ts`), wired
   in `admin/main.ts` for mouseover/mouseout/focusin/focusout. It drives the read-out lines under the
   trend and the share charts. Handlers read `event.type` to tell arriving from leaving.
@@ -217,6 +235,9 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 ## Mock data
 
 `data/mock-data.json` holds one week, **Sep 15–21 2026**, and the apps treat **Sep 17 2026** as today.
+It also holds 31 expenses from Jul 24 to Sep 17 — the book starts where the payments do, so the
+dashboard's windows compare like with like: the last 30 days show a profit, the last 7 a small loss
+(payday landed in them) and the 90 days roughly break even.
 It contains about 43 bookings (two exclusive rentals: Sep 23 full resort day tour, Sep 26 cottages-only
 overnight), their payments, guests with addresses, two sample guest lists, one booking with videoke and
 corkage charges, 40 inquiries, one event (Cruz 18th debut on Sep 21, reserved, ₱48,000, closes the
@@ -277,6 +298,9 @@ The same build runs on Supabase when `SUPABASE_URL` and `SUPABASE_ANON_KEY` are 
   diffs each collection against the last load or save (JSON per row) and inserts new rows, upserts
   changed ones and deletes removed ones, parents first. A refused save fires `onSaveError` (the
   desk toasts) and the store reloads from the server. Realtime pushes other desks' rows in.
+- `expenses` is a day-to-day table like bookings and payments, with one extra policy: active staff
+  may delete a row, since an expense can be typed in wrong. The desk still asks for
+  `expenses.manage` first.
 - Schema: `supabase/migrations/`. One table per collection, snake_case columns, nested values as
   jsonb, `meta` and `amenities` in `settings`. Postgres returns timestamps in UTC; `fromRow`
   rewrites them as `+08:00` because the app slices them as strings. `meta.asOf` is today in Manila.

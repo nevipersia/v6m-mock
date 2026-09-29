@@ -31,6 +31,7 @@ function normalize(loaded: State): State {
   }
   loaded.bookingLinks ??= [];
   loaded.invites ??= [];
+  loaded.expenses ??= [];
   return loaded;
 }
 

@@ -27,6 +27,8 @@ const PATHS = {
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0M16 4.5a3.5 3.5 0 0 1 0 7M18 20a6 6 0 0 0-3-5.2"/>',
   download: '<path d="M12 4v11M7.5 11.5L12 16l4.5-4.5M5 19h14"/>',
   filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
 } as const;
 
 export type IconName = keyof typeof PATHS;

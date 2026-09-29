@@ -1,30 +1,15 @@
 // Sales figures for the dashboard: what was sold, what was collected, and
 // where it came from. Windows are counted back from the demo's frozen "today".
 
-import { addDays, formatDate } from './format.js';
+import { addDays } from './format.js';
+import { buckets, dayOf, daysBetween, rankSlices, sumOf, within, type Bucket, type Slice } from './period.js';
 import { METHOD_LABELS, isActive, productKind } from './rules.js';
 import type { Booking, ISODate, PaymentMethod, State } from './types.js';
 
-/** One bar of the trend chart: a day, or a week when the window is long. */
-export interface SalesPoint {
-  label: string;
-  /** Read out for the whole bar, e.g. "Sep 8 to Sep 14". */
-  title: string;
-  from: ISODate;
-  to: ISODate;
+/** One bar of the trend chart, with what was sold and taken in over it. */
+export interface SalesPoint extends Bucket {
   booked: number;
   collected: number;
-  isNow: boolean;
-}
-
-/** One line of a breakdown: cottages, GCash, and so on. */
-export interface SalesSlice {
-  key: string;
-  label: string;
-  amount: number;
-  count: number;
-  /** 0–1 of the breakdown's total, for the bar width. */
-  share: number;
 }
 
 /** Figures for one stretch of days. */
@@ -44,8 +29,8 @@ export interface SalesSummary {
   change: number | null;
   /** Still owed on the bookings taken in the window. */
   outstanding: number;
-  byProduct: SalesSlice[];
-  byMethod: SalesSlice[];
+  byProduct: Slice[];
+  byMethod: Slice[];
 }
 
 /** A summary of the whole window, plus the bars that make it up. */
@@ -55,12 +40,12 @@ export interface SalesReport extends SalesSummary {
   points: SalesPoint[];
 }
 
+/** A breakdown line, under the name the dashboard has always used for it. */
+export type SalesSlice = Slice;
+
 /** Ranges the dashboard offers. */
 export const SALES_RANGES = [7, 30, 90] as const;
 export type SalesRange = (typeof SALES_RANGES)[number];
-
-/** Above this many days the trend is bucketed into weeks so the bars stay readable. */
-const DAILY_LIMIT = 14;
 
 /**
  * What a sale is grouped under in the breakdown chart. Five groups, each with a
@@ -86,53 +71,24 @@ function groupOf(state: State, product: string): SalesGroup {
   return 'entrance';
 }
 
-const sum = (values: number[]): number => values.reduce((total, value) => total + value, 0);
-
-const dayOf = (timestamp: string): ISODate => timestamp.slice(0, 10);
-
-const within = (day: ISODate, from: ISODate, to: ISODate): boolean => day >= from && day <= to;
-
-/** Days in a window, counting both ends. */
-function daysBetween(from: ISODate, to: ISODate): number {
-  let days = 1;
-  for (let day = from; day < to; day = addDays(day, 1)) days += 1;
-  return days;
-}
-
 /** Bookings taken (created) between two dates, cancelled ones left out. */
 const bookedBetween = (state: State, from: ISODate, to: ISODate): Booking[] =>
   state.bookings.filter((booking) => isActive(booking) && within(dayOf(booking.createdAt), from, to));
 
 const collectedBetween = (state: State, from: ISODate, to: ISODate): number =>
-  sum(state.payments.filter((payment) => within(dayOf(payment.receivedAt), from, to)).map((payment) => payment.amount));
-
-function rank(slices: SalesSlice[]): SalesSlice[] {
-  const total = sum(slices.map((slice) => slice.amount));
-  return slices
-    .filter((slice) => slice.amount > 0)
-    .map((slice) => ({ ...slice, share: total ? slice.amount / total : 0 }))
-    .sort((a, b) => b.amount - a.amount);
-}
+  sumOf(state.payments.filter((payment) => within(dayOf(payment.receivedAt), from, to)).map((payment) => payment.amount));
 
 /** The bars: one per day, or one per week for the longer windows. */
 function trend(state: State, from: ISODate, to: ISODate, days: number): { points: SalesPoint[]; weekly: boolean } {
-  const weekly = days > DAILY_LIMIT;
-  const step = weekly ? 7 : 1;
-  const points: SalesPoint[] = [];
-  for (let start = from; start <= to; start = addDays(start, step)) {
-    const end = weekly ? addDays(start, 6) : start;
-    const last = end > to ? to : end;
-    points.push({
-      label: weekly ? formatDate(start, 'monthDay') : formatDate(start, 'weekday'),
-      title: weekly ? `${formatDate(start)} to ${formatDate(last)}` : formatDate(start, 'long'),
-      from: start,
-      to: last,
-      booked: sum(bookedBetween(state, start, last).map((booking) => booking.total)),
-      collected: collectedBetween(state, start, last),
-      isNow: within(state.meta.asOf, start, last),
-    });
-  }
-  return { points, weekly };
+  const split = buckets(state.meta.asOf, from, to, days);
+  return {
+    weekly: split.weekly,
+    points: split.buckets.map((bucket) => ({
+      ...bucket,
+      booked: sumOf(bookedBetween(state, bucket.from, bucket.to).map((booking) => booking.total)),
+      collected: collectedBetween(state, bucket.from, bucket.to),
+    })),
+  };
 }
 
 /**
@@ -142,11 +98,11 @@ function trend(state: State, from: ISODate, to: ISODate, days: number): { points
 export function salesBetween(state: State, from: ISODate, to: ISODate): SalesSummary {
   const days = daysBetween(from, to);
   const taken = bookedBetween(state, from, to);
-  const booked = sum(taken.map((booking) => booking.total));
+  const booked = sumOf(taken.map((booking) => booking.total));
   const collected = collectedBetween(state, from, to);
   const collectedBefore = collectedBetween(state, addDays(from, -days), addDays(from, -1));
 
-  const products = new Map<SalesGroup, SalesSlice>();
+  const products = new Map<SalesGroup, Slice>();
   taken.forEach((booking) => {
     const key = groupOf(state, booking.product);
     const slice = products.get(key) ?? { key, label: GROUP_LABELS[key], amount: 0, count: 0, share: 0 };
@@ -155,7 +111,7 @@ export function salesBetween(state: State, from: ISODate, to: ISODate): SalesSum
     products.set(key, slice);
   });
 
-  const methods = new Map<PaymentMethod, SalesSlice>();
+  const methods = new Map<PaymentMethod, Slice>();
   state.payments
     .filter((payment) => within(dayOf(payment.receivedAt), from, to))
     .forEach((payment) => {
@@ -176,9 +132,9 @@ export function salesBetween(state: State, from: ISODate, to: ISODate): SalesSum
     collected,
     collectedBefore,
     change: collectedBefore ? Math.round(((collected - collectedBefore) / collectedBefore) * 100) : null,
-    outstanding: sum(taken.map((booking) => booking.balance)),
-    byProduct: rank(GROUP_ORDER.flatMap((group) => products.get(group) ?? [])),
-    byMethod: rank([...methods.values()]),
+    outstanding: sumOf(taken.map((booking) => booking.balance)),
+    byProduct: rankSlices(GROUP_ORDER.flatMap((group) => products.get(group) ?? [])),
+    byMethod: rankSlices([...methods.values()]),
   };
 }
 

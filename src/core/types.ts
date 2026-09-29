@@ -24,6 +24,7 @@ export type Permission =
   | 'inbox.write'
   | 'events.manage'
   | 'discounts.apply'
+  | 'expenses.manage'
   | 'users.manage';
 
 export interface Meta {
@@ -297,6 +298,28 @@ export interface BookingLink {
   usedAt?: Timestamp;
 }
 
+/**
+ * What an expense is filed under. Five buckets on purpose: the dashboard's
+ * breakdown gives each one a colour, and a sixth would stop being tellable
+ * apart. Anything unusual goes under 'other' with its own description.
+ */
+export type ExpenseCategory = 'payroll' | 'utilities' | 'supplies' | 'upkeep' | 'other';
+
+/** Money the resort spent. Dated by the day it went out, not when it was typed in. */
+export interface Expense {
+  id: string;
+  date: ISODate;
+  category: ExpenseCategory;
+  /** What it was for, in the staff member's own words. */
+  item: string;
+  amount: number;
+  method: PaymentMethod;
+  vendor: string | null;
+  note: string | null;
+  recordedBy: string | null;
+  createdAt: Timestamp;
+}
+
 export interface ActivityEntry {
   /** Set when the entry is saved to Supabase; the demo data has none. */
   id?: string;
@@ -321,6 +344,7 @@ export interface State {
   guests: Guest[];
   bookings: Booking[];
   payments: Payment[];
+  expenses: Expense[];
   events: ResortEvent[];
   inquiries: Inquiry[];
   bookingLinks: BookingLink[];

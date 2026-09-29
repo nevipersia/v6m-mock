@@ -1,7 +1,7 @@
 // Types shared by the V6M Desk shell, its views and its drawers.
 
 import type { SafeHTML, TemplateValue } from '../core/dom.js';
-import type { Permission, Staff, State } from '../core/types.js';
+import type { Expense, Permission, Staff, State } from '../core/types.js';
 import type { IconName } from './components/icons.js';
 
 export type PageId = 'dashboard' | 'calendar' | 'bookings' | 'inbox' | 'events' | 'users';
@@ -28,6 +28,8 @@ export interface DeskContext {
   newBookingLink: (prefill?: BookingPrefill) => void;
   editBooking: (bookingId: string) => void;
   newEvent: () => void;
+  /** Pass an expense to edit it, nothing to record a new one. */
+  newExpense: (expense?: Expense) => void;
   closeDrawer: () => void;
 }
 

@@ -8,6 +8,7 @@ import { can, canView, currentStaff, hasSession, homePage, restoreSession, signO
 import { createBookingDetail } from './components/booking-detail.js';
 import { createBookingForm } from './components/booking-form.js';
 import { createEventForm } from './components/event-form.js';
+import { createExpenseForm } from './components/expense-form.js';
 import { createBookingLinkPanel } from './components/booking-link.js';
 import { closeDrawer, openDrawer, syncDrawer } from './components/drawer.js';
 import { showToast } from './components/toast.js';
@@ -50,6 +51,7 @@ function buildContext(state: State, staff: Staff): DeskContext {
     newBookingLink: (prefill = {}) => openDrawer(createBookingLinkPanel(prefill), ctx),
     editBooking: (bookingId) => openDrawer(createBookingForm({}, { editId: bookingId }), ctx),
     newEvent: () => openDrawer(createEventForm(), ctx),
+    newExpense: (expense) => openDrawer(createExpenseForm(expense), ctx),
     closeDrawer,
   };
   return ctx;

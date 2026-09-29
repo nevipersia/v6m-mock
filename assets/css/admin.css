@@ -1826,6 +1826,10 @@ body.has-drawer {
 
 /* ---------- Trend chart ---------- */
 
+.trend {
+  margin: 0;
+}
+
 .chart {
   display: grid;
   grid-auto-flow: column;
@@ -1889,7 +1893,9 @@ body.has-drawer {
 }
 
 .chart__bar--booked { background: var(--blue); }
-.chart__bar--collected { background: var(--green); }
+.chart__bar--collected,
+.chart__bar--in { background: var(--green); }
+.chart__bar--out { background: var(--orange); }
 
 .chart__label {
   font-size: 11px;
@@ -1907,8 +1913,15 @@ body.has-drawer {
 
 .chart__legend {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 12px;
+}
+
+.chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .chart__key {
@@ -1919,7 +1932,9 @@ body.has-drawer {
 }
 
 .chart__key--booked { background: var(--blue); }
-.chart__key--collected { background: var(--green); margin-left: 6px; }
+.chart__key--collected,
+.chart__key--in { background: var(--green); }
+.chart__key--out { background: var(--orange); }
 
 /* ---------- Share chart: one stacked bar plus its legend ---------- */
 
@@ -2014,7 +2029,71 @@ body.has-drawer {
 .share__seg--cash, .share__key--cash { background: var(--cat-3); }
 .share__seg--exclusive, .share__key--exclusive,
 .share__seg--bank_transfer, .share__key--bank_transfer { background: var(--cat-4); }
-.share__seg--event, .share__key--event { background: var(--cat-5); }
+.share__seg--event, .share__key--event,
+.share__seg--other, .share__key--other { background: var(--cat-5); }
+.share__seg--payroll, .share__key--payroll { background: var(--cat-1); }
+.share__seg--utilities, .share__key--utilities { background: var(--cat-2); }
+.share__seg--supplies, .share__key--supplies { background: var(--cat-3); }
+.share__seg--upkeep, .share__key--upkeep { background: var(--cat-4); }
+
+/* ---------- Expenses ---------- */
+
+.spend-rows {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spend-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  margin: 0 -4px;
+  border-radius: var(--radius-sm);
+}
+
+.spend-row + .spend-row {
+  border-top: 1px solid var(--line);
+}
+
+.spend-row:hover {
+  background: var(--cream-deep);
+}
+
+.spend-row__main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.spend-row__title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spend-row__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spend-row__amount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
 @media (min-width: 760px) {
   .sales__grid {

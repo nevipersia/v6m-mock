@@ -179,6 +179,22 @@ create index payments_booking_idx on public.payments (booking_id);
 -- A GCash reference can only pay once.
 create unique index payments_qr_reference_key on public.payments (reference) where via = 'qr' and reference is not null;
 
+-- What the resort spent. Dated on the day the money went out, so the dashboard
+-- can set it against the payments received over the same window.
+create table public.expenses (
+  id text primary key,
+  date date not null,
+  category text not null check (category in ('payroll', 'utilities', 'supplies', 'upkeep', 'other')),
+  item text not null,
+  amount numeric(12, 2) not null check (amount > 0),
+  method text not null check (method in ('cash', 'gcash', 'bank_transfer')),
+  vendor text,
+  note text,
+  recorded_by text,
+  created_at timestamptz not null default now()
+);
+create index expenses_date_idx on public.expenses (date);
+
 create table public.events (
   id text primary key,
   title text not null,
@@ -272,12 +288,16 @@ declare
 begin
   -- Day-to-day records: any active staff member reads and writes them. The
   -- desk checks the finer permissions (payments.write, bookings.cancel…).
-  foreach t in array array['guests', 'bookings', 'payments', 'events', 'inquiries', 'booking_links', 'activity_log'] loop
+  foreach t in array array['guests', 'bookings', 'payments', 'expenses', 'events', 'inquiries', 'booking_links', 'activity_log'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('create policy "staff read" on public.%I for select to authenticated using (public.is_staff())', t);
     execute format('create policy "staff add" on public.%I for insert to authenticated with check (public.is_staff())', t);
     execute format('create policy "staff change" on public.%I for update to authenticated using (public.is_staff()) with check (public.is_staff())', t);
   end loop;
+
+  -- An expense can be typed in wrong, so it is the one day-to-day record staff
+  -- may delete. The desk asks for the expenses.manage permission first.
+  create policy "staff remove" on public.expenses for delete to authenticated using (public.is_staff());
 
   -- Accounts, rates and settings: everyone reads, only users.manage writes.
   foreach t in array array['staff', 'invites', 'settings', 'pool_sessions', 'exclusive_packages', 'units', 'promos', 'event_packages', 'saved_replies'] loop
@@ -296,7 +316,7 @@ revoke all on all tables in schema public from anon;
 
 alter publication supabase_realtime add table
   public.staff, public.invites, public.guests, public.bookings, public.payments,
-  public.events, public.inquiries, public.booking_links, public.activity_log;
+  public.expenses, public.events, public.inquiries, public.booking_links, public.activity_log;
 
 -- ---------- First owner ----------
 
@@ -322,7 +342,7 @@ begin
   insert into public.staff (id, name, email, role, permissions, status, user_id)
   values (
     new_id, owner_name, owner_email, 'owner',
-    '["bookings.write","payments.write","bookings.cancel","inbox.write","events.manage","discounts.apply","users.manage"]',
+    '["bookings.write","payments.write","bookings.cancel","inbox.write","events.manage","discounts.apply","expenses.manage","users.manage"]',
     'active', auth_id
   )
   on conflict (id) do update

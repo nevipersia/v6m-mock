@@ -8,9 +8,13 @@ import {
   closingEvent, downpaymentDue, exclusiveOn, findSession, findStaff, findUnit, isActive, poolGuests, productLabel,
 } from '../../core/rules.js';
 import {
-  SALES_RANGES, salesBetween, salesReport, type SalesPoint, type SalesReport, type SalesSlice, type SalesSummary,
+  CATEGORY_LABELS, financeBetween, financeReport, type FinancePoint, type FinanceSummary,
+} from '../../core/finance.js';
+import type { Bucket, Slice } from '../../core/period.js';
+import {
+  SALES_RANGES, salesBetween, salesReport, type SalesPoint, type SalesSummary,
 } from '../../core/sales.js';
-import type { Booking, Staff, State } from '../../core/types.js';
+import type { Booking, Expense, Staff, State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { kindDot, paymentPill, statusPill } from '../components/badges.js';
 import { icon } from '../components/icons.js';
@@ -41,6 +45,9 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'link.created': 'Booking link sent',
   'link.cancelled': 'Booking link cancelled',
   'link.used': 'Booking link used',
+  'expense.recorded': 'Expense recorded',
+  'expense.updated': 'Expense edited',
+  'expense.removed': 'Expense removed',
 };
 
 function greeting(staff: Staff): string {
@@ -160,6 +167,9 @@ function attentionItems(ctx: DeskContext): SafeHTML[] {
 let salesDays: number = SALES_RANGES[0];
 /** The trend bar the reader pinned by clicking or tapping it, by start date. */
 let pinnedPoint: string | null = null;
+/** The same two, for the profit and loss section. A month is its natural window. */
+let moneyDays = 30;
+let pinnedMoney: string | null = null;
 
 function salesStat(label: string, value: string, detail: TemplateValue = '', tone = ''): SafeHTML {
   return html`
@@ -170,46 +180,93 @@ function salesStat(label: string, value: string, detail: TemplateValue = '', ton
     </div>`;
 }
 
-/** "Wed, Sep 16 · ₱42,300 booked · ₱8,900 collected" — one bar, read out in full. */
-const pointReadout = (point: SalesPoint): string =>
-  `${point.title} · ${peso(point.booked)} booked · ${peso(point.collected)} collected`;
+/**
+ * One series of a trend chart. `key` carries the colour, `legend` names it above
+ * the chart and `word` is how it reads out: "₱42,300 booked".
+ */
+interface TrendSeries<P> {
+  key: string;
+  legend: string;
+  word: string;
+  value: (point: P) => number;
+}
 
-/** Sales taken and money collected per day (per week over longer windows). */
-function salesChart(report: SalesReport): SafeHTML {
-  const peak = Math.max(1, ...report.points.flatMap((point) => [point.booked, point.collected]));
+/** The key and its name, above the chart. Both trends on the page use it. */
+function trendLegend<P>(series: TrendSeries<P>[]): SafeHTML {
+  return html`
+    <p class="chart__legend small muted">
+      ${series.map((one) => html`
+        <span class="chart__legend-item"><span class="chart__key chart__key--${one.key}"></span>${one.legend}</span>`)}
+    </p>`;
+}
+
+interface TrendOptions<P extends Bucket> {
+  points: P[];
+  series: TrendSeries<P>[];
+  /** Bars are weeks rather than days. */
+  weekly: boolean;
+  days: number;
+  /** The bar the reader pinned, by start date. */
+  pinned: string | null;
+  /** Action name for clicking a bar. */
+  action: string;
+  /** What the chart is, for the screen-reader line. */
+  caption: string;
+}
+
+/**
+ * Two figures per day (per week over longer windows), as pairs of bars. Every
+ * bar is a button: hovering reads it out under the chart, clicking pins it.
+ */
+function trendChart<P extends Bucket>({ points, series, weekly, days, pinned, action, caption }: TrendOptions<P>): SafeHTML {
+  const peak = Math.max(1, ...points.flatMap((point) => series.map((one) => one.value(point))));
   const height = (value: number) => `${Math.max(value > 0 ? 2 : 0, Math.round((value / peak) * 100))}%`;
-  const pinned = report.points.find((point) => point.from === pinnedPoint);
+  const readout = (point: P) => `${point.title} · ${series.map((one) => `${peso(one.value(point))} ${one.word}`).join(' · ')}`;
+  const focus = points.find((point) => point.from === pinned);
   // What the line under the chart says when nothing is hovered.
-  const resting = pinned
-    ? pointReadout(pinned)
-    : `Tallest bar ${pesoShort(peak)}${report.weekly ? ' · one bar per week' : ' · one bar per day'}`;
+  const resting = focus
+    ? readout(focus)
+    : `Tallest bar ${pesoShort(peak)}${weekly ? ' · one bar per week' : ' · one bar per day'}`;
 
   return html`
-    <p class="sr-only">Sales taken and money collected over the last ${report.days} days. Each bar reads out below the chart.</p>
-    <div class="chart">
-      ${report.points.map((point) => html`
-        <button class="chart__col ${point.isNow ? 'is-now' : ''} ${point.from === pinnedPoint ? 'is-pinned' : ''}"
-          type="button" data-action="pin-point" data-hover="chart-point" data-point="${point.from}"
-          data-readout="${pointReadout(point)}" aria-pressed="${flag(point.from === pinnedPoint)}"
-          aria-label="${pointReadout(point)}">
-          <span class="chart__bars">
-            <span class="chart__bar chart__bar--booked" style="height:${height(point.booked)}"></span>
-            <span class="chart__bar chart__bar--collected" style="height:${height(point.collected)}"></span>
-          </span>
-          <span class="chart__label">${point.label}</span>
-        </button>`)}
-    </div>
-    <p class="chart__readout small ${pinned ? '' : 'muted'}" data-slot="chart-readout" data-resting="${resting}" aria-live="polite">${resting}</p>`;
+    <figure class="trend">
+      <p class="sr-only">${caption} over the last ${days} days. Each bar reads out below the chart.</p>
+      <div class="chart">
+        ${points.map((point) => html`
+          <button class="chart__col ${point.isNow ? 'is-now' : ''} ${point.from === pinned ? 'is-pinned' : ''}"
+            type="button" data-action="${action}" data-hover="chart-point" data-point="${point.from}"
+            data-readout="${readout(point)}" aria-pressed="${flag(point.from === pinned)}"
+            aria-label="${readout(point)}">
+            <span class="chart__bars">
+              ${series.map((one) => html`
+                <span class="chart__bar chart__bar--${one.key}" style="height:${height(one.value(point))}"></span>`)}
+            </span>
+            <span class="chart__label">${point.label}</span>
+          </button>`)}
+      </div>
+      <figcaption class="chart__readout small ${focus ? '' : 'muted'}" data-slot="chart-readout"
+        data-resting="${resting}" aria-live="polite">${resting}</figcaption>
+    </figure>`;
 }
+
+const SALES_SERIES: TrendSeries<SalesPoint>[] = [
+  { key: 'booked', legend: 'Booked', word: 'booked', value: (point) => point.booked },
+  { key: 'collected', legend: 'Collected', word: 'collected', value: (point) => point.collected },
+];
+
+const MONEY_SERIES: TrendSeries<FinancePoint>[] = [
+  { key: 'in', legend: 'Money in', word: 'in', value: (point) => point.income },
+  { key: 'out', legend: 'Money out', word: 'out', value: (point) => point.spend },
+];
 
 /**
  * Part-to-whole: one stacked bar, then the legend that names every slice. The
  * slice keys carry the colour, so a group keeps its colour whatever it sold
  * and wherever it lands in the ranking.
  */
-function shareChart(slices: SalesSlice[], total: number, empty: string, name: string): SafeHTML {
+function shareChart(slices: Slice[], total: number, empty: string, name: string): SafeHTML {
   if (!slices.length) return html`<p class="small muted">${empty}</p>`;
-  const readout = (slice: SalesSlice) => `${slice.label} · ${peso(slice.amount)} · ${Math.round(slice.share * 100)}% of ${peso(total)}`;
+  const readout = (slice: Slice) => `${slice.label} · ${peso(slice.amount)} · ${Math.round(slice.share * 100)}% of ${peso(total)}`;
 
   return html`
     <figure class="share">
@@ -278,12 +335,17 @@ function salesSection(ctx: DeskContext): SafeHTML {
         <section class="panel sales__trend">
           <header class="panel__head">
             <h3 class="panel__title">Trend</h3>
-            <p class="chart__legend small muted">
-              <span class="chart__key chart__key--booked"></span>Booked
-              <span class="chart__key chart__key--collected"></span>Collected
-            </p>
+            ${trendLegend(SALES_SERIES)}
           </header>
-          ${salesChart(report)}
+          ${trendChart({
+            points: report.points,
+            series: SALES_SERIES,
+            weekly: report.weekly,
+            days: report.days,
+            pinned: pinnedPoint,
+            action: 'pin-point',
+            caption: 'Sales taken and money collected',
+          })}
         </section>
 
         <section class="panel">
@@ -300,6 +362,120 @@ function salesSection(ctx: DeskContext): SafeHTML {
             ${focus ? html`<span class="pill pill--info">${focus.label}</span>` : ''}
           </header>
           ${shareChart(shown.byMethod, shown.collected, focus ? 'Nothing came in then.' : 'No payments in this window.', 'How guests paid')}
+        </section>
+      </div>
+    </section>`;
+}
+
+/** How many expenses the list shows before it says how many more there are. */
+const EXPENSES_SHOWN = 6;
+
+/** One recorded expense, with the amount and a way into the form. */
+function expenseRow(ctx: DeskContext, expense: Expense): SafeHTML {
+  const who = expense.recordedBy ? findStaff(ctx.state, expense.recordedBy)?.name : null;
+  return html`
+    <li class="spend-row">
+      <button class="spend-row__main" type="button" data-action="edit-expense" data-id="${expense.id}">
+        <span class="spend-row__title">${expense.item}</span>
+        <span class="spend-row__meta small muted">
+          ${formatDate(expense.date)} · ${CATEGORY_LABELS[expense.category]}${expense.vendor ? ` · ${expense.vendor}` : ''}${who ? ` · ${who}` : ''}
+        </span>
+      </button>
+      <span class="spend-row__amount">${peso(expense.amount)}</span>
+    </li>`;
+}
+
+/**
+ * Money in against money out. Income is what the payments brought in, so the
+ * profit here is cash that has actually arrived — a booking that is still owed
+ * for counts under Sales, not here.
+ */
+function moneySection(ctx: DeskContext): SafeHTML {
+  const report = financeReport(ctx.state, moneyDays);
+  // Clicking a bar cuts the whole section down to that day or week.
+  const focus = report.points.find((point) => point.from === pinnedMoney) ?? null;
+  const shown: FinanceSummary = focus ? financeBetween(ctx.state, focus.from, focus.to) : report;
+  const loss = shown.profit < 0;
+  // Nothing moved in the window before: there is no honest comparison to draw.
+  const swing = shown.profitBefore === null ? null : shown.profit - shown.profitBefore;
+  const biggest = shown.byCategory[0];
+  const canTrack = ctx.can('expenses.manage');
+
+  return html`
+    <section class="sales money" aria-label="Profit and loss">
+      <header class="sales__head">
+        <div>
+          <h2 class="sales__title">Profit and loss</h2>
+          <p class="small muted">
+            ${focus
+              ? html`<strong>${focus.title}</strong> · ${report.weekly ? 'this week' : 'this day'} only`
+              : `${formatDate(report.from, 'monthDay')} – ${formatDate(report.to, 'monthDay')} · money received against money spent`}
+          </p>
+        </div>
+        <div class="sales__controls">
+          ${focus ? html`
+            <button class="btn btn--quiet btn--sm" type="button" data-action="clear-money">Show all ${moneyDays} days</button>` : ''}
+          <div class="segmented" role="group" aria-label="Profit and loss period">
+            ${SALES_RANGES.map((days) => html`
+              <button class="segmented__option ${days === moneyDays ? 'is-active' : ''}" type="button"
+                data-action="money-range" data-days="${days}" aria-pressed="${flag(days === moneyDays)}">${days} days</button>`)}
+          </div>
+          ${canTrack ? html`
+            <button class="btn btn--secondary btn--sm" type="button" data-action="add-expense">${icon('plus')} Record an expense</button>` : ''}
+        </div>
+      </header>
+
+      <div class="stats ${focus ? 'is-focused' : ''}">
+        ${salesStat('Money in', peso(shown.income), 'Payments received')}
+        ${salesStat('Money out', peso(shown.spend), `${plural(shown.count, 'expense')} recorded`)}
+        ${salesStat(loss ? 'Loss' : 'Profit', peso(Math.abs(shown.profit)), html`
+          ${shown.margin === null ? 'Nothing came in' : `${Math.round(shown.margin * 100)}% of money in`}
+          ${swing === null ? '· nothing to compare with' : html`
+            · <span class="stat__change stat__change--${swing < 0 ? 'down' : 'up'}">${swing < 0 ? '▼' : '▲'} ${peso(Math.abs(swing))}</span> ${comparedWith(shown.days)}`}`,
+        loss ? 'warn' : '')}
+        ${salesStat('Biggest cost', biggest ? peso(biggest.amount) : peso(0),
+        biggest ? `${biggest.label} · ${Math.round(biggest.share * 100)}% of spending` : 'Nothing spent in this window')}
+      </div>
+
+      <div class="sales__grid">
+        <section class="panel sales__trend">
+          <header class="panel__head">
+            <h3 class="panel__title">In and out</h3>
+            ${trendLegend(MONEY_SERIES)}
+          </header>
+          ${trendChart({
+            points: report.points,
+            series: MONEY_SERIES,
+            weekly: report.weekly,
+            days: report.days,
+            pinned: pinnedMoney,
+            action: 'pin-money',
+            caption: 'Money received and money spent',
+          })}
+        </section>
+
+        <section class="panel">
+          <header class="panel__head">
+            <h3 class="panel__title">Where it went</h3>
+            ${focus ? html`<span class="pill pill--info">${focus.label}</span>` : ''}
+          </header>
+          ${shareChart(shown.byCategory, shown.spend, focus ? 'Nothing was spent then.' : 'No expenses recorded in this window.', 'Where it went')}
+        </section>
+
+        <section class="panel">
+          <header class="panel__head">
+            <h3 class="panel__title">Expenses</h3>
+            <span class="panel__count">${shown.count}</span>
+          </header>
+          ${shown.expenses.length ? html`
+            <ul class="spend-rows">
+              ${shown.expenses.slice(0, EXPENSES_SHOWN).map((expense) => expenseRow(ctx, expense))}
+            </ul>
+            ${shown.expenses.length > EXPENSES_SHOWN ? html`
+              <p class="small muted">${plural(shown.expenses.length - EXPENSES_SHOWN, 'older expense')} in this window.</p>` : ''}`
+          : emptyState('Nothing spent yet', canTrack
+            ? 'Record what the resort pays out and the profit here follows.'
+            : 'Only accounts that track expenses can add them.')}
         </section>
       </div>
     </section>`;
@@ -348,6 +524,8 @@ export function render(ctx: DeskContext): SafeHTML {
     </div>
 
     ${salesSection(ctx)}
+
+    ${ctx.can('expenses.manage') ? moneySection(ctx) : ''}
 
     <div class="dashboard-grid">
       <section class="panel dashboard-grid__arriving">
@@ -426,13 +604,16 @@ export const hovers: HandlerMap = {
     readout.classList.toggle('muted', !arriving);
   },
 
-  // Arriving shows that bar's figures; leaving puts the resting line back.
+  // Arriving shows that bar's figures; leaving puts the resting line back. The
+  // page has two trends, so write into the one this bar belongs to.
   'chart-point': ({ el, event }) => {
-    const readout = document.querySelector<HTMLElement>('[data-slot="chart-readout"]');
+    const readout = el.closest('.trend')?.querySelector<HTMLElement>('[data-slot="chart-readout"]');
     if (!readout) return;
     const arriving = event.type === 'mouseover' || event.type === 'focusin';
-    readout.textContent = arriving ? el.dataset.readout ?? '' : readout.dataset.resting ?? '';
-    readout.classList.toggle('muted', !arriving && !pinnedPoint);
+    const resting = readout.dataset.resting ?? '';
+    readout.textContent = arriving ? el.dataset.readout ?? '' : resting;
+    // The resting line is only emphasised while a bar stays pinned.
+    readout.classList.toggle('muted', !arriving && !el.closest('.chart')?.querySelector('.is-pinned'));
   },
 };
 
@@ -452,6 +633,29 @@ export const actions: HandlerMap = {
   'clear-point': ({ ctx }) => {
     pinnedPoint = null;
     ctx.redraw();
+  },
+
+  'money-range': ({ el, ctx }) => {
+    moneyDays = Number(el.dataset.days) || 30;
+    pinnedMoney = null;
+    ctx.redraw();
+  },
+
+  'pin-money': ({ el, ctx }) => {
+    pinnedMoney = pinnedMoney === el.dataset.point ? null : el.dataset.point ?? null;
+    ctx.redraw();
+  },
+
+  'clear-money': ({ ctx }) => {
+    pinnedMoney = null;
+    ctx.redraw();
+  },
+
+  'add-expense': ({ ctx }) => ctx.newExpense(),
+
+  'edit-expense': ({ el, ctx }) => {
+    const expense = ctx.state.expenses.find((item) => item.id === el.dataset.id);
+    if (expense) ctx.newExpense(expense);
   },
 
   'check-out': ({ el, ctx }) => {

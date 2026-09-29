@@ -11,8 +11,9 @@ import {
 } from './rules.js';
 import { formatReference, referenceProblem } from './qr-payment.js';
 import type {
-  Booking, BookingLink, BookingSource, Companion, EventPackage, EventStage, ExtraCharge, Guest, ISODate, Inquiry, Invite,
-  Payment, PaymentMethod, Permission, PriceLine, ResortEvent, Role, Staff, StaffStatus, State, Timestamp,
+  Booking, BookingLink, BookingSource, Companion, EventPackage, EventStage, Expense, ExpenseCategory, ExtraCharge, Guest,
+  ISODate, Inquiry, Invite, Payment, PaymentMethod, Permission, PriceLine, ResortEvent, Role, Staff, StaffStatus, State,
+  Timestamp,
 } from './types.js';
 
 const pad = (n: number, width = 2): string => String(n).padStart(width, '0');
@@ -664,6 +665,88 @@ export function bookEvent(eventId: string, staffId: string): EventResult {
     if (event.stage === 'inquiry' || event.stage === 'ocular') event.stage = 'reserved';
     logActivity(state, staffId, 'event.booked', event.id, `${event.title} · ${peso(booking.total)}`);
     return { event, booking };
+  });
+}
+
+// ---------- Expenses ----------
+
+/** What the expense form collects. Amount and date are the only hard fields. */
+export interface NewExpense {
+  date: ISODate;
+  category: ExpenseCategory;
+  item: string;
+  amount: number;
+  method: PaymentMethod;
+  vendor: string;
+  note: string;
+}
+
+export type ExpenseResult = { expense: Expense; error?: undefined } | { expense?: undefined; error: string };
+
+/** Checks shared by recording and editing: the same rules either way. */
+function expenseProblem(state: State, input: NewExpense): string | null {
+  if (!input.item.trim()) return 'Say what the money was spent on.';
+  if (!input.date) return 'Pick the day it was spent.';
+  if (input.date > state.meta.asOf) return 'That date is in the future. Record it on the day it was spent.';
+  if (!Number.isFinite(input.amount) || input.amount <= 0) return 'Enter how much it was.';
+  return null;
+}
+
+const expenseFields = (input: NewExpense): Omit<Expense, 'id' | 'recordedBy' | 'createdAt'> => ({
+  date: input.date,
+  category: input.category,
+  item: input.item.trim(),
+  amount: Math.round(input.amount),
+  method: input.method,
+  vendor: input.vendor.trim() || null,
+  note: input.note.trim() || null,
+});
+
+export function recordExpense(input: NewExpense, staffId: string): ExpenseResult {
+  return update((state): ExpenseResult => {
+    const staff = findStaff(state, staffId);
+    if (!staff?.permissions.includes('expenses.manage')) return { error: 'Your account cannot record expenses.' };
+    const problem = expenseProblem(state, input);
+    if (problem) return { error: problem };
+
+    const expense: Expense = {
+      id: nextId(state.expenses, 'EXP'),
+      ...expenseFields(input),
+      recordedBy: staffId,
+      createdAt: demoNow(state),
+    };
+    state.expenses.push(expense);
+    logActivity(state, staffId, 'expense.recorded', expense.id, `${expense.item} · ${peso(expense.amount)}`);
+    return { expense };
+  });
+}
+
+export function updateExpense(expenseId: string, input: NewExpense, staffId: string): ExpenseResult {
+  return update((state): ExpenseResult => {
+    const staff = findStaff(state, staffId);
+    if (!staff?.permissions.includes('expenses.manage')) return { error: 'Your account cannot record expenses.' };
+    const expense = state.expenses.find((item) => item.id === expenseId);
+    if (!expense) return { error: 'That expense is no longer there.' };
+    const problem = expenseProblem(state, input);
+    if (problem) return { error: problem };
+
+    Object.assign(expense, expenseFields(input));
+    logActivity(state, staffId, 'expense.updated', expense.id, `${expense.item} · ${peso(expense.amount)}`);
+    return { expense };
+  });
+}
+
+export function removeExpense(expenseId: string, staffId: string): ExpenseResult {
+  return update((state): ExpenseResult => {
+    const staff = findStaff(state, staffId);
+    if (!staff?.permissions.includes('expenses.manage')) return { error: 'Your account cannot record expenses.' };
+    const index = state.expenses.findIndex((item) => item.id === expenseId);
+    const expense = state.expenses[index];
+    if (!expense) return { error: 'That expense is no longer there.' };
+
+    state.expenses.splice(index, 1);
+    logActivity(state, staffId, 'expense.removed', expense.id, `${expense.item} · ${peso(expense.amount)}`);
+    return { expense };
   });
 }
 
