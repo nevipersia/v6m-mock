@@ -224,6 +224,7 @@ export function render(ctx: DeskContext): SafeHTML {
           <button class="btn btn--primary" type="button" data-action="new-booking">${icon('plus')} New booking</button>` : ''}`,
     })}
 
+    <div class="list-body" data-enter="bookings|list" data-motion="swap">
     ${filterBar(state)}
     ${isFiltered ? html`<button class="btn btn--quiet btn--sm filters__clear" type="button" data-action="clear-filters">Clear filters</button>` : ''}
 
@@ -261,6 +262,7 @@ export function render(ctx: DeskContext): SafeHTML {
             </tbody>
           </table>
         </div>` : emptyState('No bookings match', 'Try a different search or clear the filters.')}
+    </div>
     </div>`;
 }
 

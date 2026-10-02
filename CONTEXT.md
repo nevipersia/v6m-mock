@@ -217,6 +217,14 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   the view. The month and year open a pop-up picker (`pickerDialog`): a year, its months (a month
   moves the calendar behind straight away) and that month's days. Ranges of dates are the list's job:
   its filter holds `from`/`to`, either end optional, with one-tap shortcut chips.
+- Motion (`components/motion.ts` + the Motion section at the end of `admin.css`): every render
+  rebuilds the markup, so nothing animates by class alone. After each render `markEntering` adds
+  `.page--enter` when the page is new, `.is-entering` to any `[data-enter="slot|key"]` whose key
+  changed (with `data-motion` = on/back/in/out/swap choosing the direction), and `.is-entering` to a
+  pop-up that was not open before. `[data-count-up]` figures count up when their page opens. The
+  drawer slides out before it hides. `prefers-reduced-motion` turns all of it off.
+- Drawers can put buttons in their header beside Close (`DrawerContent.tools`); a booking's Edit
+  and Sheet live there.
 - Pop-ups are `<dialog data-modal data-cancel="action">`. `admin/main.ts` opens each one as a modal
   after every render, runs the `data-cancel` action on Esc or a backdrop click, and gives focus back
   to the control with the same `data-focus-key` once a redraw has replaced it.

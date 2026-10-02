@@ -74,6 +74,8 @@ export type DrawerHandler = (payload: DrawerPayload) => void | Promise<void>;
 export interface DrawerContent {
   title: string | ((ctx: DeskContext) => string);
   render: (ctx: DeskContext) => TemplateValue;
+  /** Buttons in the header, beside Close: what you do to the thing as a whole. */
+  tools?: (ctx: DeskContext) => TemplateValue;
   /** Re-render whenever the store changes. */
   live: boolean;
   actions?: Record<string, DrawerHandler>;

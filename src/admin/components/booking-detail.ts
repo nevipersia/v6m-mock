@@ -342,6 +342,19 @@ export function createBookingDetail(bookingId: string): DrawerContent {
 
     title: (ctx) => findBooking(ctx.state, bookingId)?.guestName ?? 'Booking',
 
+    tools(ctx) {
+      const booking = findBooking(ctx.state, bookingId);
+      if (!booking) return '';
+      return html`
+        ${ctx.can('bookings.write') && isEditable(ctx.state, booking) ? html`
+          <button class="btn btn--secondary btn--sm" type="button" data-action="edit-booking" title="Edit this booking">
+            ${icon('pencil')} Edit
+          </button>` : ''}
+        <button class="btn btn--secondary btn--sm" type="button" data-action="download-pdf" title="Download the registration sheet">
+          ${icon('download')} Sheet
+        </button>`;
+    },
+
     render(ctx) {
       const booking = findBooking(ctx.state, bookingId);
       if (!booking) return html`<p class="muted">This booking no longer exists.</p>`;
@@ -352,13 +365,6 @@ export function createBookingDetail(bookingId: string): DrawerContent {
             <span class="small muted mono">${booking.id}</span>
           </div>
 
-          <div class="detail__tools">
-            ${ctx.can('bookings.write') && isEditable(ctx.state, booking) ? html`
-              <button class="btn btn--secondary" type="button" data-action="edit-booking">Edit booking</button>` : ''}
-            <button class="btn btn--secondary" type="button" data-action="download-pdf">
-              ${icon('download')} Registration sheet
-            </button>
-          </div>
           ${actionsSection(ctx, booking)}
           ${facts(ctx.state, booking)}
           ${priceSection(ctx.state, booking)}

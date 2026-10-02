@@ -7,6 +7,7 @@ import type { DeskContext, DrawerContent, DrawerPayload } from '../types.js';
 const root = $('#drawer');
 const panel = $('.drawer__panel', root);
 const titleSlot = $('[data-slot="title"]', root);
+const toolsSlot = $('[data-slot="tools"]', root);
 const bodySlot = $('[data-slot="body"]', root);
 
 let current: { content: DrawerContent; ctx: DeskContext } | null = null;
@@ -16,13 +17,27 @@ function draw(): void {
   if (!current) return;
   const { content, ctx } = current;
   titleSlot.textContent = typeof content.title === 'function' ? content.title(ctx) : content.title;
+  render(toolsSlot, content.tools ? content.tools(ctx) : '');
   render(bodySlot, content.render(ctx));
 }
 
+/** The close animation's length; matches drawer-out in admin.css. */
+const LEAVE_MS = 180;
+let leaving: ReturnType<typeof setTimeout> | undefined;
+
 export function openDrawer(content: DrawerContent, ctx: DeskContext): void {
+  // Reopened while still sliding away: stay open instead.
+  clearTimeout(leaving);
+  root.classList.remove('is-leaving');
+  const swapping = !!current;
   if (!current) returnFocusTo = document.activeElement as HTMLElement | null;
   current = { content, ctx };
   draw();
+  if (swapping) {
+    bodySlot.classList.remove('is-swapping');
+    void bodySlot.offsetWidth; // restart the animation
+    bodySlot.classList.add('is-swapping');
+  }
   root.hidden = false;
   document.body.classList.add('has-drawer');
   bodySlot.scrollTop = 0;
@@ -32,9 +47,15 @@ export function openDrawer(content: DrawerContent, ctx: DeskContext): void {
 export function closeDrawer(): void {
   if (!current) return;
   current = null;
-  root.hidden = true;
-  bodySlot.replaceChildren();
   document.body.classList.remove('has-drawer');
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  root.classList.add('is-leaving');
+  leaving = setTimeout(() => {
+    root.classList.remove('is-leaving');
+    root.hidden = true;
+    bodySlot.replaceChildren();
+    toolsSlot.replaceChildren();
+  }, still ? 0 : LEAVE_MS);
   if (returnFocusTo?.isConnected) returnFocusTo.focus();
   returnFocusTo = null;
 }

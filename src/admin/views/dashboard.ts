@@ -41,7 +41,7 @@ interface CardOptions {
 function card({ label, value, detail, action, href, opens, tone }: CardOptions): SafeHTML {
   const inner = html`
     <span class="card__label">${label}</span>
-    <span class="card__value">${value}</span>
+    <span class="card__value" data-count-up>${value}</span>
     <span class="card__detail">${detail} ${icon('arrowRight')}</span>`;
   const className = `card ${tone ? `card--${tone}` : ''}`;
   return href
@@ -161,7 +161,7 @@ function summarySection(ctx: DeskContext): SafeHTML {
         </div>
       </header>
 
-      <div class="summary__cols ${money ? '' : 'summary__cols--one'}">
+      <div class="summary__cols ${money ? '' : 'summary__cols--one'}" data-enter="summary|${summaryDays}">
         <div>
           <h3 class="summary__heading">Sales</h3>
           <dl class="summary__lines">

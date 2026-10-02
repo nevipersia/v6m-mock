@@ -10,6 +10,7 @@ import { createBookingForm } from './components/booking-form.js';
 import { createEventForm } from './components/event-form.js';
 import { createExpenseForm } from './components/expense-form.js';
 import { createGuestSummary } from './components/guest-summary.js';
+import { markEntering } from './components/motion.js';
 import { createBookingLinkPanel } from './components/booking-link.js';
 import { closeDrawer, openDrawer, syncDrawer } from './components/drawer.js';
 import { jumpBy, refreshJump } from './components/jump.js';
@@ -151,11 +152,13 @@ function draw(): void {
 
   const focus = rememberFocus();
   const modalFocus = focusKey();
+  const modalWasOpen = !!app.querySelector('dialog[data-modal][open]');
   context = buildContext(state, staff);
   activeRoute = route;
   document.title = `${route.label} · V6M Desk`;
   render(app, renderShell(context, route, route.view.render(context)));
   restoreFocus(focus);
+  markEntering(app, route.id, modalWasOpen);
   showModals(modalFocus);
   syncDrawer(context);
   // A new page has its own parts, and may not be long enough to need the buttons.

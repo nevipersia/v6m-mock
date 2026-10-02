@@ -37,6 +37,9 @@ const ui: {
 
 const anchorOf = (state: State): ISODate => ui.anchor ?? state.meta.asOf;
 
+/** Which way the last move went, so the new period slides in from that side. */
+let motion: 'back' | 'on' | 'in' | 'out' | 'swap' = 'swap';
+
 const startOfWeek = (date: ISODate): ISODate => addDays(date, -((parseDate(date).getDay() + 6) % 7)); // Monday
 const startOfMonth = (date: ISODate): ISODate => `${date.slice(0, 8)}01`;
 
@@ -446,12 +449,14 @@ export function render(ctx: DeskContext, switcher: SafeHTML): SafeHTML {
             title="New booking on ${formatDate(focused, 'long')}">${icon('plus')} New booking</button>` : ''}`,
     })}
 
-    ${day ? html`
-      ${dayBar(state, day)}
-      ${dayView(ctx, day)}
-      ${LEGEND}` : html`
-      ${periodBar(state)}
-      ${ui.range === 'month' ? monthView(ctx, days) : html`${weekView(ctx, days)}${LEGEND}`}`}
+    <div class="cal-body" data-enter="bookings|${ui.range}:${days[0] ?? ''}:${day ?? ''}" data-motion="${motion}">
+      ${day ? html`
+        ${dayBar(state, day)}
+        ${dayView(ctx, day)}
+        ${LEGEND}` : html`
+        ${periodBar(state)}
+        ${ui.range === 'month' ? monthView(ctx, days) : html`${weekView(ctx, days)}${LEGEND}`}`}
+    </div>
 
     ${ui.picker.open ? pickerDialog(state) : ''}`;
 }
@@ -485,6 +490,7 @@ export const actions: HandlerMap = {
 
   // A month moves the calendar behind the pop-up too, so it can be read through it.
   'picker-month': ({ el, ctx }) => {
+    motion = 'swap';
     ui.picker.month = Number(el.dataset.month) || 0;
     ui.anchor = toISODate(new Date(ui.picker.year, ui.picker.month, 1));
     ui.openDay = null;
@@ -494,18 +500,21 @@ export const actions: HandlerMap = {
 
   'picker-day': ({ el, ctx }) => {
     if (!el.dataset.date) return;
+    motion = 'in';
     openDay(el.dataset.date);
     ui.picker.open = false;
     ctx.redraw();
   },
 
   'picker-today': ({ ctx }) => {
+    motion = 'in';
     openDay(ctx.state.meta.asOf);
     ui.picker.open = false;
     ctx.redraw();
   },
 
   'picker-week': ({ ctx }) => {
+    motion = 'swap';
     ui.range = 'week';
     ui.anchor = null;
     ui.openDay = null;
@@ -520,6 +529,7 @@ export const actions: HandlerMap = {
   },
 
   'set-range': ({ el, ctx }) => {
+    motion = 'swap';
     if (isRange(el.dataset.range)) ui.range = el.dataset.range;
     ui.pickedDay = null;
     ctx.redraw();
@@ -527,6 +537,7 @@ export const actions: HandlerMap = {
 
   step: ({ el, ctx }) => {
     const direction = Number(el.dataset.step);
+    motion = direction < 0 ? 'back' : 'on';
     const anchor = anchorOf(ctx.state);
     ui.pickedDay = null;
     if (ui.range === 'week') ui.anchor = addDays(startOfWeek(anchor), direction * 7);
@@ -539,6 +550,7 @@ export const actions: HandlerMap = {
 
   'open-day': ({ el, ctx }) => {
     if (!el.dataset.date) return;
+    motion = 'in';
     openDay(el.dataset.date);
     ctx.redraw();
     window.scrollTo({ top: 0 });
@@ -546,11 +558,13 @@ export const actions: HandlerMap = {
 
   'step-day': ({ el, ctx }) => {
     if (!ui.openDay) return;
+    motion = Number(el.dataset.step) < 0 ? 'back' : 'on';
     openDay(addDays(ui.openDay, Number(el.dataset.step) || 0));
     ctx.redraw();
   },
 
   'close-day': ({ ctx }) => {
+    motion = 'out';
     ui.openDay = null;
     ctx.redraw();
   },

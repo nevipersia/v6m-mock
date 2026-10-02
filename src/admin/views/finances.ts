@@ -177,7 +177,7 @@ function salesSection(ctx: DeskContext): SafeHTML {
         </div>
       </header>
 
-      <div class="stats ${focus ? 'is-focused' : ''}">
+      <div class="stats ${focus ? 'is-focused' : ''}" data-enter="sales|${salesDays}:${pinnedPoint ?? ''}">
         ${salesStat('Sales booked', peso(shown.booked), `${plural(shown.bookings, 'booking')} taken`)}
         ${salesStat('Collected', peso(shown.collected), shown.change === null
           ? 'Nothing to compare with'
@@ -278,7 +278,7 @@ function moneySection(ctx: DeskContext): SafeHTML {
         </div>
       </header>
 
-      <div class="stats ${focus ? 'is-focused' : ''}">
+      <div class="stats ${focus ? 'is-focused' : ''}" data-enter="money|${moneyDays}:${pinnedMoney ?? ''}">
         ${salesStat('Income', peso(shown.income), 'Payments received')}
         ${salesStat('Expenses', peso(shown.spend), `${plural(shown.count, 'expense')} recorded`)}
         ${salesStat(loss ? 'Loss' : 'Profit', peso(Math.abs(shown.profit)), html`
