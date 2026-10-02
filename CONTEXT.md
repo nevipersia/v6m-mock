@@ -234,7 +234,9 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   and `input.input[type=date]` on the desk gets a button that opens a styled list or the shared date
   pop-up (the same `.picker` look as the Bookings calendar). The real control stays in the form,
   hidden, and receives the value plus input/change events, so views need no changes. A
-  MutationObserver picks up new fields, side panels included. `data-optional` on a date input adds
+  MutationObserver picks up new fields, side panels included. Date pickers open next to the button that
+  opened them (`components/popover.ts` `placeNear`; the Bookings picker names its button with
+  `data-anchor`), below it or above when there is no room, at a compact 292px. `data-optional` on a date input adds
   Clear. The guest booking page keeps native pickers.
 - Packages (`views/packages.ts`, `components/package-form.ts`, needs `packages.manage`, which
   owners have by default): every bookable thing — entrance sessions, rooms and cottages, exclusive

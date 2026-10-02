@@ -212,6 +212,7 @@ function enhanceDate(input: HTMLInputElement): void {
       // Only a date the form can do without offers Clear: mark it data-optional.
       clearable: 'optional' in input.dataset,
       title: label ?? 'Pick a date',
+      anchor: trigger,
       onPick: (value) => {
         commit(input, value);
         trigger.querySelector('.field-trigger__text')!.textContent = dateText(value);

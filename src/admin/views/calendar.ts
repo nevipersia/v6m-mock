@@ -325,7 +325,7 @@ function pickerDialog(state: State): SafeHTML {
   const label = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return html`
-    <dialog class="picker" data-modal data-cancel="close-picker" aria-labelledby="picker-title">
+    <dialog class="picker" data-modal data-cancel="close-picker" data-anchor='[data-action="open-picker"]' aria-labelledby="picker-title">
       <div class="picker__body">
         <header class="picker__head">
           <h2 class="picker__title" id="picker-title">Go to a date</h2>

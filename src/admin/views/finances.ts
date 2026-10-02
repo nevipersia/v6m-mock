@@ -382,8 +382,9 @@ export const actions: HandlerMap = {
     ctx.redraw();
   },
 
-  'fin-pick': ({ ctx }) => {
+  'fin-pick': ({ el, ctx }) => {
     openDatePicker({
+      anchor: el,
       mode: 'month',
       value: month ?? firstOf(ctx.state.meta.asOf),
       today: ctx.state.meta.asOf,

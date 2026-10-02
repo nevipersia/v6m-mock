@@ -4133,3 +4133,91 @@ dialog.is-entering::backdrop {
   font-weight: 600;
   color: var(--orange-strong);
 }
+
+/* ---------- Date pickers sit by their button, compact ---------- */
+
+.picker.is-anchored {
+  position: fixed;
+  inset: auto;
+  width: 292px;
+  max-height: calc(100vh - 24px);
+  margin: 0;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(31, 45, 92, 0.18);
+  transform-origin: top left;
+}
+
+.picker.is-anchored[data-side="above"] {
+  transform-origin: bottom left;
+}
+
+/* A light veil only: the page stays readable around a small pop-up. */
+.picker.is-anchored::backdrop {
+  background: rgba(31, 45, 92, 0.08);
+}
+
+.picker.is-anchored .picker__body {
+  gap: 10px;
+  padding: 12px;
+}
+
+.picker.is-anchored .picker__title {
+  font-size: 15px;
+}
+
+.picker.is-anchored .picker__icon {
+  width: 28px;
+  height: 28px;
+}
+
+.picker.is-anchored .picker__year-label {
+  font-size: 16px;
+}
+
+.picker.is-anchored .picker__months {
+  gap: 4px;
+}
+
+.picker.is-anchored .picker__month {
+  padding: 5px 0;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.picker.is-anchored .picker__days {
+  padding-top: 8px;
+}
+
+.picker.is-anchored .picker__days-label {
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.picker.is-anchored .picker__day {
+  aspect-ratio: auto;
+  height: 32px;
+  font-size: 13px;
+}
+
+.picker.is-anchored .picker__weekday {
+  padding-bottom: 2px;
+}
+
+.picker.is-anchored .picker__dot {
+  bottom: 3px;
+}
+
+.picker.is-anchored .picker__shortcuts .btn {
+  min-height: 32px;
+}
+
+/* It grows out of its button rather than rising from the middle. */
+@keyframes picker-drop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+}
+
+dialog.picker.is-anchored.is-entering {
+  animation: picker-drop 0.18s cubic-bezier(0.2, 0.75, 0.25, 1);
+}

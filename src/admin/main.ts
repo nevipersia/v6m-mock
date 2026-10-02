@@ -13,6 +13,7 @@ import { createGuestSummary } from './components/guest-summary.js';
 import { createStageSummary } from './components/stage-summary.js';
 import { createPackageForm, createPromoForm } from './components/package-form.js';
 import { markEntering } from './components/motion.js';
+import { placeNear } from './components/popover.js';
 import { setFieldsToday, startFields } from './components/fields.js';
 import { createBookingLinkPanel } from './components/booking-link.js';
 import { closeDrawer, openDrawer, syncDrawer } from './components/drawer.js';
@@ -118,6 +119,8 @@ const focusKey = (): string | null =>
 function showModals(key: string | null): void {
   app.querySelectorAll<HTMLDialogElement>('dialog[data-modal]').forEach((dialog) => {
     if (!dialog.open) dialog.showModal();
+    // A pop-up that names its button sits next to it, not in the middle.
+    if (dialog.dataset.anchor) placeNear(dialog, app.querySelector<HTMLElement>(dialog.dataset.anchor));
     if (key) dialog.querySelector<HTMLElement>(`[data-focus-key="${key}"]`)?.focus();
   });
 }

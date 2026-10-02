@@ -10,6 +10,7 @@ import { html, render, type SafeHTML } from '../../core/dom.js';
 import { formatDate, parseDate, toISODate } from '../../core/format.js';
 import type { ISODate } from '../../core/types.js';
 import { icon } from './icons.js';
+import { placeNear } from './popover.js';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -25,6 +26,8 @@ export interface DatePickerOptions {
   title?: string;
   /** Offers a Clear button that answers ''. */
   clearable?: boolean;
+  /** The button it opened from: the picker sits next to it. */
+  anchor?: HTMLElement | null;
   onPick: (value: ISODate | '') => void;
 }
 
@@ -162,5 +165,6 @@ export function openDatePicker(options: DatePickerOptions): void {
 
   draw();
   dialog.showModal();
+  placeNear(dialog, options.anchor ?? returnTo);
   draw(); // focus lands once the dialog is open
 }
