@@ -56,12 +56,12 @@ function daysInView(state: State): ISODate[] {
   return monthDays(anchor);
 }
 
-/** "Sep 2026", or "Sep 14 – Sep 20" for a week. */
+/** "September 2026" in full for a month; "Sep 14 – Sep 20" for a week, so it fits between the arrows. */
 function rangeLabel(state: State): string {
   const days = daysInView(state);
   const first = days[0] ?? state.meta.asOf;
   const last = days[days.length - 1] ?? first;
-  if (ui.range === 'month') return parseDate(first).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  if (ui.range === 'month') return parseDate(first).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   return `${formatDate(first, 'monthDay')} – ${formatDate(last, 'monthDay')}`;
 }
 
@@ -289,7 +289,7 @@ function monthView(ctx: DeskContext, days: ISODate[]): SafeHTML {
           const guests = bookings.reduce((sum, booking) => sum + booking.adults + booking.kids, 0);
           const canBook = ctx.can('bookings.write') && !event;
           return html`
-            <div class="month__cell ${day === state.meta.asOf ? 'is-today' : ''}">
+            <div class="month__cell ${day === state.meta.asOf ? 'is-today' : ''}" data-action="open-day" data-date="${day}">
               <div class="month__head">
                 <button class="month__date" type="button" data-action="open-day" data-date="${day}" aria-label="Open ${formatDate(day, 'long')}">${parseDate(day).getDate()}</button>
                 ${canBook ? html`<button class="month__add" type="button" data-action="new-booking" data-date="${day}" aria-label="New booking on ${formatDate(day, 'long')}">${icon('plus')}</button>` : ''}
@@ -322,7 +322,7 @@ function pickerDialog(state: State): SafeHTML {
   const days = monthDays(toISODate(first));
   const leading = (first.getDay() + 6) % 7; // Monday first
   const selected = ui.openDay;
-  const label = first.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  const label = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return html`
     <dialog class="picker" data-modal data-cancel="close-picker" aria-labelledby="picker-title">

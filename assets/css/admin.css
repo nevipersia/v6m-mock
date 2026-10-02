@@ -2681,7 +2681,7 @@ body.has-drawer {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: 172px;
+  width: 196px;
   padding: 6px 10px;
   background: none;
   border: 0;
@@ -2915,6 +2915,11 @@ body.has-drawer {
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
+}
+
+/* Any part of a day opens it; its + still starts a booking. */
+.month__cell:not(.month__cell--blank) {
+  cursor: pointer;
 }
 
 .month__cell--blank {
