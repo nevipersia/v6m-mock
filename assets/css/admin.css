@@ -1313,26 +1313,9 @@ button.cal-pool:hover {
   color: var(--ink-muted);
 }
 
-.data-table__actions {
-  white-space: nowrap;
-  text-align: right;
-}
-
-.data-table__actions .btn {
-  opacity: 0.55;
-  transition: opacity 0.12s ease;
-}
-
-.data-table tr:hover .data-table__actions .btn,
-.data-table__actions .btn:focus-visible {
-  opacity: 1;
-}
-
-/* Touch screens have no hover to bring row actions up, so show them in full. */
-@media (hover: none) {
-  .data-table__actions .btn {
-    opacity: 1;
-  }
+/* The whole row opens the booking; the guest's name stays the keyboard way in. */
+.data-table__row {
+  cursor: pointer;
 }
 
 /* ---------- Bookings on phones ---------- */
@@ -2692,18 +2675,22 @@ body.has-drawer {
   min-width: 0;
 }
 
+/* A fixed width, so the arrows either side stay put whatever the label says. */
 .period__label {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 4px 10px;
+  width: 172px;
+  padding: 6px 10px;
   background: none;
   border: 0;
   border-radius: var(--radius-sm);
   color: var(--ink);
   font-family: var(--font-serif);
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -2717,7 +2704,7 @@ body.has-drawer {
 
 .period__day {
   margin: 0 0 0 6px;
-  font-size: 22px;
+  font-size: 17px;
 }
 
 .picker {

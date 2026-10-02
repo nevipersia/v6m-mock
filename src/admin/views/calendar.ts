@@ -53,13 +53,13 @@ function daysInView(state: State): ISODate[] {
   return monthDays(anchor);
 }
 
-/** "September 2026", or "Sep 14 – Sep 20" for a week. */
+/** "Sep 2026", or "Sep 14 – Sep 20" for a week. */
 function rangeLabel(state: State): string {
   const days = daysInView(state);
   const first = days[0] ?? state.meta.asOf;
   const last = days[days.length - 1] ?? first;
-  if (ui.range === 'month') return parseDate(first).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  return `${formatDate(first, 'monthDayLong')} – ${formatDate(last, 'monthDayLong')}`;
+  if (ui.range === 'month') return parseDate(first).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  return `${formatDate(first, 'monthDay')} – ${formatDate(last, 'monthDay')}`;
 }
 
 const shortName = (name: string): string => {
@@ -109,15 +109,11 @@ function dayView(ctx: DeskContext, day: ISODate): SafeHTML {
         <ul class="rows">
           ${state.poolSessions.map((session) => {
             const guests = poolGuests(state, day, session.id);
-            const percent = Math.min(100, Math.round((guests / session.capacity) * 100));
             const held = exclusiveOverlapping(state, bookingWindow(state, session.id, day));
             return html`
               <li class="row">
-                <span class="row__main">
-                  <span class="row__title">${session.label}</span>
-                  <span class="meter"><span style="width:${percent}%"></span></span>
-                </span>
-                <span class="small muted">${held ? 'Exclusive' : `${guests}/${session.capacity}`}</span>
+                <span class="row__main"><span class="row__title">${session.label}</span></span>
+                <span class="small muted">${held ? 'Exclusive' : plural(guests, 'guest')}</span>
               </li>`;
           })}
           ${state.units.map((unit) => {
@@ -145,15 +141,12 @@ function poolCell(ctx: DeskContext, sessionId: string, day: ISODate): SafeHTML |
   if (!session) return '';
   if (exclusiveOverlapping(ctx.state, bookingWindow(ctx.state, sessionId, day))) return html`<span class="cal-closed cal-closed--exclusive">Exclusive</span>`;
   const guests = poolGuests(ctx.state, day, sessionId);
-  const percent = Math.min(100, Math.round((guests / session.capacity) * 100));
-  const content = html`
-    <span class="cal-pool__text">${guests}/${session.capacity}</span>
-    <span class="meter meter--thin"><span style="width:${percent}%"></span></span>`;
+  const content = html`<span class="cal-pool__text">${plural(guests, 'guest')}</span>`;
 
   if (!ctx.can('bookings.write')) return html`<div class="cal-pool">${content}</div>`;
   return html`
     <button class="cal-pool" type="button" data-action="new-booking" data-product="${sessionId}" data-date="${day}"
-      aria-label="${session.label} on ${formatDate(day)}: ${guests} of ${session.capacity} guests. Add booking">${content}</button>`;
+      aria-label="${session.label} on ${formatDate(day)}: ${plural(guests, 'guest')}. Add booking">${content}</button>`;
 }
 
 function unitCell(ctx: DeskContext, unit: Unit, day: ISODate): SafeHTML {
@@ -326,7 +319,7 @@ function pickerDialog(state: State): SafeHTML {
   const days = monthDays(toISODate(first));
   const leading = (first.getDay() + 6) % 7; // Monday first
   const selected = ui.openDay;
-  const label = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const label = first.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
   return html`
     <dialog class="picker" data-modal data-cancel="close-picker" aria-labelledby="picker-title">
@@ -408,7 +401,7 @@ function dayBar(state: State, day: ISODate): SafeHTML {
         <button class="btn btn--secondary btn--sm" type="button" data-action="close-day">
           ${icon('arrowLeft')} ${rangeLabel(state)}
         </button>
-        <h2 class="period__day">${formatDate(day, 'long')}</h2>
+        <h2 class="period__day">${formatDate(day, 'short')}</h2>
       </div>
       <div class="button-row">
         <button class="btn btn--secondary btn--icon" type="button" data-action="step-day" data-step="-1" aria-label="Previous day">${icon('chevronLeft')}</button>

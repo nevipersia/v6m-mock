@@ -4,12 +4,11 @@
 import { flag, html, type SafeHTML } from '../../core/dom.js';
 import { addDays, formatDate, peso, plural, timeOf } from '../../core/format.js';
 import {
-  STATUS_LABELS, findBooking, isActive, isEditable, productLabel,
+  STATUS_LABELS, isActive, productLabel,
 } from '../../core/rules.js';
 import type { Booking, BookingStatus, State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { kindDot, statusPill } from '../components/badges.js';
-import { downloadBookingPdf } from '../components/booking-pdf.js';
 import { icon } from '../components/icons.js';
 import { emptyState, pageHead } from '../layout.js';
 import * as calendar from './calendar.js';
@@ -243,12 +242,11 @@ export function render(ctx: DeskContext): SafeHTML {
                 <th scope="col" class="num">Total</th>
                 <th scope="col" class="num">Balance</th>
                 <th scope="col">Status</th>
-                <th scope="col"><span class="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
               ${results.map((b) => html`
-                <tr>
+                <tr class="data-table__row" data-action="open-booking" data-id="${b.id}">
                   <td>
                     <button class="link-button" type="button" data-action="open-booking" data-id="${b.id}">${b.guestName}</button>
                     <span class="data-table__sub mono">${b.id}</span>
@@ -259,11 +257,6 @@ export function render(ctx: DeskContext): SafeHTML {
                   <td class="num">${peso(b.total)}</td>
                   <td class="num ${b.balance > 0 && isActive(b) ? 'is-due' : ''}">${peso(b.balance)}</td>
                   <td>${statusPill(b)}</td>
-                  <td class="data-table__actions">
-                    ${ctx.can('bookings.write') && isEditable(state, b) ? html`
-                      <button class="btn btn--quiet btn--sm" type="button" data-action="edit-booking-row" data-id="${b.id}" title="Edit this booking">Edit</button>` : ''}
-                    <button class="btn btn--quiet btn--sm" type="button" data-action="download-sheet" data-id="${b.id}" title="Download the registration sheet">${icon('download')} Sheet</button>
-                  </td>
                 </tr>`)}
             </tbody>
           </table>
@@ -299,17 +292,6 @@ export const actions: HandlerMap = {
     const same = filters.from === from && filters.to === to;
     filters = { ...filters, from: same ? '' : from, to: same ? '' : to };
     ctx.redraw();
-  },
-
-  'edit-booking-row': ({ el, ctx }) => {
-    if (el.dataset.id) ctx.editBooking(el.dataset.id);
-  },
-
-  'download-sheet': ({ el, ctx }) => {
-    const booking = el.dataset.id ? findBooking(ctx.state, el.dataset.id) : null;
-    if (!booking) return;
-    downloadBookingPdf(ctx.state, booking);
-    ctx.toast(`Registration sheet downloaded · ${booking.guestName}`);
   },
 
   'clear-filters': ({ ctx }) => {
