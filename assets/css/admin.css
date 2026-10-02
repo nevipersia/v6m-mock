@@ -4063,3 +4063,18 @@ dialog.is-entering::backdrop {
 .weekday-pick input:focus-visible + span {
   box-shadow: var(--focus-ring);
 }
+
+/* Today: one tap to today's bookings alone, from the month, the week or another day. */
+.period__today {
+  margin-left: 4px;
+}
+
+.period__today-tag {
+  margin-left: 4px;
+  padding: 3px 10px;
+  background: var(--orange-soft);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--orange-strong);
+}

@@ -374,6 +374,11 @@ function pickerDialog(state: State): SafeHTML {
     </dialog>`;
 }
 
+/** Opens today on its own, from wherever the calendar or list is. */
+const todayButton = (state: State): SafeHTML => html`
+  <button class="btn btn--secondary btn--sm period__today" type="button" data-action="go-today"
+    title="Show ${formatDate(state.meta.asOf, 'long')} only">Today</button>`;
+
 /** The month or week: arrows either side of the month and year, which opens the picker. */
 function periodBar(state: State, extra: TemplateValue = ''): SafeHTML {
   return html`
@@ -386,6 +391,7 @@ function periodBar(state: State, extra: TemplateValue = ''): SafeHTML {
           ${icon('chevronDown')}
         </button>
         <button class="btn btn--secondary btn--icon" type="button" data-action="step" data-step="1" aria-label="Next ${ui.range}">${icon('chevronRight')}</button>
+        ${todayButton(state)}
       </div>
 
       <div class="calendar-bar__end">
@@ -408,6 +414,7 @@ function dayBar(state: State, day: ISODate, extra: TemplateValue = ''): SafeHTML
           ${icon('arrowLeft')} ${rangeLabel(state)}
         </button>
         <h2 class="period__day">${formatDate(day, 'short')}</h2>
+        ${day === state.meta.asOf ? html`<span class="period__today-tag">Today</span>` : todayButton(state)}
       </div>
       <div class="calendar-bar__end">
         ${extra}
@@ -572,6 +579,13 @@ export const actions: HandlerMap = {
       ui.anchor = toISODate(new Date(first.getFullYear(), first.getMonth() + direction, 1));
     }
     ctx.redraw();
+  },
+
+  'go-today': ({ ctx }) => {
+    motion = 'in';
+    openDay(ctx.state.meta.asOf);
+    ctx.redraw();
+    window.scrollTo({ top: 0 });
   },
 
   'open-day': ({ el, ctx }) => {
