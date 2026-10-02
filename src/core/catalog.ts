@@ -2,7 +2,7 @@
 // session, cottages and rooms, and the exclusive rental packages.
 
 import { formatTime, peso } from './format.js';
-import { exclusiveSessionLabel, findExclusive, findSession, findUnit } from './rules.js';
+import { exclusiveSessionLabel, findExclusive, findSession, findUnit, live } from './rules.js';
 import type { State } from './types.js';
 
 export interface ProductOption {
@@ -23,7 +23,7 @@ export function productGroups(state: State, style: 'desk' | 'guest' = 'desk'): P
   return [
     {
       label: 'Entrance',
-      options: state.poolSessions.map((session) => ({
+      options: live(state.poolSessions).map((session) => ({
         value: session.id,
         label: guest
           ? `${session.label} · ${hours(session.start, session.end)} · ${peso(session.adult)} adult`
@@ -32,7 +32,7 @@ export function productGroups(state: State, style: 'desk' | 'guest' = 'desk'): P
     },
     {
       label: 'Cottages and rooms',
-      options: state.units.map((unit) => {
+      options: live(state.units).map((unit) => {
         const range = unit.capacityMin > 1 ? `${unit.capacityMin}–${unit.capacityMax}` : `up to ${unit.capacityMax}`;
         return {
           value: unit.id,
@@ -42,7 +42,7 @@ export function productGroups(state: State, style: 'desk' | 'guest' = 'desk'): P
     },
     {
       label: 'Exclusive rental (no other guests)',
-      options: (state.exclusivePackages ?? []).map((pkg) => ({
+      options: live(state.exclusivePackages).map((pkg) => ({
         value: pkg.id,
         label: `${exclusiveSessionLabel(pkg)} · ${pkg.name} · ${hours(pkg.start, pkg.end)} · ${peso(pkg.price)}`,
       })),

@@ -1,11 +1,12 @@
 // Types shared by the V6M Desk shell, its views and its drawers.
 
 import type { SafeHTML, TemplateValue } from '../core/dom.js';
+import type { PackageKind } from '../core/actions.js';
 import type { Expense, Permission, Staff, State } from '../core/types.js';
 import type { IconName } from './components/icons.js';
 import type { AlertTone } from './components/toast.js';
 
-export type PageId = 'dashboard' | 'bookings' | 'finances' | 'inbox' | 'events' | 'users';
+export type PageId = 'dashboard' | 'bookings' | 'finances' | 'packages' | 'inbox' | 'events' | 'users';
 
 export interface BookingPrefill {
   product?: string | undefined;
@@ -32,6 +33,10 @@ export interface DeskContext {
   newEvent: () => void;
   /** Pass an expense to edit it, nothing to record a new one. */
   newExpense: (expense?: Expense) => void;
+  /** Add a package of a kind, or edit one; `confirmDelete` opens it on the delete question. */
+  editPackage: (kind: PackageKind, id?: string, confirmDelete?: boolean) => void;
+  /** Add a promotion, or edit one, on its own. */
+  editPromo: (id?: string) => void;
   /** Who is arriving today, or who is checked in now, in the side panel. */
   openGuests: (group: 'arriving' | 'inhouse') => void;
   closeDrawer: () => void;

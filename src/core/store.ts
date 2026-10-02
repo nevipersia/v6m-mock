@@ -32,6 +32,15 @@ function normalize(loaded: State): State {
   loaded.bookingLinks ??= [];
   loaded.invites ??= [];
   loaded.expenses ??= [];
+  // A package is on at most one promotion. Where older data lists it on
+  // several, the one that is switched on keeps it (else the first), so the
+  // price a guest is quoted does not change.
+  const claimed = new Set<string>();
+  const byPreference = [...(loaded.promos ?? [])].sort((a, b) => Number(b.active) - Number(a.active));
+  for (const promo of byPreference) {
+    promo.appliesTo = (promo.appliesTo ?? []).filter((id) => !claimed.has(id));
+    promo.appliesTo.forEach((id) => claimed.add(id));
+  }
   return loaded;
 }
 

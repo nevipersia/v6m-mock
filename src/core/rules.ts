@@ -44,6 +44,9 @@ export const isActive = (booking: Booking): boolean => !INACTIVE_STATUSES.includ
 
 // ---------- Lookups ----------
 
+/** Not deleted: what new bookings, pickers and the calendar may offer. */
+export const live = <T extends { retired?: boolean }>(items: T[] = []): T[] => items.filter((item) => !item.retired);
+
 export const findUnit = (state: State, id: string | null | undefined) => state.units.find((unit) => unit.id === id);
 export const findSession = (state: State, id: string | null | undefined) => state.poolSessions.find((session) => session.id === id);
 export const findBooking = (state: State, id: string | null | undefined) => state.bookings.find((booking) => booking.id === id);
@@ -187,6 +190,20 @@ export function findPromo(state: State, { product, date, guests }: { product: st
     && guests >= promo.minPax,
   ) ?? null;
 }
+
+export type PromoStatus = 'running' | 'scheduled' | 'ended' | 'paused';
+
+/** Whether a promotion is taking effect around `today`, for the Packages page. */
+export function promoStatus(promo: Promo, today: ISODate): PromoStatus {
+  if (!promo.active) return 'paused';
+  if (today < promo.validFrom) return 'scheduled';
+  if (today > promo.validTo) return 'ended';
+  return 'running';
+}
+
+/** The one promotion a package is on, if any. */
+export const promoFor = (state: State, packageId: string): Promo | null =>
+  state.promos.find((promo) => promo.appliesTo.includes(packageId)) ?? null;
 
 export interface Quote extends Pricing {
   promo: Promo | null;

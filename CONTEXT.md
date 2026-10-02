@@ -74,7 +74,7 @@ then removed on request; its inquiries stay in the data as inbox history.
 
 - **V6M Desk** (`/admin/`): staff app — email and password sign-in (two demo accounts, or an invite
   code that also sets a password),
-  Dashboard, Bookings (calendar or list, by month, week or day), Finances, Inbox, Events, Users.
+  Dashboard, Bookings (calendar or list, by month, week or day), Finances, Packages, Inbox, Events, Users.
 - **Booking link** (`/book/?code=…`): single-use page a staff member sends to one guest; the booking
   they submit lands on the calendar as a hold under that staff member.
 
@@ -127,7 +127,7 @@ src/                        TypeScript sources (compiled to assets/js/, which is
                             which phones show in the top bar instead
     components/             drawer, booking-detail, booking-form, booking-link, booking-pdf,
                             event-form, expense-form, guest-summary, jump, badges, icons, toast
-    views/                  login, dashboard, calendar, bookings, finances, inbox, events, users
+    views/                  login, dashboard, calendar, bookings, finances, packages, inbox, events, users
 assets/
   img/                      Logo
   css/                      tokens.css, base.css (shared) · admin.css · book.css
@@ -236,6 +236,19 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   hidden, and receives the value plus input/change events, so views need no changes. A
   MutationObserver picks up new fields, side panels included. `data-optional` on a date input adds
   Clear. The guest booking page keeps native pickers.
+- Packages (`views/packages.ts`, `components/package-form.ts`, needs `packages.manage`, which
+  owners have by default): every bookable thing — entrance sessions, rooms and cottages, exclusive
+  rentals, event packages — as cards in four tabs, edited in the side panel, plus the shared
+  promotions table. A package is on at most one promotion: `promo.appliesTo` lists its packages,
+  `setPromo` in `core/actions.ts` takes a package off every other promotion first, and `normalize`
+  in `core/store.ts` repairs older data by keeping the active one. Ticking a promotion is part of
+  the package's form; editing a promotion saves at once because it changes every package on it.
+  Deleting a package sets `retired: true` — `live()` in `core/rules.ts` keeps it out of every picker,
+  the calendar, the guest page and new bookings, while old bookings still find its name. Delete is
+  refused while upcoming bookings, open booking links, upcoming events or rooms (for an entrance)
+  still use it. Event packages now take their promotion when an event is booked, like stays do.
+  Supabase: the five catalog tables are written under `packages.manage` (not `users.manage`), have a
+  `retired` column, no delete policy, and are in the realtime publication.
 - Alerts (`components/toast.ts`, `ctx.toast(message, tone)`): a card in the top right for every
   change (bottom right, beside the jump buttons), success by default, `info` for copies and downloads, `warning` for cancellations,
   removals and revoked access, `error` for anything that failed. They stack (four at most), drain

@@ -4,7 +4,7 @@
 import { createEvent, type NewEvent } from '../../core/actions.js';
 import { $maybe, html, render, type SafeHTML } from '../../core/dom.js';
 import { formatDigits, isPHMobile, parseDigits, peso, plural } from '../../core/format.js';
-import { DOWNPAYMENT_PERCENT, METHOD_LABELS, STAGE_LABELS, closingEvent, findPackage } from '../../core/rules.js';
+import { DOWNPAYMENT_PERCENT, METHOD_LABELS, STAGE_LABELS, closingEvent, findPackage, live } from '../../core/rules.js';
 import type { EventStage, PaymentMethod, State } from '../../core/types.js';
 import { asField, type DrawerContent } from '../types.js';
 
@@ -19,7 +19,7 @@ const ADD_ON_PRESETS = ['Extra guests', 'Sound system', 'Extra hours', 'Styling 
 type Draft = NewEvent;
 
 function initialDraft(state: State): Draft {
-  const first = state.eventPackages[0];
+  const first = live(state.eventPackages)[0];
   return {
     title: '',
     date: state.meta.asOf,
@@ -108,7 +108,7 @@ export function createEventForm(): DrawerContent {
             <label class="field">
               <span class="field__label">Package</span>
               <select class="input" name="packageId" data-input="field">
-                ${state.eventPackages.map((item) => option(item.id, `${item.name} · ${peso(item.price)} · up to ${item.maxGuests}`, form.packageId))}
+                ${live(state.eventPackages).map((item) => option(item.id, `${item.name} · ${peso(item.price)} · up to ${item.maxGuests}`, form.packageId))}
               </select>
             </label>
             ${pkg ? html`<p class="small muted">${pkg.hours.replace('-', '–')} · ${pkg.inclusions.join(' · ')}</p>` : ''}

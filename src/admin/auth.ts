@@ -48,6 +48,7 @@ export const PERMISSIONS: PermissionInfo[] = [
   { id: 'events.manage', label: 'Manage events', detail: 'See the event pipeline and packages' },
   { id: 'discounts.apply', label: 'Give discounts', detail: 'Owners can skip the note; everyone else must say why' },
   { id: 'expenses.manage', label: 'Track expenses', detail: 'Records spending and sees the profit and loss figures' },
+  { id: 'packages.manage', label: 'Manage packages and prices', detail: 'Adds, edits and deletes what can be booked, and runs promotions' },
   { id: 'users.manage', label: 'Manage users', detail: 'Invite accounts and change what they can do' },
 ];
 
@@ -64,6 +65,7 @@ const PAGE_REQUIREMENTS: Record<PageId, Permission | null> = {
   bookings: null,
   // The books: payments in, expenses out, what is owed.
   finances: 'expenses.manage',
+  packages: 'packages.manage',
   inbox: 'inbox.write',
   events: 'events.manage',
   users: 'users.manage',

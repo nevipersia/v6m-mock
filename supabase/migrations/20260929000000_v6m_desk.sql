@@ -26,6 +26,7 @@ create table public.pool_sessions (
   capacity integer not null,
   photo text,
   rates_to_confirm boolean not null default false,
+  retired boolean not null default false,
   sort integer not null default 0
 );
 
@@ -40,6 +41,7 @@ create table public.exclusive_packages (
   price numeric(12, 2) not null,
   max_guests integer not null,
   photo text,
+  retired boolean not null default false,
   sort integer not null default 0
 );
 
@@ -57,6 +59,7 @@ create table public.units (
   inclusions jsonb not null default '[]',
   price_note text,
   photo text,
+  retired boolean not null default false,
   sort integer not null default 0
 );
 
@@ -81,6 +84,7 @@ create table public.event_packages (
   exclusive boolean not null default false,
   hours text not null,
   inclusions jsonb not null default '[]',
+  retired boolean not null default false,
   sort integer not null default 0
 );
 
@@ -299,13 +303,23 @@ begin
   -- may delete. The desk asks for the expenses.manage permission first.
   create policy "staff remove" on public.expenses for delete to authenticated using (public.is_staff());
 
-  -- Accounts, rates and settings: everyone reads, only users.manage writes.
-  foreach t in array array['staff', 'invites', 'settings', 'pool_sessions', 'exclusive_packages', 'units', 'promos', 'event_packages', 'saved_replies'] loop
+  -- Accounts and settings: everyone reads, only users.manage writes.
+  foreach t in array array['staff', 'invites', 'settings', 'saved_replies'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('create policy "staff read" on public.%I for select to authenticated using (public.is_staff())', t);
     execute format('create policy "owner add" on public.%I for insert to authenticated with check (public.has_permission(''users.manage''))', t);
     execute format('create policy "owner change" on public.%I for update to authenticated using (public.has_permission(''users.manage'')) with check (public.has_permission(''users.manage''))', t);
     execute format('create policy "owner remove" on public.%I for delete to authenticated using (public.has_permission(''users.manage''))', t);
+  end loop;
+
+  -- What can be booked, its prices and promotions: everyone reads, only
+  -- packages.manage writes. Deleting a package only marks it retired, so old
+  -- bookings keep its name; there is no delete policy to grant.
+  foreach t in array array['pool_sessions', 'exclusive_packages', 'units', 'promos', 'event_packages'] loop
+    execute format('alter table public.%I enable row level security', t);
+    execute format('create policy "staff read" on public.%I for select to authenticated using (public.is_staff())', t);
+    execute format('create policy "prices add" on public.%I for insert to authenticated with check (public.has_permission(''packages.manage''))', t);
+    execute format('create policy "prices change" on public.%I for update to authenticated using (public.has_permission(''packages.manage'')) with check (public.has_permission(''packages.manage''))', t);
   end loop;
 end $$;
 
@@ -316,7 +330,8 @@ revoke all on all tables in schema public from anon;
 
 alter publication supabase_realtime add table
   public.staff, public.invites, public.guests, public.bookings, public.payments,
-  public.expenses, public.events, public.inquiries, public.booking_links, public.activity_log;
+  public.expenses, public.events, public.inquiries, public.booking_links, public.activity_log,
+  public.pool_sessions, public.exclusive_packages, public.units, public.promos, public.event_packages;
 
 -- ---------- First owner ----------
 
@@ -342,7 +357,7 @@ begin
   insert into public.staff (id, name, email, role, permissions, status, user_id)
   values (
     new_id, owner_name, owner_email, 'owner',
-    '["bookings.write","payments.write","bookings.cancel","inbox.write","events.manage","discounts.apply","expenses.manage","users.manage"]',
+    '["bookings.write","payments.write","bookings.cancel","inbox.write","events.manage","discounts.apply","expenses.manage","packages.manage","users.manage"]',
     'active', auth_id
   )
   on conflict (id) do update

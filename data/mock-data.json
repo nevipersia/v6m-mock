@@ -8,7 +8,7 @@
     },
     "timezone": "Asia/Manila",
     "currency": "PHP",
-    "seed": 665709764,
+    "seed": 665709765,
     "rules": [
       "A unit holds one booking per night; exclusive events that are reserved, paid or done close the resort for the day.",
       "Regular bookings: per-head entrance for a session (day tour 8 AM–4 PM, night tour 2 PM–10 PM, overnight 3 PM–12 NN, overnight tour 6 PM–6 AM), plus cottages or rooms. Each session caps at 120 guests.",
@@ -50,6 +50,7 @@
         "events.manage",
         "discounts.apply",
         "expenses.manage",
+        "packages.manage",
         "users.manage"
       ],
       "status": "active",

@@ -4,7 +4,7 @@
 import { bookEvent } from '../../core/actions.js';
 
 import { html, type SafeHTML } from '../../core/dom.js';
-import { formatDate, formatTime, peso, plural } from '../../core/format.js';
+import { formatDate, peso, plural } from '../../core/format.js';
 import { STAGE_LABELS, findBooking, findGuest, findPackage, findStaff } from '../../core/rules.js';
 import type { EventStage, ResortEvent } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
@@ -57,8 +57,10 @@ export function render(ctx: DeskContext): SafeHTML {
     ${pageHead({
       title: 'Events',
       subtitle: `${plural(events.length, 'event')} in this period`,
-      actions: ctx.can('events.manage') ? html`
-        <button class="btn btn--primary" type="button" data-action="new-event">${icon('plus')} New event</button>` : '',
+      actions: html`
+        ${ctx.canView('packages') ? html`<a class="btn btn--secondary" href="#/packages">${icon('tag')} Packages and prices</a>` : ''}
+        ${ctx.can('events.manage') ? html`
+          <button class="btn btn--primary" type="button" data-action="new-event">${icon('plus')} New event</button>` : ''}`,
     })}
 
     ${events.length ? html`
@@ -74,39 +76,7 @@ export function render(ctx: DeskContext): SafeHTML {
               ${inStage.length ? inStage.map((event) => eventCard(ctx, event)) : html`<p class="pipeline__empty">None</p>`}
             </section>`;
         })}
-      </div>` : html`<div class="panel">${emptyState('No events in this period', 'Event bookings will show up here by stage.')}</div>`}
-
-    <section class="panel panel--flush packages">
-      <header class="panel__head panel__head--padded">
-        <h2 class="panel__title">Packages</h2>
-      </header>
-      <div class="table-scroll">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th scope="col">Package</th>
-              <th scope="col">Hours</th>
-              <th scope="col" class="num">Max guests</th>
-              <th scope="col">Venue</th>
-              <th scope="col" class="num">Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${state.eventPackages.map((pkg) => {
-              const [start = '', end = ''] = pkg.hours.split('-');
-              return html`
-                <tr>
-                  <td><strong>${pkg.name}</strong><span class="data-table__sub">${pkg.inclusions.join(' · ')}</span></td>
-                  <td>${formatTime(start)} – ${formatTime(end)}</td>
-                  <td class="num">${pkg.maxGuests}</td>
-                  <td>${pkg.exclusive ? 'Exclusive' : 'Shared'}</td>
-                  <td class="num">${peso(pkg.price)}</td>
-                </tr>`;
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>`;
+      </div>` : html`<div class="panel">${emptyState('No events in this period', 'Event bookings will show up here by stage.')}</div>`}`;
 }
 
 export const actions: HandlerMap = {

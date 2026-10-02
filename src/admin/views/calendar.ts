@@ -5,7 +5,7 @@
 import { $maybe, flag, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { addDays, formatDate, parseDate, peso, plural, timeOf, toISODate } from '../../core/format.js';
 import {
-  bookingWindow, closingEvent, exclusiveOn, exclusiveOverlapping, findSession, isActive, poolGuests, productLabel, unitBookingOn,
+  bookingWindow, closingEvent, exclusiveOn, exclusiveOverlapping, findSession, isActive, live, poolGuests, productLabel, unitBookingOn,
 } from '../../core/rules.js';
 import type { ISODate, State, Unit } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
@@ -110,7 +110,7 @@ function dayView(ctx: DeskContext, day: ISODate): SafeHTML {
       <section class="panel" data-part="What is still free">
         <header class="panel__head"><h2 class="panel__title">Availability</h2></header>
         <ul class="rows">
-          ${state.poolSessions.map((session) => {
+          ${live(state.poolSessions).map((session) => {
             const guests = poolGuests(state, day, session.id);
             const held = exclusiveOverlapping(state, bookingWindow(state, session.id, day));
             return html`
@@ -119,7 +119,7 @@ function dayView(ctx: DeskContext, day: ISODate): SafeHTML {
                 <span class="small muted">${held ? 'Exclusive' : plural(guests, 'guest')}</span>
               </li>`;
           })}
-          ${state.units.map((unit) => {
+          ${live(state.units).map((unit) => {
             const booking = unitBookingOn(state, unit.id, day);
             const held = exclusiveOverlapping(state, bookingWindow(state, unit.id, day));
             return html`
@@ -206,8 +206,8 @@ function weekView(ctx: DeskContext, days: ISODate[]): SafeHTML {
   const rows: GridRow[] = [
     { label: 'Events', cell: (day) => eventCell(ctx, day), alwaysShow: true },
     { label: 'Exclusive rental', cell: (day) => exclusiveCell(ctx, day) },
-    ...state.poolSessions.map((session): GridRow => ({ label: session.label, cell: (day) => poolCell(ctx, session.id, day) })),
-    ...state.units.map((unit): GridRow => ({ label: unit.name, cell: (day) => unitCell(ctx, unit, day) })),
+    ...live(state.poolSessions).map((session): GridRow => ({ label: session.label, cell: (day) => poolCell(ctx, session.id, day) })),
+    ...live(state.units).map((unit): GridRow => ({ label: unit.name, cell: (day) => unitCell(ctx, unit, day) })),
   ];
 
   const picked = pickedDay(state, days);

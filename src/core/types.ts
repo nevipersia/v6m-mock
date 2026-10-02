@@ -25,6 +25,7 @@ export type Permission =
   | 'events.manage'
   | 'discounts.apply'
   | 'expenses.manage'
+  | 'packages.manage'
   | 'users.manage';
 
 export interface Meta {
@@ -71,6 +72,8 @@ export interface PoolSession {
   photo?: string;
   /** The owner has not confirmed these entrance rates yet. */
   ratesToConfirm?: boolean;
+  /** Deleted from the Packages page: gone from every picker, kept so old bookings still read. */
+  retired?: boolean;
 }
 
 /** An exclusive rental from the brochure: while it is booked, nobody else is. */
@@ -85,6 +88,8 @@ export interface ExclusivePackage {
   price: number;
   maxGuests: number;
   photo?: string;
+  /** Deleted from the Packages page: gone from every picker, kept so old bookings still read. */
+  retired?: boolean;
 }
 
 export interface Unit {
@@ -101,6 +106,8 @@ export interface Unit {
   inclusions: string[];
   priceNote?: string;
   photo?: string | null;
+  /** Deleted from the Packages page: gone from every picker, kept so old bookings still read. */
+  retired?: boolean;
 }
 
 export interface Promo {
@@ -111,6 +118,7 @@ export interface Promo {
   validTo: ISODate;
   weekdays: number[];
   minPax: number;
+  /** The packages it runs on. A package is on at most one promotion. */
   appliesTo: string[];
   active: boolean;
   source: string;
@@ -124,6 +132,8 @@ export interface EventPackage {
   exclusive: boolean;
   hours: string;
   inclusions: string[];
+  /** Deleted from the Packages page: gone from every picker, kept so old bookings still read. */
+  retired?: boolean;
 }
 
 export interface SavedReply {

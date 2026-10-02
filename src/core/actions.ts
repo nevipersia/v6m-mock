@@ -7,12 +7,12 @@ import { guestListProblem } from './guest-list.js';
 import {
   DOWNPAYMENT_RATE, METHOD_LABELS, STAGE_LABELS, bookingWindow, checkAvailability, depositRequired, discountAmount,
   discountProblem, downpaymentDue, findBooking, findExclusive, findGuest, findPackage, findStaff, findUnit, isActive,
-  isEditable, productLabel, quote, sessionFor, type DiscountInput,
+  isEditable, findPromo, live, productLabel, quote, sessionFor, type DiscountInput,
 } from './rules.js';
 import { formatReference, referenceProblem } from './qr-payment.js';
 import type {
   Booking, BookingLink, BookingSource, Companion, EventPackage, EventStage, Expense, ExpenseCategory, ExtraCharge, Guest,
-  ISODate, Inquiry, Invite, Payment, PaymentMethod, Permission, PriceLine, ResortEvent, Role, Staff, StaffStatus, State,
+  ISODate, Inquiry, Invite, Payment, PaymentMethod, Permission, PriceLine, Promo, ResortEvent, Role, Staff, StaffStatus, State,
   Timestamp,
 } from './types.js';
 
@@ -535,7 +535,11 @@ function makeEventBooking(state: State, event: ResortEvent, contactName: string,
     { label: pkg.name, qty: 1, unitPrice: event.packagePrice, amount: event.packagePrice },
     ...event.addOns.map((addOn) => ({ label: addOn.item, qty: 1, unitPrice: addOn.amount, amount: addOn.amount })),
   ];
-  const total = lines.reduce((sum, line) => sum + line.amount, 0);
+  const subtotal = lines.reduce((sum, line) => sum + line.amount, 0);
+  // An event package's promotion takes its percent off the whole event, as it does for a stay.
+  const promo = findPromo(state, { product: pkg.id, date: event.date, guests: event.guests });
+  const promoOff = promo ? Math.round((subtotal * promo.percent) / 100) : 0;
+  const total = subtotal - promoOff;
   const window = eventWindow(pkg, event.date);
 
   const booking: Booking = {
@@ -554,7 +558,7 @@ function makeEventBooking(state: State, event: ResortEvent, contactName: string,
     pets: null,
     source: 'messenger',
     status: 'hold',
-    pricing: { lines, subtotal: total, promoId: null, discount: 0, total },
+    pricing: { lines, subtotal, promoId: promo?.id ?? null, discount: promoOff, total },
     total,
     depositRequired: Math.ceil(total * DOWNPAYMENT_RATE),
     paid: 0,
@@ -953,7 +957,7 @@ export function guestBookingInput(raw: unknown): GuestBooking {
 }
 
 const isGuestProduct = (state: State, product: string): boolean =>
-  state.poolSessions.some((session) => session.id === product) || Boolean(findUnit(state, product)) || Boolean(findExclusive(state, product));
+  [...live(state.poolSessions), ...live(state.units), ...live(state.exclusivePackages)].some((item) => item.id === product);
 
 /**
  * Everything a guest's booking must satisfy, checked on the booking page and
@@ -999,5 +1003,273 @@ export function useBookingLink(code: string, raw: GuestBooking): BookingLinkResu
     link.usedAt = demoNow(state);
     logActivity(state, link.createdBy, 'link.used', link.id, `${booking.guestName} · ${booking.id}`);
     return { booking, link };
+  });
+}
+
+// ---------- Packages and promotions ----------
+//
+// Everything that can be booked — entrance sessions, rooms and cottages,
+// exclusive rentals and event packages — and the promotions that run on them.
+// A package is on at most one promotion. Deleting a package retires it: it
+// leaves every picker and page, but old bookings still find its name.
+
+export type PackageKind = 'entrance' | 'unit' | 'exclusive' | 'event';
+
+/** One form for every kind; each kind reads only its own fields. */
+export interface PackageDraft {
+  kind: PackageKind;
+  /** Set when editing; empty when adding. */
+  id: string;
+  name: string;
+  /** Adult entrance for a session; the price for everything else. */
+  price: number;
+  /** Kid entrance (sessions). */
+  kid: number;
+  /** Opening hours: a session's, an exclusive rental's or an event's. */
+  start: string;
+  end: string;
+  /** How many guests the pool takes (sessions), or the most a package allows. */
+  maxGuests: number;
+  /** Rooms and cottages. */
+  unitKind: 'room' | 'cottage';
+  minGuests: number;
+  checkIn: string;
+  checkOut: string;
+  /** The entrance session a room or cottage comes with. */
+  session: string;
+  addsEntrance: boolean;
+  /** One per line: what a room, cottage or event comes with. */
+  inclusions: string;
+  priceNote: string;
+  /** Exclusive rentals. */
+  exclusiveSession: 'day' | 'overnight';
+  use: 'full' | 'partial' | 'cottages';
+  includes: string;
+  /** Events: the whole resort, or shared with other guests. */
+  exclusive: boolean;
+  /** The one promotion it is on, or '' for none. */
+  promoId: string;
+}
+
+export type PackageResult = { id: string } | { error: string };
+
+const PACKAGE_WORD: Record<PackageKind, string> = {
+  entrance: 'entrance', unit: 'room or cottage', exclusive: 'exclusive rental', event: 'event package',
+};
+
+const canManagePackages = (state: State, staffId: string): boolean =>
+  !!findStaff(state, staffId)?.permissions.includes('packages.manage');
+
+const listOf = (value: string): string[] => value.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
+const isTime = (value: string): boolean => /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+
+/** A form filled from a package, or blank for a new one of that kind. */
+export function packageDraft(state: State, kind: PackageKind, id = ''): PackageDraft {
+  const blank: PackageDraft = {
+    kind, id: '', name: '', price: 0, kid: 0, start: '08:00', end: '17:00', maxGuests: 0,
+    unitKind: 'cottage', minGuests: 1, checkIn: '08:00', checkOut: '17:00',
+    session: live(state.poolSessions)[0]?.id ?? '', addsEntrance: true, inclusions: '', priceNote: '',
+    exclusiveSession: 'day', use: 'full', includes: '', exclusive: true, promoId: '',
+  };
+  const promoId = id ? state.promos.find((promo) => promo.appliesTo.includes(id))?.id ?? '' : '';
+  if (kind === 'entrance') {
+    const item = state.poolSessions.find((one) => one.id === id);
+    return item ? { ...blank, id, name: item.label, price: item.adult, kid: item.kid, start: item.start, end: item.end, maxGuests: item.capacity, promoId } : blank;
+  }
+  if (kind === 'unit') {
+    const item = findUnit(state, id);
+    return item ? {
+      ...blank, id, name: item.name, price: item.price, unitKind: item.kind, minGuests: item.capacityMin, maxGuests: item.capacityMax,
+      checkIn: item.checkIn, checkOut: item.checkOut, session: item.session, addsEntrance: item.addsEntrance,
+      inclusions: item.inclusions.join('\n'), priceNote: item.priceNote ?? '', promoId,
+    } : blank;
+  }
+  if (kind === 'exclusive') {
+    const item = findExclusive(state, id);
+    return item ? {
+      ...blank, id, name: item.name, price: item.price, exclusiveSession: item.session, use: item.use, includes: item.includes,
+      start: item.start, end: item.end, maxGuests: item.maxGuests, promoId,
+    } : blank;
+  }
+  const item = findPackage(state, id);
+  const [start = '08:00', end = '17:00'] = item?.hours.split('-') ?? [];
+  return item ? {
+    ...blank, id, name: item.name, price: item.price, maxGuests: item.maxGuests, exclusive: item.exclusive,
+    start, end, inclusions: item.inclusions.join('\n'), promoId,
+  } : blank;
+}
+
+/** What is wrong with a package form, or '' when it can be saved. */
+export function packageProblem(state: State, draft: PackageDraft): string {
+  if (!draft.name.trim()) return 'Give it a name.';
+  if (!(draft.price > 0)) return draft.kind === 'entrance' ? 'Enter the adult rate.' : 'Enter a price above zero.';
+  if (draft.kind === 'entrance' && draft.kid < 0) return 'The kid rate cannot be below zero.';
+  if (draft.kind !== 'unit' && (!isTime(draft.start) || !isTime(draft.end))) return 'Enter the start and end times.';
+  if (draft.kind === 'unit') {
+    if (!isTime(draft.checkIn) || !isTime(draft.checkOut)) return 'Enter the check-in and check-out times.';
+    if (!(draft.minGuests >= 1)) return 'It takes at least one guest.';
+    if (draft.maxGuests < draft.minGuests) return 'The most guests cannot be fewer than the fewest.';
+    if (!live(state.poolSessions).some((session) => session.id === draft.session)) return 'Pick the entrance it comes with.';
+  } else if (!(draft.maxGuests >= 1)) {
+    return draft.kind === 'entrance' ? 'Enter how many guests the pool takes.' : 'Enter the most guests it allows.';
+  }
+  if (draft.kind === 'exclusive' && !draft.includes.trim()) return 'Say what the rental includes.';
+  if (draft.promoId && !state.promos.some((promo) => promo.id === draft.promoId)) return 'That promotion is no longer there.';
+  return '';
+}
+
+/** Puts a package on one promotion, taking it off any other, or off all of them. */
+function setPromo(state: State, packageId: string, promoId: string): void {
+  for (const promo of state.promos) {
+    promo.appliesTo = promo.appliesTo.filter((id) => id !== packageId);
+    if (promo.id === promoId) promo.appliesTo.push(packageId);
+  }
+}
+
+export function savePackage(draft: PackageDraft, staffId: string): PackageResult {
+  return update((state): PackageResult => {
+    if (!canManagePackages(state, staffId)) return { error: 'Your account cannot change packages.' };
+    const problem = packageProblem(state, draft);
+    if (problem) return { error: problem };
+    const name = draft.name.trim();
+    const adding = !draft.id;
+    let id = draft.id;
+
+    if (draft.kind === 'entrance') {
+      const fields = { label: name, adult: draft.price, kid: draft.kid, start: draft.start, end: draft.end, capacity: draft.maxGuests };
+      const item = state.poolSessions.find((one) => one.id === id);
+      if (item) Object.assign(item, fields);
+      else state.poolSessions.push({ id: (id = nextId(state.poolSessions, 'SES')), ...fields });
+    } else if (draft.kind === 'unit') {
+      const fields = {
+        name, kind: draft.unitKind, price: draft.price, capacityMin: draft.minGuests, capacityMax: draft.maxGuests,
+        checkIn: draft.checkIn, checkOut: draft.checkOut, session: draft.session, addsEntrance: draft.addsEntrance,
+        inclusions: listOf(draft.inclusions),
+      };
+      const note = draft.priceNote.trim();
+      const item = findUnit(state, id);
+      if (item) {
+        Object.assign(item, fields);
+        if (note) item.priceNote = note;
+        else delete item.priceNote;
+      } else {
+        state.units.push({ id: (id = nextId(state.units, 'UNIT')), ...fields, ...(note ? { priceNote: note } : {}) });
+      }
+    } else if (draft.kind === 'exclusive') {
+      const fields = {
+        name, session: draft.exclusiveSession, use: draft.use, includes: draft.includes.trim(),
+        start: draft.start, end: draft.end, price: draft.price, maxGuests: draft.maxGuests,
+      };
+      const item = findExclusive(state, id);
+      if (item) Object.assign(item, fields);
+      else state.exclusivePackages.push({ id: (id = nextId(state.exclusivePackages, 'EX')), ...fields });
+    } else {
+      const fields = {
+        name, price: draft.price, maxGuests: draft.maxGuests, exclusive: draft.exclusive,
+        hours: `${draft.start}-${draft.end}`, inclusions: listOf(draft.inclusions),
+      };
+      const item = findPackage(state, id);
+      if (item) Object.assign(item, fields);
+      else state.eventPackages.push({ id: (id = nextId(state.eventPackages, 'PKG')), ...fields });
+    }
+
+    setPromo(state, id, draft.promoId);
+    logActivity(state, staffId, adding ? 'package.added' : 'package.updated', id, `${name} · ${peso(draft.price)}`);
+    return { id };
+  });
+}
+
+/**
+ * Why a package cannot go yet — upcoming bookings, open booking links, events
+ * still to come, or rooms that sell its entrance — or '' when it can.
+ */
+export function packageInUse(state: State, kind: PackageKind, id: string): string {
+  const today = state.meta.asOf;
+  if (kind === 'event') {
+    const events = state.events.filter((event) => event.packageId === id && event.date >= today && event.stage !== 'done').length;
+    return events ? `${plural(events, 'upcoming event')} ${events === 1 ? 'uses' : 'use'} it.` : '';
+  }
+  const bookings = state.bookings.filter((b) => b.product === id && isActive(b) && b.status !== 'checked_out' && b.date >= today).length;
+  if (bookings) return `${plural(bookings, 'upcoming booking')} ${bookings === 1 ? 'is' : 'are'} for it.`;
+  const links = state.bookingLinks.filter((link) => link.product === id && link.status === 'sent' && link.expiresAt >= today).length;
+  if (links) return `${plural(links, 'booking link')} still ${links === 1 ? 'offers' : 'offer'} it.`;
+  if (kind === 'entrance') {
+    const units = live(state.units).filter((unit) => unit.session === id).map((unit) => unit.name);
+    if (units.length) return `${units.join(', ')} ${units.length === 1 ? 'comes' : 'come'} with this entrance.`;
+  }
+  return '';
+}
+
+export function deletePackage(kind: PackageKind, id: string, staffId: string): PackageResult {
+  return update((state): PackageResult => {
+    if (!canManagePackages(state, staffId)) return { error: 'Your account cannot change packages.' };
+    const item = kind === 'entrance' ? state.poolSessions.find((one) => one.id === id)
+      : kind === 'unit' ? findUnit(state, id)
+        : kind === 'exclusive' ? findExclusive(state, id)
+          : findPackage(state, id);
+    if (!item || item.retired) return { error: `That ${PACKAGE_WORD[kind]} is no longer there.` };
+    const busy = packageInUse(state, kind, id);
+    if (busy) return { error: `Cannot delete it yet: ${busy}` };
+
+    item.retired = true;
+    setPromo(state, id, '');
+    logActivity(state, staffId, 'package.deleted', id, 'label' in item ? item.label : item.name);
+    return { id };
+  });
+}
+
+export interface PromoDraft {
+  id: string;
+  name: string;
+  percent: number;
+  validFrom: ISODate;
+  validTo: ISODate;
+  /** 0 Sunday … 6 Saturday. */
+  weekdays: number[];
+  minPax: number;
+  active: boolean;
+}
+
+export type PromoResult = { promo: Promo } | { error: string };
+
+export function promoDraft(state: State, id = ''): PromoDraft {
+  const promo = state.promos.find((item) => item.id === id);
+  if (promo) {
+    return {
+      id: promo.id, name: promo.name, percent: promo.percent, validFrom: promo.validFrom, validTo: promo.validTo,
+      weekdays: [...promo.weekdays], minPax: promo.minPax, active: promo.active,
+    };
+  }
+  const today = state.meta.asOf;
+  return { id: '', name: '', percent: 10, validFrom: today, validTo: addDays(today, 30), weekdays: [0, 1, 2, 3, 4, 5, 6], minPax: 0, active: true };
+}
+
+export function promoProblem(draft: PromoDraft): string {
+  if (!draft.name.trim()) return 'Give the promotion a name.';
+  if (!(draft.percent >= 1 && draft.percent <= 100)) return 'Enter a percent from 1 to 100.';
+  if (!draft.validFrom || !draft.validTo) return 'Enter the first and last day it runs.';
+  if (draft.validTo < draft.validFrom) return 'The last day cannot be before the first.';
+  if (!draft.weekdays.length) return 'Pick at least one day of the week.';
+  if (draft.minPax < 0) return 'The fewest guests cannot be below zero.';
+  return '';
+}
+
+export function savePromo(draft: PromoDraft, staffId: string): PromoResult {
+  return update((state): PromoResult => {
+    if (!canManagePackages(state, staffId)) return { error: 'Your account cannot change promotions.' };
+    const problem = promoProblem(draft);
+    if (problem) return { error: problem };
+    const fields = {
+      name: draft.name.trim(), percent: Math.round(draft.percent), validFrom: draft.validFrom, validTo: draft.validTo,
+      weekdays: [...new Set(draft.weekdays)].sort((a, b) => a - b), minPax: Math.round(draft.minPax), active: draft.active,
+    };
+    let promo = state.promos.find((item) => item.id === draft.id);
+    if (promo) Object.assign(promo, fields);
+    else {
+      promo = { id: nextId(state.promos, 'PR'), ...fields, appliesTo: [], source: 'Added on the Packages page' };
+      state.promos.push(promo);
+    }
+    logActivity(state, staffId, draft.id ? 'promo.updated' : 'promo.added', promo.id, `${promo.name} · ${promo.percent}% off`);
+    return { promo };
   });
 }
