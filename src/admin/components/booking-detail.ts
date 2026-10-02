@@ -577,12 +577,16 @@ export function createBookingDetail(bookingId: string): DrawerContent {
           return;
         }
         ui.errors = {};
+        // Paying an event off moves it along on the Events page; say so.
+        const paysOffEvent = amount === booking.balance
+          ? ctx.state.events.find((item) => item.bookingId === bookingId && item.stage !== 'done')
+          : undefined;
         recordPayment(bookingId, {
           amount,
           method: value('method') as PaymentMethod,
           reference: value('reference').trim(),
         }, ctx.staff.id);
-        ctx.toast(`${peso(amount)} recorded for ${booking.guestName}`);
+        ctx.toast(`${peso(amount)} recorded for ${booking.guestName}${paysOffEvent ? ` · ${paysOffEvent.title} moved to Paid` : ''}`);
       },
 
       'ask-cancel': ({ redraw }) => {

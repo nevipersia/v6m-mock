@@ -96,6 +96,23 @@ interface PaymentInput {
  * Records a payment. A booking on hold only becomes confirmed once the 50%
  * downpayment is met; anything less stays on hold as a partial payment.
  */
+/**
+ * Keeps an event's stage in step with its booking's money: paid in full moves
+ * it to Paid, and a balance coming back (a discount taken off, a price raised)
+ * moves it back to Reserved. Done is left alone; the event has happened.
+ */
+function syncEventStage(state: State, booking: Booking, staffId: string | null): void {
+  const event = state.events.find((item) => item.bookingId === booking.id);
+  if (!event || event.stage === 'done' || !isActive(booking)) return;
+  if (booking.balance <= 0 && event.stage !== 'paid') {
+    event.stage = 'paid';
+    logActivity(state, staffId, 'event.paid', event.id, `${event.title} · paid in full`);
+  } else if (booking.balance > 0 && event.stage === 'paid') {
+    event.stage = 'reserved';
+    logActivity(state, staffId, 'event.reserved', event.id, `${event.title} · ${peso(booking.balance)} still owed`);
+  }
+}
+
 function applyPayment(state: State, booking: Booking, { amount, method, reference, via = 'desk', sentTime, senderName }: PaymentInput, staffId: string | null): Payment {
   const type = booking.paid === 0 && amount >= booking.total ? 'full' : booking.paid < booking.depositRequired ? 'deposit' : 'balance';
   const payment: Payment = {
@@ -120,6 +137,7 @@ function applyPayment(state: State, booking: Booking, { amount, method, referenc
   const how = via === 'qr' ? 'GCash QR, verified' : METHOD_LABELS[method];
   logActivity(state, staffId, 'payment.recorded', booking.id, `${peso(amount)} ${how} (${type})`);
   if (confirmed) logActivity(state, staffId, 'booking.confirmed', booking.id, 'Downpayment met');
+  syncEventStage(state, booking, staffId);
   return payment;
 }
 
@@ -175,6 +193,7 @@ function reprice(state: State, booking: Booking, staffId: string): void {
     booking.status = 'hold';
     logActivity(state, staffId, 'booking.unconfirmed', booking.id, `${peso(downpaymentDue(booking))} short of the downpayment after the price changed`);
   }
+  syncEventStage(state, booking, staffId);
 }
 
 /** Records the discount on the booking; the caller has already checked it. */

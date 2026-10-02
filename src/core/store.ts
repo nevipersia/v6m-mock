@@ -37,6 +37,9 @@ function normalize(loaded: State): State {
   for (const event of loaded.events ?? []) {
     if ((event.stage as string) === 'ocular') event.stage = 'inquiry';
     delete (event as { ocularDate?: string }).ocularDate;
+    // Paid in full before payments moved events along: catch it up.
+    const booking = loaded.bookings?.find((item) => item.id === event.bookingId);
+    if (booking && event.stage === 'reserved' && booking.balance <= 0 && booking.status !== 'cancelled') event.stage = 'paid';
   }
   // A package is on at most one promotion. Where older data lists it on
   // several, the one that is switched on keeps it (else the first), so the

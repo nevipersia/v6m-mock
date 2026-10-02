@@ -253,7 +253,8 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   The ocular visit stage and date were dropped; `normalize` turns an old `ocular` event into an
   inquiry. Each stage is a dashboard-style card that opens `components/stage-summary.ts` in the
   side panel (events, guests, worth, paid, owed, then each event); a booked event card opens its
-  booking from anywhere on it.
+  booking from anywhere on it. `syncEventStage` in `core/actions.ts` moves an event to Paid when its
+  booking's balance reaches zero (any payment or reprice) and back to Reserved if a balance returns.
 - Alerts (`components/toast.ts`, `ctx.toast(message, tone)`): a card in the top right for every
   change (bottom right, beside the jump buttons), success by default, `info` for copies and downloads, `warning` for cancellations,
   removals and revoked access, `error` for anything that failed. They stack (four at most), drain
