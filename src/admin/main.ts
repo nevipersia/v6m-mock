@@ -10,6 +10,7 @@ import { createBookingForm } from './components/booking-form.js';
 import { createEventForm } from './components/event-form.js';
 import { createExpenseForm } from './components/expense-form.js';
 import { createGuestSummary } from './components/guest-summary.js';
+import { createStageSummary } from './components/stage-summary.js';
 import { createPackageForm, createPromoForm } from './components/package-form.js';
 import { markEntering } from './components/motion.js';
 import { setFieldsToday, startFields } from './components/fields.js';
@@ -58,6 +59,7 @@ function buildContext(state: State, staff: Staff): DeskContext {
     newEvent: () => openDrawer(createEventForm(), ctx),
     newExpense: (expense) => openDrawer(createExpenseForm(expense), ctx),
     openGuests: (group) => openDrawer(createGuestSummary(group), ctx),
+    openStage: (stage) => openDrawer(createStageSummary(stage), ctx),
     editPackage: (kind, id = '', confirmDelete = false) => openDrawer(createPackageForm(kind, id, { confirmDelete }), ctx),
     editPromo: (id = '') => openDrawer(createPromoForm(id), ctx),
     closeDrawer,

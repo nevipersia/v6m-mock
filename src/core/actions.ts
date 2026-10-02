@@ -502,7 +502,6 @@ export interface NewEvent {
   contactName: string;
   contactMobile: string;
   coordinatorId: string;
-  ocularDate: ISODate;
   notes: string;
   /** Recorded against the booking, for events that are already reserved. */
   deposit: number;
@@ -630,7 +629,6 @@ export function createEvent(input: NewEvent, staffId: string): EventResult {
       stage: input.stage,
       contactGuestId: contact.id,
       coordinatorId: input.coordinatorId || staffId,
-      ocularDate: input.ocularDate || input.date,
       bookingId: null,
       notes: input.notes.trim() || null,
     };
@@ -666,7 +664,7 @@ export function bookEvent(eventId: string, staffId: string): EventResult {
     const booking = makeEventBooking(state, event, contact?.name ?? event.title, staffId);
     event.bookingId = booking.id;
     event.blocksCalendar = event.exclusive;
-    if (event.stage === 'inquiry' || event.stage === 'ocular') event.stage = 'reserved';
+    if (event.stage === 'inquiry') event.stage = 'reserved';
     logActivity(state, staffId, 'event.booked', event.id, `${event.title} · ${peso(booking.total)}`);
     return { event, booking };
   });

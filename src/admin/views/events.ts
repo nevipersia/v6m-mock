@@ -1,7 +1,7 @@
-// Events: private events by stage, plus the package price list. Staff add one
-// here; it takes the date once it is reserved.
-
-import { bookEvent } from '../../core/actions.js';
+// Events: private events by stage. Each stage is a card, like the dashboard's,
+// that opens a summary of its events; each event card opens its booking. Staff
+// add events here; one takes the date once it is reserved. Prices live on the
+// Packages page.
 
 import { html, type SafeHTML } from '../../core/dom.js';
 import { formatDate, peso, plural } from '../../core/format.js';
@@ -10,8 +10,9 @@ import type { EventStage, ResortEvent } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { icon } from '../components/icons.js';
 import { emptyState, pageHead } from '../layout.js';
+import { bookAndOpen, stageMoney } from '../components/stage-summary.js';
 
-const STAGES: EventStage[] = ['inquiry', 'ocular', 'reserved', 'paid', 'done'];
+const STAGES: EventStage[] = ['inquiry', 'reserved', 'paid', 'done'];
 
 function eventCard(ctx: DeskContext, event: ResortEvent): SafeHTML {
   const { state } = ctx;
@@ -22,7 +23,7 @@ function eventCard(ctx: DeskContext, event: ResortEvent): SafeHTML {
   const paidPercent = booking ? Math.min(100, Math.round((booking.paid / booking.total) * 100)) : 0;
 
   return html`
-    <article class="event-card">
+    <article class="event-card ${booking ? 'event-card--opens' : ''}" ${booking ? html`data-action="open-booking" data-id="${booking.id}" title="Open the booking"` : ''}>
       <p class="event-card__date">${formatDate(event.date, 'long')}</p>
       <h3 class="event-card__title">${event.title}</h3>
       <p class="small muted">${pkg?.name ?? 'Custom package'} · ${plural(event.guests, 'guest')}${event.exclusive ? ' · closes resort' : ''}</p>
@@ -33,7 +34,7 @@ function eventCard(ctx: DeskContext, event: ResortEvent): SafeHTML {
           <span class="small"><strong>${peso(booking.paid)}</strong> of ${peso(booking.total)} paid</span>
           <span class="meter" role="img" aria-label="${paidPercent}% paid"><span style="width:${paidPercent}%"></span></span>
         </div>` : html`
-        <p class="small muted">No booking yet. Ocular visit ${event.ocularDate > state.meta.asOf ? 'on' : 'was'} ${formatDate(event.ocularDate)}.</p>`}
+        <p class="small muted">No booking yet.</p>`}
 
       ${event.notes ? html`<p class="event-card__note">${event.notes}</p>` : ''}
 
@@ -68,12 +69,18 @@ export function render(ctx: DeskContext): SafeHTML {
         ${usedStages.map((stage) => {
           const inStage = events.filter((event) => event.stage === stage);
           return html`
-            <section class="pipeline__column" aria-label="${STAGE_LABELS[stage]}">
-              <header class="pipeline__head">
-                <h2 class="pipeline__title">${STAGE_LABELS[stage]}</h2>
-                <span class="panel__count">${inStage.length}</span>
-              </header>
-              ${inStage.length ? inStage.map((event) => eventCard(ctx, event)) : html`<p class="pipeline__empty">None</p>`}
+            <section class="pipeline__column" aria-label="${STAGE_LABELS[stage]}" data-action="open-stage" data-stage="${stage}">
+              <button class="pipeline__head" type="button" data-action="open-stage" data-stage="${stage}" title="See every ${STAGE_LABELS[stage].toLowerCase()} event">
+                <span class="pipeline__title-row">
+                  <span class="pipeline__title">${STAGE_LABELS[stage]}</span>
+                  <span class="panel__count">${inStage.length}</span>
+                </span>
+                <span class="pipeline__sum">
+                  ${inStage.length ? `${peso(stageMoney(state, inStage).worth)} · ${plural(inStage.reduce((sum, event) => sum + event.guests, 0), 'guest')}` : 'Nothing here yet'}
+                  ${icon('arrowRight')}
+                </span>
+              </button>
+              ${inStage.map((event) => eventCard(ctx, event))}
             </section>`;
         })}
       </div>` : html`<div class="panel">${emptyState('No events in this period', 'Event bookings will show up here by stage.')}</div>`}`;
@@ -82,13 +89,10 @@ export function render(ctx: DeskContext): SafeHTML {
 export const actions: HandlerMap = {
   'new-event': ({ ctx }) => ctx.newEvent(),
 
-  'book-event': ({ el, ctx }) => {
-    const result = bookEvent(el.dataset.id ?? '', ctx.staff.id);
-    if (result.error !== undefined) {
-      ctx.toast(result.error, 'error');
-      return;
-    }
-    ctx.toast(`${result.event.title} booked · ${peso(result.booking?.total ?? 0)} · on hold until the downpayment`);
-    if (result.booking) ctx.openBooking(result.booking.id);
+  'book-event': ({ el, ctx }) => bookAndOpen(el.dataset.id ?? '', ctx),
+
+  'open-stage': ({ el, ctx }) => {
+    const stage = el.dataset.stage as EventStage | undefined;
+    if (stage && STAGES.includes(stage)) ctx.openStage(stage);
   },
 };

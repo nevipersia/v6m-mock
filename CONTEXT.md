@@ -249,6 +249,11 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   still use it. Event packages now take their promotion when an event is booked, like stays do.
   Supabase: the five catalog tables are written under `packages.manage` (not `users.manage`), have a
   `retired` column, no delete policy, and are in the realtime publication.
+- Events has three stages on screen — Reserved, Paid, Done (Inquiry shows only when one waits).
+  The ocular visit stage and date were dropped; `normalize` turns an old `ocular` event into an
+  inquiry. Each stage is a dashboard-style card that opens `components/stage-summary.ts` in the
+  side panel (events, guests, worth, paid, owed, then each event); a booked event card opens its
+  booking from anywhere on it.
 - Alerts (`components/toast.ts`, `ctx.toast(message, tone)`): a card in the top right for every
   change (bottom right, beside the jump buttons), success by default, `info` for copies and downloads, `warning` for cancellations,
   removals and revoked access, `error` for anything that failed. They stack (four at most), drain

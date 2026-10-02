@@ -18,7 +18,6 @@ const STATUS_TONES: Record<BookingStatus, Tone> = {
 
 const STAGE_TONES: Record<EventStage, Tone> = {
   inquiry: 'neutral',
-  ocular: 'warning',
   reserved: 'info',
   paid: 'success',
   done: 'neutral',

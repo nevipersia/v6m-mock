@@ -211,10 +211,9 @@ create table public.events (
   guests integer not null default 0,
   exclusive boolean not null default false,
   blocks_calendar boolean not null default false,
-  stage text not null check (stage in ('inquiry', 'ocular', 'reserved', 'paid', 'done')),
+  stage text not null check (stage in ('inquiry', 'reserved', 'paid', 'done')),
   contact_guest_id text not null,
   coordinator_id text not null,
-  ocular_date date,
   booking_id text,
   notes text
 );

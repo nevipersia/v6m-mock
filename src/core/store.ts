@@ -32,6 +32,12 @@ function normalize(loaded: State): State {
   loaded.bookingLinks ??= [];
   loaded.invites ??= [];
   loaded.expenses ??= [];
+  // The ocular visit stage and its date were dropped: an event still at that
+  // stage is an inquiry until it is reserved.
+  for (const event of loaded.events ?? []) {
+    if ((event.stage as string) === 'ocular') event.stage = 'inquiry';
+    delete (event as { ocularDate?: string }).ocularDate;
+  }
   // A package is on at most one promotion. Where older data lists it on
   // several, the one that is switched on keeps it (else the first), so the
   // price a guest is quoted does not change.

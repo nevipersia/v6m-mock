@@ -9,7 +9,7 @@ export type BookingStatus = 'hold' | 'confirmed' | 'checked_in' | 'checked_out' 
 export type BookingSource = 'messenger' | 'instagram' | 'phone' | 'website' | 'walk_in' | 'booking_link';
 export type PaymentMethod = 'cash' | 'gcash' | 'bank_transfer';
 export type PaymentType = 'deposit' | 'balance' | 'full';
-export type EventStage = 'inquiry' | 'ocular' | 'reserved' | 'paid' | 'done';
+export type EventStage = 'inquiry' | 'reserved' | 'paid' | 'done';
 export type UnitKind = 'room' | 'cottage';
 export type ProductType = 'entrance' | UnitKind | 'exclusive' | 'event';
 export type InquiryStatus = 'new' | 'replied' | 'booked' | 'lost';
@@ -273,7 +273,6 @@ export interface ResortEvent {
   stage: EventStage;
   contactGuestId: string;
   coordinatorId: string;
-  ocularDate: ISODate;
   bookingId: string | null;
   notes: string | null;
 }

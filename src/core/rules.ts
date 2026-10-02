@@ -32,7 +32,6 @@ export const METHOD_LABELS: Record<PaymentMethod, string> = {
 
 export const STAGE_LABELS: Record<EventStage, string> = {
   inquiry: 'Inquiry',
-  ocular: 'Ocular visit',
   reserved: 'Reserved',
   paid: 'Paid',
   done: 'Done',

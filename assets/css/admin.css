@@ -1728,15 +1728,70 @@ button.cal-pool:hover {
   border-radius: var(--radius-lg);
 }
 
+/* Each stage is a card like the dashboard's: it lifts, and opens its summary. */
+.pipeline__column {
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.2, 0.75, 0.25, 1), box-shadow 0.2s ease, background-color 0.15s ease;
+}
+
+.pipeline__column:hover {
+  background: #EFE3CC;
+  box-shadow: 0 10px 24px rgba(31, 45, 92, 0.1);
+  transform: translateY(-3px);
+}
+
 .pipeline__head {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 2px 4px 4px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pipeline__title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 4px;
 }
 
 .pipeline__title {
-  font-size: 16px;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.pipeline__sum {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.pipeline__sum .icon {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.pipeline__column:hover .pipeline__sum .icon {
+  transform: translateX(3px);
+}
+
+/* A booked event card opens its booking from anywhere on it. */
+.event-card--opens {
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.event-card--opens:hover {
+  box-shadow: 0 8px 18px rgba(31, 45, 92, 0.12);
+  transform: translateY(-2px);
 }
 
 .pipeline__head .panel__count {

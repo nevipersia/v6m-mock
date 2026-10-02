@@ -8,7 +8,7 @@ import { DOWNPAYMENT_PERCENT, METHOD_LABELS, STAGE_LABELS, closingEvent, findPac
 import type { EventStage, PaymentMethod, State } from '../../core/types.js';
 import { asField, type DrawerContent } from '../types.js';
 
-const STAGES: EventStage[] = ['inquiry', 'ocular', 'reserved', 'paid'];
+const STAGES: EventStage[] = ['inquiry', 'reserved', 'paid'];
 const METHODS: PaymentMethod[] = ['gcash', 'cash', 'bank_transfer'];
 
 /** Stages that take the date: these write a booking as well as the event. */
@@ -31,7 +31,6 @@ function initialDraft(state: State): Draft {
     contactName: '',
     contactMobile: '',
     coordinatorId: '',
-    ocularDate: '',
     notes: '',
     deposit: 0,
     method: 'gcash',
@@ -168,18 +167,12 @@ export function createEventForm(): DrawerContent {
 
           <fieldset class="form-section">
             <legend class="form-section__title">Where it stands</legend>
-            <div class="form-grid">
-              <label class="field">
-                <span class="field__label">Stage</span>
-                <select class="input" name="stage" data-input="field">
-                  ${STAGES.map((stage) => option(stage, STAGE_LABELS[stage], form.stage))}
-                </select>
-              </label>
-              <label class="field">
-                <span class="field__label">Ocular visit (optional)</span>
-                <input class="input" name="ocularDate" data-input="field" data-optional type="date" value="${form.ocularDate}">
-              </label>
-            </div>
+            <label class="field">
+              <span class="field__label">Stage</span>
+              <select class="input" name="stage" data-input="field">
+                ${STAGES.map((stage) => option(stage, STAGE_LABELS[stage], form.stage))}
+              </select>
+            </label>
             <label class="field">
               <span class="field__label">Notes (optional)</span>
               <input class="input" name="notes" data-input="field" value="${form.notes}" placeholder="Program starts 6 PM">

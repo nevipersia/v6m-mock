@@ -2,7 +2,7 @@
 
 import type { SafeHTML, TemplateValue } from '../core/dom.js';
 import type { PackageKind } from '../core/actions.js';
-import type { Expense, Permission, Staff, State } from '../core/types.js';
+import type { EventStage, Expense, Permission, Staff, State } from '../core/types.js';
 import type { IconName } from './components/icons.js';
 import type { AlertTone } from './components/toast.js';
 
@@ -37,6 +37,8 @@ export interface DeskContext {
   editPackage: (kind: PackageKind, id?: string, confirmDelete?: boolean) => void;
   /** Add a promotion, or edit one, on its own. */
   editPromo: (id?: string) => void;
+  /** The events at one stage, in the side panel. */
+  openStage: (stage: EventStage) => void;
   /** Who is arriving today, or who is checked in now, in the side panel. */
   openGuests: (group: 'arriving' | 'inhouse') => void;
   closeDrawer: () => void;
