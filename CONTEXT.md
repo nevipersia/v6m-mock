@@ -262,6 +262,10 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 - An event saved at the Inquiry stage needs only its date (always filled in): name, contact and
   guests may be blank (`createEvent` names it "<contact> inquiry" or "Event inquiry", leaves
   `contactGuestId` empty, and cards say "guests not set"). Reserved and Paid still require them.
+- Inquiries are edited in the same drawer (`createEventForm(eventId)`, `ctx.editEvent`): clicking an
+  unbooked event card, its Edit button, or its row in the Inquiry stage summary opens it.
+  `updateEvent` shares `eventProblem` / `eventFields` / `bookIfTaken` with `createEvent`, so changing
+  the stage to Reserved or Paid there books it. Booked events refuse it and change through the booking.
 - Events has three stages on screen — Reserved, Paid, Done (Inquiry shows only when one waits).
   The ocular visit stage and date were dropped; `normalize` turns an old `ocular` event into an
   inquiry. Each stage is a dashboard-style card that opens `components/stage-summary.ts` in the

@@ -31,6 +31,8 @@ export interface DeskContext {
   newBookingLink: (prefill?: BookingPrefill) => void;
   editBooking: (bookingId: string) => void;
   newEvent: () => void;
+  /** Edit an inquiry that has no booking yet. */
+  editEvent: (eventId: string) => void;
   /** Pass an expense to edit it, nothing to record a new one. */
   newExpense: (expense?: Expense) => void;
   /** Add a package of a kind, or edit one; `confirmDelete` opens it on the delete question. */

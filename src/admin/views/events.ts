@@ -20,10 +20,13 @@ function eventCard(ctx: DeskContext, event: ResortEvent): SafeHTML {
   const booking = findBooking(state, event.bookingId);
   const contact = findGuest(state, event.contactGuestId);
   const coordinator = findStaff(state, event.coordinatorId);
+  const editable = !booking && ctx.can('events.manage');
   const paidPercent = booking ? Math.min(100, Math.round((booking.paid / booking.total) * 100)) : 0;
 
   return html`
-    <article class="event-card ${booking ? 'event-card--opens' : ''}" ${booking ? html`data-action="open-booking" data-id="${booking.id}" title="Open the booking"` : ''}>
+    <article class="event-card ${booking || editable ? 'event-card--opens' : ''}" ${booking
+      ? html`data-action="open-booking" data-id="${booking.id}" title="Open the booking"`
+      : editable ? html`data-action="edit-event" data-id="${event.id}" title="Edit the inquiry"` : ''}>
       <p class="event-card__date">${formatDate(event.date, 'long')}</p>
       <h3 class="event-card__title">${event.title}</h3>
       <p class="small muted">${pkg?.name ?? 'Custom package'} · ${event.guests ? plural(event.guests, 'guest') : 'guests not set'}${event.exclusive ? ' · closes resort' : ''}</p>
@@ -43,7 +46,10 @@ function eventCard(ctx: DeskContext, event: ResortEvent): SafeHTML {
         ${booking
           ? html`<button class="btn btn--secondary btn--sm" type="button" data-action="open-booking" data-id="${booking.id}">Open booking</button>`
           : ctx.can('events.manage')
-            ? html`<button class="btn btn--secondary btn--sm" type="button" data-action="book-event" data-id="${event.id}">Book this event</button>`
+            ? html`<span class="button-row">
+                <button class="btn btn--quiet btn--sm" type="button" data-action="edit-event" data-id="${event.id}">Edit</button>
+                <button class="btn btn--secondary btn--sm" type="button" data-action="book-event" data-id="${event.id}">Book this event</button>
+              </span>`
             : ''}
       </footer>
     </article>`;
@@ -88,6 +94,7 @@ export function render(ctx: DeskContext): SafeHTML {
 
 export const actions: HandlerMap = {
   'new-event': ({ ctx }) => ctx.newEvent(),
+  'edit-event': ({ el, ctx }) => ctx.editEvent(el.dataset.id ?? ''),
 
   'book-event': ({ el, ctx }) => bookAndOpen(el.dataset.id ?? '', ctx),
 

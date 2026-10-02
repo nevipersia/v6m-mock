@@ -75,7 +75,7 @@ function summary(ctx: DeskContext, stage: EventStage): SafeHTML {
             </li>`;
         })}
       </ul>
-      <p class="small muted">Open an event to see its booking and payments.</p>
+      <p class="small muted">Open an event to see its booking and payments, or an inquiry to fill it in.</p>
     </div>`;
 }
 
@@ -97,8 +97,11 @@ export function createStageSummary(stage: EventStage): DrawerContent {
     render: (ctx) => summary(ctx, stage),
     actions: {
       'open-booking': ({ el, ctx }) => ctx.openBooking(el.dataset.id ?? ''),
-      // An inquiry has no booking to open; booking it is the next step.
-      'open-unbooked': ({ ctx }) => ctx.toast('Not booked yet. Use Book to take the date.', 'info'),
+      // An inquiry has no booking to open, so it opens to be filled in.
+      'open-unbooked': ({ el, ctx }) => {
+        if (ctx.can('events.manage')) ctx.editEvent(el.dataset.id ?? '');
+        else ctx.toast('Not booked yet.', 'info');
+      },
       'book-event': ({ el, ctx }) => bookAndOpen(el.dataset.id ?? '', ctx),
     },
   };

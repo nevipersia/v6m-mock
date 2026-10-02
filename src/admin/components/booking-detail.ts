@@ -33,6 +33,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'booking.guest_list': 'Guest list updated',
   'event.created': 'Event added',
   'event.booked': 'Event booked',
+  'event.updated': 'Event changed',
 };
 
 const CANCEL_REASONS = ['Change of plans', 'Guest request', 'Typhoon or weather', 'Duplicate booking', 'Other'];

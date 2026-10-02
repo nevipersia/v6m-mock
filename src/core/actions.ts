@@ -601,6 +601,63 @@ function makeEventBooking(state: State, event: ResortEvent, contactName: string,
 }
 
 /**
+ * Why an event can't be saved as entered, or null. An inquiry is only a lead:
+ * whatever is known so far saves, and the rest is asked for once it is reserved.
+ */
+function eventProblem(state: State, input: NewEvent, pkg: EventPackage, ignoreId?: string): string | null {
+  if (!input.date) return 'Pick the event date.';
+  if (input.stage !== 'inquiry') {
+    if (!input.title.trim()) return 'Give the event a name.';
+    if (!input.contactName.trim()) return 'Enter who is arranging it.';
+    if (input.guests < 1) return 'Add how many guests are coming.';
+    if (input.guests > pkg.maxGuests) return `${pkg.name} takes up to ${pkg.maxGuests} guests.`;
+  }
+  if (!BOOKED_STAGES.includes(input.stage) || !input.exclusive) return null;
+  const existing = state.events.find((event) => event.id !== ignoreId && event.date === input.date && event.blocksCalendar);
+  if (existing) return `${existing.title} already closes the resort on ${formatDate(input.date)}.`;
+  const clashes = clashesOn(state, input.date);
+  if (clashes.length) {
+    return `${plural(clashes.length, 'booking')} already on ${formatDate(input.date)}. Move or cancel ${clashes.length === 1 ? 'it' : 'them'} before closing the resort.`;
+  }
+  return null;
+}
+
+/** The event's own fields from the form, finding or adding the contact as a guest. */
+function eventFields(state: State, input: NewEvent, pkg: EventPackage, staffId: string): { fields: Omit<ResortEvent, 'id' | 'bookingId'>; contact: Guest | null } {
+  const taken = BOOKED_STAGES.includes(input.stage);
+  const addOns = input.addOns.filter((addOn) => addOn.item.trim() && addOn.amount > 0)
+    .map((addOn) => ({ item: addOn.item.trim(), amount: Math.round(addOn.amount) }));
+  const contactName = input.contactName.trim() || input.contactMobile.trim();
+  const contact = contactName ? findOrCreateGuest(state, { name: contactName, mobile: input.contactMobile || null }) : null;
+  const fields: Omit<ResortEvent, 'id' | 'bookingId'> = {
+    title: input.title.trim() || (contact ? `${contact.name} inquiry` : 'Event inquiry'),
+    type: pkg.id.replace('PKG-', '').toLowerCase(),
+    date: input.date,
+    packageId: pkg.id,
+    packagePrice: pkg.price,
+    addOns,
+    total: 0,
+    guests: Math.max(0, Math.round(input.guests) || 0),
+    exclusive: input.exclusive,
+    blocksCalendar: taken && input.exclusive,
+    stage: input.stage,
+    contactGuestId: contact?.id ?? '',
+    coordinatorId: input.coordinatorId || staffId,
+    notes: input.notes.trim() || null,
+  };
+  fields.total = eventTotal(fields);
+  return { fields, contact };
+}
+
+/** Writes the booking for an event that has reached a booked stage, with any downpayment. */
+function bookIfTaken(state: State, event: ResortEvent, input: NewEvent, contact: Guest | null, staffId: string): Booking | null {
+  if (!BOOKED_STAGES.includes(event.stage)) return null;
+  const booking = makeEventBooking(state, event, contact?.name ?? event.title, staffId);
+  if (input.deposit > 0) applyPayment(state, booking, { amount: Math.min(input.deposit, booking.total), method: input.method }, staffId);
+  return booking;
+}
+
+/**
  * Puts a private event in the pipeline. An event that is already reserved also
  * gets its booking, which is what closes the date on the calendar.
  */
@@ -608,63 +665,42 @@ export function createEvent(input: NewEvent, staffId: string): EventResult {
   return update((state): EventResult => {
     const staff = findStaff(state, staffId);
     if (!staff?.permissions.includes('events.manage')) return { error: 'Your account cannot manage events.' };
-
     const pkg = findPackage(state, input.packageId);
     if (!pkg) return { error: 'Pick an event package.' };
-    // An inquiry is only a lead: whatever is known so far saves, and the rest
-    // is asked for once it is reserved.
-    const inquiry = input.stage === 'inquiry';
-    if (!input.date) return { error: 'Pick the event date.' };
-    if (!inquiry) {
-      if (!input.title.trim()) return { error: 'Give the event a name.' };
-      if (!input.contactName.trim()) return { error: 'Enter who is arranging it.' };
-      if (input.guests < 1) return { error: 'Add how many guests are coming.' };
-      if (input.guests > pkg.maxGuests) return { error: `${pkg.name} takes up to ${pkg.maxGuests} guests.` };
-    }
+    const problem = eventProblem(state, input, pkg);
+    if (problem) return { error: problem };
 
-    const taken = BOOKED_STAGES.includes(input.stage);
-    const closes = input.exclusive;
-    const existing = state.events.find((event) => event.date === input.date && event.blocksCalendar);
-    if (taken && closes && existing) return { error: `${existing.title} already closes the resort on ${formatDate(input.date)}.` };
-    const clashes = taken && closes ? clashesOn(state, input.date) : [];
-    if (clashes.length) {
-      return { error: `${plural(clashes.length, 'booking')} already on ${formatDate(input.date)}. Move or cancel ${clashes.length === 1 ? 'it' : 'them'} before closing the resort.` };
-    }
-
-    const addOns = input.addOns.filter((addOn) => addOn.item.trim() && addOn.amount > 0)
-      .map((addOn) => ({ item: addOn.item.trim(), amount: Math.round(addOn.amount) }));
-    const contactName = input.contactName.trim() || input.contactMobile.trim();
-    const contact = contactName ? findOrCreateGuest(state, { name: contactName, mobile: input.contactMobile || null }) : null;
-
-    const event: ResortEvent = {
-      id: nextId(state.events, 'EV', 3),
-      title: input.title.trim() || (contact ? `${contact.name} inquiry` : 'Event inquiry'),
-      type: pkg.id.replace('PKG-', '').toLowerCase(),
-      date: input.date,
-      packageId: pkg.id,
-      packagePrice: pkg.price,
-      addOns,
-      total: 0,
-      guests: Math.max(0, Math.round(input.guests) || 0),
-      exclusive: closes,
-      blocksCalendar: taken && closes,
-      stage: input.stage,
-      contactGuestId: contact?.id ?? '',
-      coordinatorId: input.coordinatorId || staffId,
-      bookingId: null,
-      notes: input.notes.trim() || null,
-    };
-    event.total = eventTotal(event);
+    const { fields, contact } = eventFields(state, input, pkg, staffId);
+    const event: ResortEvent = { id: nextId(state.events, 'EV', 3), ...fields, bookingId: null };
     state.events.push(event);
     state.events.sort((a, b) => a.date.localeCompare(b.date));
     logActivity(state, staffId, 'event.created', event.id, `${event.title} · ${formatDate(event.date)} · ${STAGE_LABELS[event.stage]}`);
+    return { event, booking: bookIfTaken(state, event, input, contact, staffId) };
+  });
+}
 
-    let booking: Booking | null = null;
-    if (taken) {
-      booking = makeEventBooking(state, event, contact?.name ?? event.title, staffId);
-      if (input.deposit > 0) applyPayment(state, booking, { amount: Math.min(input.deposit, booking.total), method: input.method }, staffId);
-    }
-    return { event, booking };
+/**
+ * Fills in or changes an inquiry. Moving it to Reserved or Paid books it, the
+ * same as saving a new event at that stage. Booked events change through
+ * their booking instead.
+ */
+export function updateEvent(eventId: string, input: NewEvent, staffId: string): EventResult {
+  return update((state): EventResult => {
+    const staff = findStaff(state, staffId);
+    if (!staff?.permissions.includes('events.manage')) return { error: 'Your account cannot manage events.' };
+    const event = state.events.find((item) => item.id === eventId);
+    if (!event) return { error: 'This event no longer exists.' };
+    if (event.bookingId) return { error: 'This event is booked already. Change it from its booking.' };
+    const pkg = findPackage(state, input.packageId);
+    if (!pkg) return { error: 'Pick an event package.' };
+    const problem = eventProblem(state, input, pkg, event.id);
+    if (problem) return { error: problem };
+
+    const { fields, contact } = eventFields(state, input, pkg, staffId);
+    Object.assign(event, fields);
+    state.events.sort((a, b) => a.date.localeCompare(b.date));
+    logActivity(state, staffId, 'event.updated', event.id, `${event.title} · ${formatDate(event.date)} · ${STAGE_LABELS[event.stage]}`);
+    return { event, booking: bookIfTaken(state, event, input, contact, staffId) };
   });
 }
 

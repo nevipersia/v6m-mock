@@ -1,11 +1,11 @@
 // New private event: the pipeline record, and the booking that closes the date
-// once the event is reserved.
+// once the event is reserved. Given an inquiry's id, the same form edits it.
 
-import { createEvent, type NewEvent } from '../../core/actions.js';
+import { createEvent, updateEvent, type NewEvent } from '../../core/actions.js';
 import { $maybe, html, render, type SafeHTML } from '../../core/dom.js';
 import { formatDigits, isPHMobile, parseDigits, peso, plural } from '../../core/format.js';
-import { DOWNPAYMENT_PERCENT, METHOD_LABELS, STAGE_LABELS, closingEvent, findPackage, live } from '../../core/rules.js';
-import type { EventStage, PaymentMethod, State } from '../../core/types.js';
+import { DOWNPAYMENT_PERCENT, METHOD_LABELS, STAGE_LABELS, closingEvent, findGuest, findPackage, live } from '../../core/rules.js';
+import type { EventStage, PaymentMethod, ResortEvent, State } from '../../core/types.js';
 import { asField, type DrawerContent } from '../types.js';
 
 const STAGES: EventStage[] = ['inquiry', 'reserved', 'paid'];
@@ -37,13 +37,36 @@ function initialDraft(state: State): Draft {
   };
 }
 
+/** The form filled in from a saved inquiry. */
+function draftFrom(state: State, event: ResortEvent): Draft {
+  const contact = findGuest(state, event.contactGuestId);
+  // A name the desk made up for a nameless inquiry shows as an empty box.
+  const madeUp = event.title === 'Event inquiry' || (contact && event.title === `${contact.name} inquiry`);
+  return {
+    title: madeUp ? '' : event.title,
+    date: event.date,
+    packageId: event.packageId,
+    addOns: event.addOns.map((addOn) => ({ ...addOn })),
+    guests: event.guests,
+    exclusive: event.exclusive,
+    stage: event.stage,
+    // A contact saved from a number alone is named after it; show that as no name.
+    contactName: contact && contact.name !== contact.mobile ? contact.name : '',
+    contactMobile: contact?.mobile ?? '',
+    coordinatorId: event.coordinatorId,
+    notes: event.notes ?? '',
+    deposit: 0,
+    method: 'gcash',
+  };
+}
+
 const option = (value: string, label: string, selected: string): SafeHTML =>
   html`<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`;
 
 const addOnTotal = (draft: Draft): number =>
   draft.addOns.reduce((sum, addOn) => sum + (addOn.item.trim() ? addOn.amount : 0), 0);
 
-export function createEventForm(): DrawerContent {
+export function createEventForm(eventId?: string): DrawerContent {
   let draft: Draft | null = null;
   let error = '';
 
@@ -87,11 +110,15 @@ export function createEventForm(): DrawerContent {
 
   return {
     live: false,
-    title: 'New event',
+    title: eventId ? 'Edit inquiry' : 'New event',
 
     render(ctx) {
       const { state } = ctx;
-      if (!draft) draft = initialDraft(state);
+      const editing = eventId ? state.events.find((event) => event.id === eventId) : undefined;
+      if (eventId && (!editing || editing.bookingId)) {
+        return html`<p class="muted">${editing ? 'This event is booked now. Change it from its booking.' : 'This event no longer exists.'}</p>`;
+      }
+      if (!draft) draft = editing ? draftFrom(state, editing) : initialDraft(state);
       const form = draft;
       const pkg = findPackage(state, form.packageId);
       const books = BOOKS_THE_DATE.includes(form.stage);
@@ -203,7 +230,7 @@ export function createEventForm(): DrawerContent {
 
           <div class="button-row button-row--end">
             <button class="btn btn--quiet" type="button" data-action="close-drawer">Cancel</button>
-            <button class="btn btn--primary" type="submit">Save event</button>
+            <button class="btn btn--primary" type="submit">${eventId ? 'Save changes' : 'Save event'}</button>
           </div>
         </form>`;
     },
@@ -279,7 +306,8 @@ export function createEventForm(): DrawerContent {
           refresh(root, ctx.state);
           return;
         }
-        const result = createEvent({ ...draft, coordinatorId: draft.coordinatorId || ctx.staff.id }, ctx.staff.id);
+        const input = { ...draft, coordinatorId: draft.coordinatorId || ctx.staff.id };
+        const result = eventId ? updateEvent(eventId, input, ctx.staff.id) : createEvent(input, ctx.staff.id);
         if (result.error !== undefined) {
           error = result.error;
           refresh(root, ctx.state);
@@ -287,7 +315,7 @@ export function createEventForm(): DrawerContent {
         }
         ctx.toast(result.booking
           ? `${result.event.title} booked · ${peso(result.booking.total)}${result.booking.status === 'confirmed' ? ' · confirmed' : ' · on hold'}`
-          : `${result.event.title} added to the pipeline`);
+          : eventId ? `${result.event.title} saved` : `${result.event.title} added to the pipeline`);
         if (result.booking) ctx.openBooking(result.booking.id);
         else ctx.closeDrawer();
       },
