@@ -22,13 +22,15 @@ let navCollapsed = ((): boolean => {
   }
 })();
 
-export function toggleNav(): void {
+/** Flips the sidebar and says which way it ended up. */
+export function toggleNav(): boolean {
   navCollapsed = !navCollapsed;
   try {
     localStorage.setItem(NAV_KEY, navCollapsed ? '1' : '0');
   } catch {
     // Private windows can refuse storage; the sidebar still folds for this visit.
   }
+  return navCollapsed;
 }
 
 function navCount(state: State, routeId: string): number {
@@ -65,7 +67,7 @@ export function renderShell(ctx: DeskContext, route: Route, content: TemplateVal
         <nav class="sidebar__nav" aria-label="Sections">${navLinks(ctx, route.id, 'nav-link')}</nav>
         <button class="sidebar__toggle" type="button" data-action="toggle-nav" aria-expanded="${navCollapsed ? 'false' : 'true'}"
           aria-label="${navCollapsed ? 'Expand the menu' : 'Collapse the menu'}" title="${navCollapsed ? 'Expand the menu' : 'Collapse the menu'}">
-          ${icon(navCollapsed ? 'chevronRight' : 'chevronLeft')}
+          ${icon('chevronLeft')}
           <span class="sidebar__toggle-label">Collapse</span>
         </button>
         <div class="sidebar__account">

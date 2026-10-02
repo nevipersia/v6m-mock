@@ -188,11 +188,17 @@ const globalActions: HandlerMap = {
 
   'new-booking-link': ({ el, ctx }) => ctx.newBookingLink({ product: el.dataset.product, date: el.dataset.date }),
 
-  // The redraw replaces the button, so hand focus to the new one.
-  'toggle-nav': () => {
-    toggleNav();
-    draw();
-    app.querySelector<HTMLElement>('[data-action="toggle-nav"]')?.focus();
+  // Flipped in place rather than redrawn: a fresh shell would start at its new
+  // width, and there would be nothing for the slide to animate from.
+  'toggle-nav': ({ el }) => {
+    const collapsed = toggleNav();
+    app.querySelector('.desk')?.classList.toggle('desk--nav-collapsed', collapsed);
+    const label = collapsed ? 'Expand the menu' : 'Collapse the menu';
+    el.setAttribute('aria-expanded', String(!collapsed));
+    el.setAttribute('aria-label', label);
+    el.title = label;
+    // The page is a different width once the slide ends.
+    setTimeout(refreshJump, 320);
   },
 
   'jump-up': () => jumpBy(-1),
