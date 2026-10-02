@@ -1259,9 +1259,6 @@ button.cal-pool:hover {
   border-bottom: 0;
 }
 
-.data-table tbody tr:hover td {
-  background: #FFFCF6;
-}
 
 .data-table .num {
   text-align: right;
@@ -1283,6 +1280,64 @@ button.cal-pool:hover {
 /* The whole row opens the booking; the guest's name stays the keyboard way in. */
 .data-table__row {
   cursor: pointer;
+}
+
+.data-table__row td {
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Today's bookings stay lightly lit, so they stand out in a month or a week. */
+.data-table__row.is-today td {
+  background: #FFF4E8;
+}
+
+.data-table__row.is-today td:first-child {
+  box-shadow: inset 4px 0 0 #F7C9A6;
+}
+
+.data-table__today {
+  color: var(--orange-strong);
+  font-weight: 600;
+}
+
+/* Pointing at a row, or tabbing to its name, lights the whole row up. */
+.data-table__row:hover td,
+.data-table__row:focus-within td {
+  background: #FDE7D3;
+}
+
+.data-table__row:hover td:first-child,
+.data-table__row:focus-within td:first-child {
+  box-shadow: inset 4px 0 0 var(--orange);
+}
+
+.data-table__row:hover .link-button,
+.data-table__row:focus-within .link-button {
+  color: var(--orange-strong);
+}
+
+.data-table__row:active td {
+  background: var(--orange-soft);
+}
+
+/* An arrow slides in at the end of the row to say it opens. */
+.data-table__go {
+  width: 40px;
+  padding-inline: 0 14px !important;
+  color: var(--orange-strong);
+  vertical-align: middle !important;
+}
+
+.data-table__go .icon {
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.15s ease, transform 0.2s var(--ease-out);
+}
+
+.data-table__row:hover .data-table__go .icon,
+.data-table__row:focus-within .data-table__go .icon {
+  opacity: 1;
+  transform: none;
 }
 
 /* ---------- Bookings on phones ---------- */

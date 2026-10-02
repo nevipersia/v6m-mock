@@ -143,21 +143,23 @@ export function render(ctx: DeskContext): SafeHTML {
                 <th scope="col" class="num">Total</th>
                 <th scope="col" class="num">Balance</th>
                 <th scope="col">Status</th>
+                <th scope="col" class="data-table__go"><span class="sr-only">Open</span></th>
               </tr>
             </thead>
             <tbody>
               ${results.map((b) => html`
-                <tr class="data-table__row" data-action="open-booking" data-id="${b.id}">
+                <tr class="data-table__row ${b.date === state.meta.asOf ? 'is-today' : ''}" data-action="open-booking" data-id="${b.id}">
                   <td>
                     <button class="link-button" type="button" data-action="open-booking" data-id="${b.id}">${b.guestName}</button>
                     <span class="data-table__sub mono">${b.id}</span>
                   </td>
                   <td><span class="inline-kind">${kindDot(state, b.product)} ${productLabel(state, b.product)}</span></td>
-                  <td>${formatDate(b.date)}<span class="data-table__sub">${timeOf(b.startsAt)}</span></td>
+                  <td>${b.date === state.meta.asOf ? html`<span class="data-table__today">Today</span>` : formatDate(b.date)}<span class="data-table__sub">${timeOf(b.startsAt)}</span></td>
                   <td class="num">${b.adults + b.kids}<span class="data-table__sub">${namedSub(b)}</span></td>
                   <td class="num">${peso(b.total)}</td>
                   <td class="num ${b.balance > 0 && isActive(b) ? 'is-due' : ''}">${peso(b.balance)}</td>
                   <td>${statusPill(b)}</td>
+                  <td class="data-table__go" aria-hidden="true">${icon('chevronRight')}</td>
                 </tr>`)}
             </tbody>
           </table>
