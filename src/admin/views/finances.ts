@@ -22,6 +22,26 @@ let month: ISODate | null = null;
 let view: 'all' | 'in' | 'out' = 'all';
 /** A week of the chart the reader pinned, by its first day: the tables narrow to it. */
 let pinned: string | null = null;
+/** How many rows a table shows before Show all; the totals always count every row. */
+const LEDGER_SHOWN = 10;
+const OWED_SHOWN = 8;
+/** The tables opened out with Show all. Folded again on a new month or week. */
+const expanded = { ledger: false, owed: false };
+
+/** The last row of a capped table: how many more there are, and the way to see them. */
+function showAll(table: keyof typeof expanded, total: number, cap: number, columns: number): SafeHTML | '' {
+  if (total <= cap) return '';
+  const open = expanded[table];
+  return html`
+    <tr class="fin-more">
+      <td colspan="${columns}">
+        <button class="btn btn--quiet btn--sm" type="button" data-action="show-all" data-table="${table}" aria-expanded="${flag(open)}">
+          ${open ? html`${icon('chevronUp')} Show fewer` : html`${icon('chevronDown')} Show all ${total} · ${total - cap} more`}
+        </button>
+      </td>
+    </tr>`;
+}
+
 /** Which way the last step went, for the slide. */
 let motion: 'back' | 'on' | 'swap' = 'swap';
 
@@ -175,7 +195,7 @@ function ledger(state: State, rows: LedgerRow[], label: string): SafeHTML {
               </tr>
             </thead>
             <tbody>
-              ${shown.map((row) => html`
+              ${(expanded.ledger ? shown : shown.slice(0, LEDGER_SHOWN)).map((row) => html`
                 <tr class="data-table__row ${row.date === state.meta.asOf ? 'is-today' : ''}" data-action="${row.action}" data-id="${row.id}">
                   <td>${row.date === state.meta.asOf ? html`<span class="data-table__today">Today</span>` : formatDate(row.date, 'monthDay')}</td>
                   <td>
@@ -188,6 +208,7 @@ function ledger(state: State, rows: LedgerRow[], label: string): SafeHTML {
                   <td class="num fin-out">${row.amountOut ? peso(row.amountOut) : ''}</td>
                   <td class="data-table__go" aria-hidden="true">${icon('chevronRight')}</td>
                 </tr>`)}
+              ${showAll('ledger', shown.length, LEDGER_SHOWN, 7)}
             </tbody>
             <tfoot>
               <tr>
@@ -242,7 +263,7 @@ function owedTable(state: State, from: ISODate, to: ISODate, label: string): Saf
             <tr><th scope="col">Guest</th><th scope="col">Date</th><th scope="col" class="num">Owed</th></tr>
           </thead>
           <tbody>
-            ${owing.map((b) => html`
+            ${(expanded.owed ? owing : owing.slice(0, OWED_SHOWN)).map((b) => html`
               <tr class="data-table__row ${b.date === state.meta.asOf ? 'is-today' : ''}" data-action="open-booking" data-id="${b.id}">
                 <td>
                   <button class="link-button" type="button" data-action="open-booking" data-id="${b.id}">${b.guestName}</button>
@@ -251,6 +272,7 @@ function owedTable(state: State, from: ISODate, to: ISODate, label: string): Saf
                 <td>${b.date === state.meta.asOf ? html`<span class="data-table__today">Today</span>` : formatDate(b.date, 'monthDay')}</td>
                 <td class="num fin-owed">${peso(b.balance)}</td>
               </tr>`)}
+            ${showAll('owed', owing.length, OWED_SHOWN, 3)}
           </tbody>
           <tfoot>
             <tr><th scope="row" colspan="2">Total owed</th><td class="num fin-owed">${peso(total)}</td></tr>
@@ -355,6 +377,8 @@ export const actions: HandlerMap = {
     month = toISODate(new Date(date.getFullYear(), date.getMonth() + step, 1));
     pinned = null;
     motion = step < 0 ? 'back' : 'on';
+    expanded.ledger = false;
+    expanded.owed = false;
     ctx.redraw();
   },
 
@@ -368,6 +392,8 @@ export const actions: HandlerMap = {
         month = firstOf(value);
         pinned = null;
         motion = 'swap';
+        expanded.ledger = false;
+        expanded.owed = false;
         ctx.redraw();
       },
     });
@@ -376,13 +402,25 @@ export const actions: HandlerMap = {
   // Clicking a week narrows everything to it; clicking it again lets go.
   'pin-week': ({ el, ctx }) => {
     pinned = pinned === el.dataset.point ? null : el.dataset.point ?? null;
+    expanded.ledger = false;
+    expanded.owed = false;
     motion = 'swap';
     ctx.redraw();
+  },
+
+  'show-all': ({ el, ctx }) => {
+    const table = el.dataset.table === 'owed' ? 'owed' : 'ledger';
+    expanded[table] = !expanded[table];
+    ctx.redraw();
+    // Folding a long table back up should not leave the reader far below it.
+    if (!expanded[table]) document.querySelector(`[data-part="${table === 'owed' ? 'Still owed by guests' : 'Ledger'}"]`)?.scrollIntoView({ block: 'nearest' });
   },
 
   'ledger-view': ({ el, ctx }) => {
     const next = el.dataset.view;
     view = next === 'in' || next === 'out' ? next : 'all';
+    expanded.ledger = false;
+    expanded.owed = false;
     ctx.redraw();
   },
 

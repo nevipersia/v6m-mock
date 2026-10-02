@@ -3724,3 +3724,14 @@ dialog.is-entering::backdrop {
 .fin-empty {
   padding: 8px 20px 18px;
 }
+
+/* The last row of a capped table: Show all / Show fewer. */
+.fin-more td {
+  padding: 6px 12px !important;
+  text-align: center;
+  background: var(--surface);
+}
+
+.fin-more .btn {
+  color: var(--orange-strong);
+}
