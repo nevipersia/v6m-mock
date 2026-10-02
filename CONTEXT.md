@@ -122,7 +122,9 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     main.ts                 Sign-in, hash routing, event dispatch, focus restore
     types.ts                DeskContext, view and drawer contracts
     auth.ts                 Roles, page access, permissions
-    routes.ts, layout.ts    Navigation, shell, page header
+    routes.ts, layout.ts    Navigation, shell, page header; the sidebar folds to icons
+                            (remembered in localStorage) and carries the signed-in account,
+                            which phones show in the top bar instead
     components/             drawer, booking-detail, booking-form, booking-link, booking-pdf,
                             event-form, expense-form, guest-summary, jump, badges, icons, toast
     views/                  login, dashboard, calendar, bookings, finances, inbox, events, users

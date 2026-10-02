@@ -11,6 +11,26 @@ import { jumpControl } from './components/jump.js';
 import { ROUTES } from './routes.js';
 import type { DeskContext, Route } from './types.js';
 
+const NAV_KEY = 'v6m.navCollapsed';
+
+/** Whether the sidebar is folded to its icons. Remembered per browser. */
+let navCollapsed = ((): boolean => {
+  try {
+    return localStorage.getItem(NAV_KEY) === '1';
+  } catch {
+    return false;
+  }
+})();
+
+export function toggleNav(): void {
+  navCollapsed = !navCollapsed;
+  try {
+    localStorage.setItem(NAV_KEY, navCollapsed ? '1' : '0');
+  } catch {
+    // Private windows can refuse storage; the sidebar still folds for this visit.
+  }
+}
+
 function navCount(state: State, routeId: string): number {
   if (routeId === 'inbox') return state.inquiries.filter((inquiry) => inquiry.status === 'new').length;
   if (routeId === 'users') return state.staff.filter((person) => person.status === 'invited').length;
@@ -22,7 +42,8 @@ function navLinks(ctx: DeskContext, activeId: string, className: string): SafeHT
     const count = navCount(ctx.state, route.id);
     const active = route.id === activeId;
     return html`
-      <a class="${className} ${active ? 'is-active' : ''}" href="#/${route.id}" ${active ? html`aria-current="page"` : ''}>
+      <a class="${className} ${active ? 'is-active' : ''}" href="#/${route.id}" ${active ? html`aria-current="page"` : ''}
+        title="${route.label}${count ? ` · ${count} need attention` : ''}">
         ${icon(route.icon)}
         <span class="${className}__label">${route.label}</span>
         ${count ? html`<span class="${className}__count" aria-label="${count} need attention">${count}</span>` : ''}
@@ -33,13 +54,29 @@ function navLinks(ctx: DeskContext, activeId: string, className: string): SafeHT
 export function renderShell(ctx: DeskContext, route: Route, content: TemplateValue): SafeHTML {
   const { staff, state } = ctx;
   return html`
-    <div class="desk">
+    <div class="desk ${navCollapsed ? 'desk--nav-collapsed' : ''}">
       <aside class="sidebar">
-        <a class="sidebar__brand" href="#/">
-          <img src="../assets/img/logo.svg" alt="" width="34" height="34">
-          <span>V6M Desk</span>
-        </a>
+        <div class="sidebar__top">
+          <a class="sidebar__brand" href="#/" title="V6M Desk">
+            <img src="../assets/img/logo.svg" alt="" width="34" height="34">
+            <span class="sidebar__brand-name">V6M Desk</span>
+          </a>
+          <button class="sidebar__toggle" type="button" data-action="toggle-nav" aria-expanded="${navCollapsed ? 'false' : 'true'}"
+            aria-label="${navCollapsed ? 'Expand the menu' : 'Collapse the menu'}" title="${navCollapsed ? 'Expand the menu' : 'Collapse the menu'}">
+            ${icon(navCollapsed ? 'chevronRight' : 'chevronLeft')}
+          </button>
+        </div>
         <nav class="sidebar__nav" aria-label="Sections">${navLinks(ctx, route.id, 'nav-link')}</nav>
+        <div class="sidebar__account">
+          ${avatar(staff.name)}
+          <span class="sidebar__who">
+            <strong>${staff.name}</strong>
+            <small>${ROLE_LABELS[staff.role]}</small>
+          </span>
+          <button class="sidebar__signout" type="button" data-action="sign-out" aria-label="Sign out" title="Sign out">
+            ${icon('logout')}
+          </button>
+        </div>
       </aside>
 
       <div class="desk__main">
@@ -53,14 +90,14 @@ export function renderShell(ctx: DeskContext, route: Route, content: TemplateVal
               <button class="btn btn--quiet btn--sm" type="button" data-action="reset-data">
                 ${icon('refresh')}<span class="topbar__hide-sm">Reset data</span>
               </button>` : ''}
-            <div class="topbar__user">
+            <div class="topbar__user topbar__phone-only">
               ${avatar(staff.name)}
               <span class="topbar__who">
                 <strong>${staff.name}</strong>
                 <small>${ROLE_LABELS[staff.role]}</small>
               </span>
             </div>
-            <button class="btn btn--quiet btn--icon" type="button" data-action="sign-out" aria-label="Sign out" title="Sign out">
+            <button class="btn btn--quiet btn--icon topbar__phone-only" type="button" data-action="sign-out" aria-label="Sign out" title="Sign out">
               ${icon('logout')}
             </button>
           </div>

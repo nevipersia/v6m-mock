@@ -14,7 +14,7 @@ import { createBookingLinkPanel } from './components/booking-link.js';
 import { closeDrawer, openDrawer, syncDrawer } from './components/drawer.js';
 import { jumpBy, refreshJump } from './components/jump.js';
 import { showToast } from './components/toast.js';
-import { renderShell } from './layout.js';
+import { renderShell, toggleNav } from './layout.js';
 import { findRoute } from './routes.js';
 import type { DeskContext, HandlerMap, HandlerPayload, LoginContext, Route } from './types.js';
 import { loginActions, loginInputs, renderLogin } from './views/login.js';
@@ -160,6 +160,13 @@ const globalActions: HandlerMap = {
   'new-booking': ({ el, ctx }) => ctx.newBooking({ product: el.dataset.product, date: el.dataset.date }),
 
   'new-booking-link': ({ el, ctx }) => ctx.newBookingLink({ product: el.dataset.product, date: el.dataset.date }),
+
+  // The redraw replaces the button, so hand focus to the new one.
+  'toggle-nav': () => {
+    toggleNav();
+    draw();
+    app.querySelector<HTMLElement>('[data-action="toggle-nav"]')?.focus();
+  },
 
   'jump-up': () => jumpBy(-1),
 

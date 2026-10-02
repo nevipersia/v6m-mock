@@ -206,6 +206,17 @@ body {
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
   min-height: 100vh;
+  transition: grid-template-columns 0.18s ease;
+}
+
+.desk--nav-collapsed {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk {
+    transition: none;
+  }
 }
 
 .sidebar {
@@ -220,8 +231,37 @@ body {
   color: #C9D0E6;
 }
 
+.sidebar__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sidebar__toggle,
+.sidebar__signout {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sidebar__toggle:hover,
+.sidebar__signout:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
 .sidebar__brand {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 10px;
   padding: 0 8px;
@@ -276,6 +316,81 @@ body {
   text-align: center;
 }
 
+/* Who is signed in, at the foot of the sidebar. */
+.sidebar__account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding: 12px 6px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.sidebar__who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.sidebar__who strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar__who small {
+  font-size: 12px;
+}
+
+/* Folded to icons: labels stay for screen readers, the counts become dots. */
+.desk--nav-collapsed .sidebar {
+  padding-inline: 12px;
+}
+
+.desk--nav-collapsed .sidebar__top {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.desk--nav-collapsed .sidebar__brand {
+  padding: 0;
+}
+
+.desk--nav-collapsed .sidebar__brand-name,
+.desk--nav-collapsed .nav-link__label,
+.desk--nav-collapsed .sidebar__who {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.desk--nav-collapsed .nav-link {
+  position: relative;
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.desk--nav-collapsed .nav-link__count {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  min-width: 0;
+  padding: 0 5px;
+  font-size: 10px;
+}
+
+.desk--nav-collapsed .sidebar__account {
+  flex-direction: column;
+  padding-inline: 0;
+}
+
 .nav-link.is-active .nav-link__count {
   background: #fff;
   color: var(--orange-strong);
@@ -312,6 +427,10 @@ body {
   align-items: center;
   gap: 10px;
   padding-left: 8px;
+}
+
+.topbar__phone-only {
+  display: none;
 }
 
 .topbar__who {
@@ -443,6 +562,10 @@ body.has-drawer .jump {
   .topbar__who,
   .topbar__hide-sm {
     display: none;
+  }
+
+  .topbar__phone-only {
+    display: flex;
   }
 
   .page {
