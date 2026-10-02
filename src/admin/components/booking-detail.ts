@@ -365,12 +365,12 @@ export function createBookingDetail(bookingId: string): DrawerContent {
             <span class="small muted mono">${booking.id}</span>
           </div>
 
-          ${actionsSection(ctx, booking)}
           ${facts(ctx.state, booking)}
           ${priceSection(ctx.state, booking)}
           ${guestListSection(ctx, booking)}
           ${paymentsSection(ctx.state, booking)}
           ${activitySection(ctx.state, booking)}
+          ${actionsSection(ctx, booking)}
         </div>`;
     },
 

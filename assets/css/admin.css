@@ -238,7 +238,23 @@ body {
   gap: 8px;
 }
 
-.sidebar__toggle,
+/* Folds the sidebar; sits at its foot, above the account. */
+.sidebar__toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding: 10px 12px;
+  background: none;
+  border: 0;
+  border-radius: 10px;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
 .sidebar__signout {
   display: inline-grid;
   place-items: center;
@@ -321,7 +337,6 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: auto;
   padding: 12px 6px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
@@ -351,9 +366,9 @@ body {
   padding-inline: 12px;
 }
 
-.desk--nav-collapsed .sidebar__top {
-  flex-direction: column;
-  gap: 12px;
+.desk--nav-collapsed .sidebar__toggle {
+  justify-content: center;
+  padding-inline: 0;
 }
 
 .desk--nav-collapsed .sidebar__brand {
@@ -361,6 +376,7 @@ body {
 }
 
 .desk--nav-collapsed .sidebar__brand-name,
+.desk--nav-collapsed .sidebar__toggle-label,
 .desk--nav-collapsed .nav-link__label,
 .desk--nav-collapsed .sidebar__who {
   position: absolute;

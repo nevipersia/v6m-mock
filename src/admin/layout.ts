@@ -61,12 +61,13 @@ export function renderShell(ctx: DeskContext, route: Route, content: TemplateVal
             <img src="../assets/img/logo.svg" alt="" width="34" height="34">
             <span class="sidebar__brand-name">V6M Desk</span>
           </a>
-          <button class="sidebar__toggle" type="button" data-action="toggle-nav" aria-expanded="${navCollapsed ? 'false' : 'true'}"
-            aria-label="${navCollapsed ? 'Expand the menu' : 'Collapse the menu'}" title="${navCollapsed ? 'Expand the menu' : 'Collapse the menu'}">
-            ${icon(navCollapsed ? 'chevronRight' : 'chevronLeft')}
-          </button>
         </div>
         <nav class="sidebar__nav" aria-label="Sections">${navLinks(ctx, route.id, 'nav-link')}</nav>
+        <button class="sidebar__toggle" type="button" data-action="toggle-nav" aria-expanded="${navCollapsed ? 'false' : 'true'}"
+          aria-label="${navCollapsed ? 'Expand the menu' : 'Collapse the menu'}" title="${navCollapsed ? 'Expand the menu' : 'Collapse the menu'}">
+          ${icon(navCollapsed ? 'chevronRight' : 'chevronLeft')}
+          <span class="sidebar__toggle-label">Collapse</span>
+        </button>
         <div class="sidebar__account">
           ${avatar(staff.name)}
           <span class="sidebar__who">
