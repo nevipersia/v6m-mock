@@ -49,6 +49,10 @@ export const live = <T extends { retired?: boolean }>(items: T[] = []): T[] => i
 export const findUnit = (state: State, id: string | null | undefined) => state.units.find((unit) => unit.id === id);
 export const findSession = (state: State, id: string | null | undefined) => state.poolSessions.find((session) => session.id === id);
 export const findBooking = (state: State, id: string | null | undefined) => state.bookings.find((booking) => booking.id === id);
+
+/** Events still on: an event whose booking was cancelled drops off the Events page. */
+export const liveEvents = (state: State): ResortEvent[] =>
+  state.events.filter((event) => findBooking(state, event.bookingId)?.status !== 'cancelled');
 export const findGuest = (state: State, id: string | null | undefined) => state.guests.find((guest) => guest.id === id);
 export const findStaff = (state: State, id: string | null | undefined) => state.staff.find((person) => person.id === id);
 export const findPackage = (state: State, id: string | null | undefined) => state.eventPackages.find((pkg) => pkg.id === id);

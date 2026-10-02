@@ -1,12 +1,13 @@
 // New private event: the pipeline record, and the booking that closes the date
 // once the event is reserved. Given an inquiry's id, the same form edits it.
 
-import { createEvent, updateEvent, type NewEvent } from '../../core/actions.js';
+import { createEvent, deleteEvent, updateEvent, type NewEvent } from '../../core/actions.js';
 import { $maybe, html, render, type SafeHTML } from '../../core/dom.js';
 import { formatDigits, isPHMobile, parseDigits, peso, plural } from '../../core/format.js';
 import { DOWNPAYMENT_PERCENT, METHOD_LABELS, STAGE_LABELS, closingEvent, findGuest, findPackage, live } from '../../core/rules.js';
 import type { EventStage, PaymentMethod, ResortEvent, State } from '../../core/types.js';
 import { asField, type DrawerContent } from '../types.js';
+import { icon } from './icons.js';
 
 const STAGES: EventStage[] = ['inquiry', 'reserved', 'paid'];
 const METHODS: PaymentMethod[] = ['gcash', 'cash', 'bank_transfer'];
@@ -69,6 +70,7 @@ const addOnTotal = (draft: Draft): number =>
 export function createEventForm(eventId?: string): DrawerContent {
   let draft: Draft | null = null;
   let error = '';
+  let confirmRemove = false;
 
   function summary(state: State, form: Draft): SafeHTML {
     const pkg = findPackage(state, form.packageId);
@@ -232,7 +234,21 @@ export function createEventForm(eventId?: string): DrawerContent {
             <button class="btn btn--quiet" type="button" data-action="close-drawer">Cancel</button>
             <button class="btn btn--primary" type="submit">${eventId ? 'Save changes' : 'Save event'}</button>
           </div>
-        </form>`;
+        </form>
+
+        ${eventId ? html`
+          <div class="detail-section">
+            ${confirmRemove ? html`
+              <div class="action-card action-card--danger">
+                <h4 class="action-card__title">Remove ${form.title.trim() || 'this inquiry'}?</h4>
+                <p class="small muted">It leaves the pipeline for good. Nothing was booked, so no date or payment changes.</p>
+                <div class="button-row">
+                  <button class="btn btn--quiet" type="button" data-action="keep-inquiry">Keep it</button>
+                  <button class="btn btn--danger" type="button" data-action="confirm-remove-inquiry">Remove</button>
+                </div>
+              </div>` : html`
+              <button class="btn btn--quiet btn--danger-text" type="button" data-action="ask-remove-inquiry">${icon('trash')} Remove inquiry</button>`}
+          </div>` : ''}`;
     },
 
     inputs: {
@@ -287,6 +303,29 @@ export function createEventForm(eventId?: string): DrawerContent {
     },
 
     actions: {
+      'ask-remove-inquiry': ({ redraw }) => {
+        confirmRemove = true;
+        redraw();
+      },
+
+      'keep-inquiry': ({ redraw }) => {
+        confirmRemove = false;
+        redraw();
+      },
+
+      'confirm-remove-inquiry': ({ ctx, root }) => {
+        if (!eventId) return;
+        const result = deleteEvent(eventId, ctx.staff.id);
+        if (result.error !== undefined) {
+          error = result.error;
+          confirmRemove = false;
+          refresh(root, ctx.state);
+          return;
+        }
+        ctx.toast(`${result.event.title} removed`, 'warning');
+        ctx.closeDrawer();
+      },
+
       'add-addon': ({ redraw }) => {
         if (!draft) return;
         draft.addOns.push({ item: '', amount: 0 });

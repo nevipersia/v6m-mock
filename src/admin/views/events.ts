@@ -5,7 +5,7 @@
 
 import { html, type SafeHTML } from '../../core/dom.js';
 import { formatDate, peso, plural } from '../../core/format.js';
-import { STAGE_LABELS, findBooking, findGuest, findPackage, findStaff } from '../../core/rules.js';
+import { STAGE_LABELS, findBooking, findGuest, findPackage, findStaff, liveEvents } from '../../core/rules.js';
 import type { EventStage, ResortEvent } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { icon } from '../components/icons.js';
@@ -46,10 +46,7 @@ function eventCard(ctx: DeskContext, event: ResortEvent): SafeHTML {
         ${booking
           ? html`<button class="btn btn--secondary btn--sm" type="button" data-action="open-booking" data-id="${booking.id}">Open booking</button>`
           : ctx.can('events.manage')
-            ? html`<span class="button-row">
-                <button class="btn btn--quiet btn--sm" type="button" data-action="edit-event" data-id="${event.id}">Edit</button>
-                <button class="btn btn--secondary btn--sm" type="button" data-action="book-event" data-id="${event.id}">Book this event</button>
-              </span>`
+            ? html`<button class="btn btn--secondary btn--sm" type="button" data-action="book-event" data-id="${event.id}">Book this event</button>`
             : ''}
       </footer>
     </article>`;
@@ -57,7 +54,7 @@ function eventCard(ctx: DeskContext, event: ResortEvent): SafeHTML {
 
 export function render(ctx: DeskContext): SafeHTML {
   const { state } = ctx;
-  const events = [...state.events].sort((a, b) => a.date.localeCompare(b.date));
+  const events = [...liveEvents(state)].sort((a, b) => a.date.localeCompare(b.date));
   const usedStages = STAGES.filter((stage) => stage !== 'inquiry' || events.some((event) => event.stage === 'inquiry'));
 
   return html`

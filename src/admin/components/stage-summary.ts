@@ -5,13 +5,13 @@
 import { bookEvent } from '../../core/actions.js';
 import { html, type SafeHTML } from '../../core/dom.js';
 import { formatDate, peso, plural } from '../../core/format.js';
-import { STAGE_LABELS, findBooking, findPackage } from '../../core/rules.js';
+import { STAGE_LABELS, findBooking, findPackage, liveEvents } from '../../core/rules.js';
 import type { EventStage, ResortEvent, State } from '../../core/types.js';
 import type { DeskContext, DrawerContent } from '../types.js';
 import { paymentPill } from './badges.js';
 
 export const eventsAt = (state: State, stage: EventStage): ResortEvent[] =>
-  state.events.filter((event) => event.stage === stage).sort((a, b) => a.date.localeCompare(b.date));
+  liveEvents(state).filter((event) => event.stage === stage).sort((a, b) => a.date.localeCompare(b.date));
 
 /** The money side of a stage: worth, paid and owed across its bookings. */
 export function stageMoney(state: State, events: ResortEvent[]): { worth: number; paid: number; owed: number } {

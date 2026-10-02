@@ -3,7 +3,7 @@
 
 import { flag, html, type SafeHTML } from '../../core/dom.js';
 import { addDays, formatDate, peso, plural } from '../../core/format.js';
-import { closingEvent, downpaymentDue, exclusiveOn, isActive, productLabel } from '../../core/rules.js';
+import { closingEvent, downpaymentDue, exclusiveOn, isActive, liveEvents, productLabel } from '../../core/rules.js';
 import { financeReport } from '../../core/finance.js';
 import { SALES_RANGES, salesReport } from '../../core/sales.js';
 import type { Staff } from '../../core/types.js';
@@ -73,7 +73,7 @@ function attentionItems(ctx: DeskContext): SafeHTML[] {
       </li>`);
   }
 
-  const upcomingEvent = state.events.find((event) => event.bookingId && event.date >= today);
+  const upcomingEvent = liveEvents(state).find((event) => event.bookingId && event.date >= today);
   const eventBooking = upcomingEvent && state.bookings.find((b) => b.id === upcomingEvent.bookingId);
   if (eventBooking && eventBooking.balance > 0 && isActive(eventBooking)) {
     items.push(html`

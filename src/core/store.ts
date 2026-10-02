@@ -40,6 +40,8 @@ function normalize(loaded: State): State {
     // Paid in full before payments moved events along: catch it up.
     const booking = loaded.bookings?.find((item) => item.id === event.bookingId);
     if (booking && event.stage === 'reserved' && booking.balance <= 0 && booking.status !== 'cancelled') event.stage = 'paid';
+    // Cancelled before cancelling released the date: open it again.
+    if (booking?.status === 'cancelled') event.blocksCalendar = false;
   }
   // A package is on at most one promotion. Where older data lists it on
   // several, the one that is switched on keeps it (else the first), so the

@@ -497,6 +497,9 @@ export function cancelBooking(bookingId: string, reason: string, staffId: string
   return update((state) => {
     const booking = must(findBooking(state, bookingId), `Booking ${bookingId}`);
     Object.assign(booking, { status: 'cancelled', cancelledAt: demoNow(state), cancelReason: reason } satisfies Partial<Booking>);
+    // A cancelled event no longer closes the resort that day.
+    const event = state.events.find((item) => item.bookingId === booking.id);
+    if (event) event.blocksCalendar = false;
     logActivity(state, staffId, 'booking.cancelled', booking.id, reason);
     return booking;
   });
@@ -701,6 +704,21 @@ export function updateEvent(eventId: string, input: NewEvent, staffId: string): 
     state.events.sort((a, b) => a.date.localeCompare(b.date));
     logActivity(state, staffId, 'event.updated', event.id, `${event.title} · ${formatDate(event.date)} · ${STAGE_LABELS[event.stage]}`);
     return { event, booking: bookIfTaken(state, event, input, contact, staffId) };
+  });
+}
+
+/** Removes an inquiry that came to nothing. Booked events are cancelled through their booking. */
+export function deleteEvent(eventId: string, staffId: string): { error: string } | { error?: undefined; event: ResortEvent } {
+  return update((state) => {
+    const staff = findStaff(state, staffId);
+    if (!staff?.permissions.includes('events.manage')) return { error: 'Your account cannot manage events.' };
+    const at = state.events.findIndex((item) => item.id === eventId);
+    const event = state.events[at];
+    if (!event) return { error: 'This event no longer exists.' };
+    if (event.bookingId) return { error: 'This event is booked. Cancel its booking instead.' };
+    state.events.splice(at, 1);
+    logActivity(state, staffId, 'event.removed', event.id, event.title);
+    return { event };
   });
 }
 

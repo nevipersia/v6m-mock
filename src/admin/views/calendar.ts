@@ -5,7 +5,7 @@
 import { $maybe, flag, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { addDays, formatDate, parseDate, peso, plural, timeOf, toISODate } from '../../core/format.js';
 import {
-  bookingWindow, closingEvent, exclusiveOn, exclusiveOverlapping, findSession, isActive, live, poolGuests, productLabel, unitBookingOn,
+  bookingWindow, closingEvent, exclusiveOn, exclusiveOverlapping, findSession, isActive, live, liveEvents, poolGuests, productLabel, unitBookingOn,
 } from '../../core/rules.js';
 import type { ISODate, State, Unit } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
@@ -180,7 +180,7 @@ function exclusiveCell(ctx: DeskContext, day: ISODate): SafeHTML {
 }
 
 function eventCell(ctx: DeskContext, day: ISODate): SafeHTML {
-  const event = ctx.state.events.find((item) => item.date === day);
+  const event = liveEvents(ctx.state).find((item) => item.date === day);
   if (!event) return html`<span class="cal-empty"></span>`;
   if (event.bookingId) {
     return html`<button class="cal-chip cal-chip--event" type="button" data-action="open-booking" data-id="${event.bookingId}" title="${event.title}">${event.title}</button>`;

@@ -302,6 +302,11 @@ begin
   -- may delete. The desk asks for the expenses.manage permission first.
   create policy "staff remove" on public.expenses for delete to authenticated using (public.is_staff());
 
+  -- An event inquiry that came to nothing can be removed; a booked event is
+  -- cancelled through its booking instead.
+  create policy "inquiry remove" on public.events for delete to authenticated
+    using (public.has_permission('events.manage') and booking_id is null);
+
   -- Accounts and settings: everyone reads, only users.manage writes.
   foreach t in array array['staff', 'invites', 'settings', 'saved_replies'] loop
     execute format('alter table public.%I enable row level security', t);
