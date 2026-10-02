@@ -1232,39 +1232,6 @@ button.cal-pool:hover {
 
 /* ---------- Bookings table ---------- */
 
-.filters {
-  display: grid;
-  /* Search, two pickers, then the date pair, which needs room for two fields. */
-  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)) minmax(0, 1.7fr);
-  gap: 12px;
-  margin-bottom: 12px;
-  align-items: end;
-}
-
-@media (max-width: 1100px) {
-  .filters {
-    grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
-  }
-
-  .filters__range {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 860px) {
-  .filters {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  .filters__search {
-    grid-column: 1 / -1;
-  }
-}
-
-.filters__clear {
-  margin-bottom: 12px;
-}
-
 .data-table {
   width: 100%;
   min-width: 760px;
@@ -1320,61 +1287,16 @@ button.cal-pool:hover {
 
 /* ---------- Bookings on phones ---------- */
 
-/* Desktop always shows every filter, so the toggle and phone list stay hidden. */
-.filters__toggle,
+/* Desktop shows the table, so the phone list stays hidden. */
 .booking-list {
   display: none;
 }
 
-.filters__count {
-  min-width: 18px;
-  padding: 0 5px;
-  background: var(--orange);
-  color: #fff;
-  border-radius: var(--radius-pill);
-  font-size: 11px;
-  line-height: 18px;
-  text-align: center;
-}
-
 /*
  * Phones: an eight-column table is a long sideways scroll, so bookings become
- * a day-by-day list of short rows, and the pickers fold behind a button.
+ * a day-by-day list of short rows.
  */
 @media (max-width: 640px) {
-  .filters {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .filters__search {
-    grid-column: auto;
-  }
-
-  .filters__toggle {
-    display: inline-flex;
-    height: 44px;
-  }
-
-  .filters > .field:not(.filters__search) {
-    grid-column: 1 / -1;
-  }
-
-  .filters:not(.is-open) > .field:not(.filters__search) {
-    display: none;
-  }
-
-  .filters + .chips {
-    flex-wrap: nowrap;
-    margin-inline: -16px;
-    padding-inline: 16px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .filters + .chips .chip {
-    flex-shrink: 0;
-  }
-
   .bookings-table {
     display: none;
   }
@@ -2520,35 +2442,6 @@ body.has-drawer {
   }
 }
 
-.date-range {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  /* Two date fields need about this much; wider just makes them look odd. */
-  max-width: 400px;
-}
-
-.date-range .input {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.date-range__to {
-  color: var(--ink-muted);
-}
-
-.filters__range {
-  min-width: 0;
-}
-
-/* One-tap date windows under the filters. */
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
 .chip {
   padding: 5px 12px;
   background: var(--surface);
@@ -2563,12 +2456,6 @@ body.has-drawer {
 .chip:hover {
   border-color: var(--line-strong);
   color: var(--ink);
-}
-
-.chip.is-active {
-  background: var(--navy);
-  border-color: var(--navy);
-  color: #fff;
 }
 
 .day-grid {
@@ -3543,4 +3430,34 @@ dialog.is-entering::backdrop {
     animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ---------- Bookings list: the calendar's bar with a search in it ---------- */
+
+.calendar-bar__end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.list-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.list-search .icon {
+  position: absolute;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  color: var(--ink-muted);
+  pointer-events: none;
+}
+
+.list-search .input {
+  width: 240px;
+  min-height: 38px;
+  padding-left: 36px;
+  border-radius: var(--radius-pill);
 }

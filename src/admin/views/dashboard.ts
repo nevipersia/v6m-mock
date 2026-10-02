@@ -11,7 +11,7 @@ import type { DeskContext, HandlerMap } from '../types.js';
 import { arrivingToday, headcount, inHouseNow } from '../components/guest-summary.js';
 import { icon } from '../components/icons.js';
 import { pageHead } from '../layout.js';
-import { showBookings } from './bookings.js';
+import { showBookingsOn } from './bookings.js';
 
 const MAX_HOLDS_SHOWN = 3;
 
@@ -253,7 +253,7 @@ export const actions: HandlerMap = {
 
   'show-inhouse': ({ ctx }) => ctx.openGuests('inhouse'),
 
-  'show-balances': ({ ctx }) => showBookings({ from: ctx.state.meta.asOf, to: ctx.state.meta.asOf }),
+  'show-balances': ({ ctx }) => showBookingsOn(ctx.state.meta.asOf),
 
   // Remembered so a redraw (a booking saved in the drawer) does not fold it away.
   'toggle-attention': ({ el }) => {

@@ -1,54 +1,22 @@
-// Bookings: the calendar (the default) and the searchable, filterable list of
-// every booking, one page with a switch between them.
+// Bookings: the calendar (the default) and a list of the same days, one page
+// with a switch between them. Both share the calendar's month, week or day.
 
 import { flag, html, type SafeHTML } from '../../core/dom.js';
 import { addDays, formatDate, peso, plural, timeOf } from '../../core/format.js';
-import {
-  STATUS_LABELS, isActive, productLabel,
-} from '../../core/rules.js';
-import type { Booking, BookingStatus, State } from '../../core/types.js';
+import { isActive, productLabel } from '../../core/rules.js';
+import type { Booking, State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { kindDot, statusPill } from '../components/badges.js';
 import { icon } from '../components/icons.js';
 import { emptyState, pageHead } from '../layout.js';
 import * as calendar from './calendar.js';
 
-interface Filters {
-  query: string;
-  /** 'open', 'all' or a booking status. */
-  status: string;
-  product: string;
-  /** Stay dates to show, either end optional; '' means open-ended. */
-  from: string;
-  to: string;
-}
-
-const DEFAULT_FILTERS: Filters = { query: '', status: 'open', product: 'all', from: '', to: '' };
-let filters = { ...DEFAULT_FILTERS };
-/** Phones fold the pickers away behind a Filters button; desktop always shows them. */
-let filtersOpen = false;
-
-const OPEN_STATUSES: BookingStatus[] = ['hold', 'confirmed', 'checked_in'];
+/** The search box: a guest's name or a booking ID, within the days on screen. */
+let query = '';
 
 function matches(booking: Booking): boolean {
-  const query = filters.query.trim().toLowerCase();
-  if (query && !`${booking.guestName} ${booking.id}`.toLowerCase().includes(query)) return false;
-  if (filters.status === 'open' && !OPEN_STATUSES.includes(booking.status)) return false;
-  if (!['open', 'all'].includes(filters.status) && booking.status !== filters.status) return false;
-  if (filters.product !== 'all' && booking.product !== filters.product) return false;
-  if (filters.from && booking.date < filters.from) return false;
-  if (filters.to && booking.date > filters.to) return false;
-  return true;
-}
-
-type FilterKey = keyof Filters;
-
-const option = (key: FilterKey, value: string, text: string): SafeHTML =>
-  html`<option value="${value}" ${filters[key] === value ? 'selected' : ''}>${text}</option>`;
-
-interface Choice {
-  value: string;
-  text: string;
+  const words = query.trim().toLowerCase();
+  return !words || `${booking.guestName} ${booking.id}`.toLowerCase().includes(words);
 }
 
 /** How much of the guest list is filled in, for the Guests column. */
@@ -57,81 +25,6 @@ function namedSub(booking: Booking): string {
   const pax = booking.adults + booking.kids;
   if (!named) return 'no names yet';
   return named >= pax ? 'all named' : `${named} named`;
-}
-
-function filterBar(state: State): SafeHTML {
-  const products: Choice[] = [
-    { value: 'all', text: 'All bookings' },
-    ...state.poolSessions.map((s) => ({ value: s.id, text: s.label })),
-    ...state.units.map((u) => ({ value: u.id, text: u.name })),
-    ...(state.exclusivePackages ?? []).map((p) => ({ value: p.id, text: `Exclusive ${p.session === 'day' ? 'day tour' : 'overnight'} · ${p.name}` })),
-    { value: 'event', text: 'Events' },
-  ];
-  const statuses: Choice[] = [
-    { value: 'open', text: 'Upcoming and in house' },
-    { value: 'all', text: 'All statuses' },
-    ...Object.entries(STATUS_LABELS).map(([value, text]) => ({ value, text })),
-  ];
-  const select = (key: FilterKey, label: string, items: Choice[]) => html`
-    <label class="field">
-      <span class="field__label">${label}</span>
-      <select class="input" data-input="filter" name="${key}">
-        ${items.map((item) => option(key, item.value, item.text))}
-      </select>
-    </label>`;
-
-  const hidden = (['status', 'product', 'from', 'to'] as const).filter((key) => filters[key] !== DEFAULT_FILTERS[key]).length;
-
-  return html`
-    <div class="filters ${filtersOpen ? 'is-open' : ''}" data-part="Search and filters">
-      <label class="field filters__search">
-        <span class="field__label">Search</span>
-        <input class="input" type="search" data-input="filter" name="query" value="${filters.query}" placeholder="Guest name or booking ID">
-      </label>
-      <button class="btn btn--secondary filters__toggle" type="button" data-action="toggle-filters" aria-expanded="${flag(filtersOpen)}">
-        ${icon('filter')} Filters${hidden ? html` <span class="filters__count">${hidden}</span>` : ''}
-      </button>
-      ${select('status', 'Status', statuses)}
-      ${select('product', 'Type', products)}
-      <div class="field filters__range">
-        <span class="field__label">Staying between</span>
-        <div class="date-range">
-          <input class="input" type="date" data-input="filter" name="from" value="${filters.from}" aria-label="Staying from" max="${filters.to || ''}">
-          <span class="date-range__to" aria-hidden="true">–</span>
-          <input class="input" type="date" data-input="filter" name="to" value="${filters.to}" aria-label="Staying until" min="${filters.from || ''}">
-        </div>
-      </div>
-    </div>
-    ${rangeShortcuts(state)}`;
-}
-
-/** " staying Sep 18 – Sep 24", for the page subtitle. */
-function rangeSummary(): string {
-  if (!filters.from && !filters.to) return '';
-  if (filters.from && filters.to) {
-    return filters.from === filters.to
-      ? ` staying ${formatDate(filters.from)}`
-      : ` staying ${formatDate(filters.from)} – ${formatDate(filters.to)}`;
-  }
-  return filters.from ? ` staying from ${formatDate(filters.from)}` : ` staying until ${formatDate(filters.to)}`;
-}
-
-/** One-tap windows, since typing two dates for "this week" is a chore. */
-function rangeShortcuts(state: State): SafeHTML {
-  const today = state.meta.asOf;
-  const shortcuts: { label: string; from: string; to: string }[] = [
-    { label: 'Today', from: today, to: today },
-    { label: 'Next 7 days', from: today, to: addDays(today, 6) },
-    { label: 'Next 30 days', from: today, to: addDays(today, 29) },
-    { label: 'Past 30 days', from: addDays(today, -30), to: addDays(today, -1) },
-  ];
-  return html`
-    <div class="chips">
-      ${shortcuts.map((shortcut) => html`
-        <button class="chip ${filters.from === shortcut.from && filters.to === shortcut.to ? 'is-active' : ''}" type="button"
-          data-action="date-shortcut" data-from="${shortcut.from}" data-to="${shortcut.to}"
-          aria-pressed="${flag(filters.from === shortcut.from && filters.to === shortcut.to)}">${shortcut.label}</button>`)}
-    </div>`;
 }
 
 /** "Today", "Tomorrow", else "Sat, Sep 19", for the phone list's day headings. */
@@ -199,9 +92,10 @@ function modeSwitch(): SafeHTML {
     </div>`;
 }
 
-/** Opens the list already narrowed, for links from elsewhere such as the dashboard's cards. */
-export function showBookings(narrowed: Partial<Filters>): void {
-  filters = { ...DEFAULT_FILTERS, ...narrowed };
+/** Opens the list on one day, for links from elsewhere such as the dashboard's cards. */
+export function showBookingsOn(day: string): void {
+  calendar.showDay(day);
+  query = '';
   mode = 'list';
   location.hash = '#/bookings';
 }
@@ -209,24 +103,30 @@ export function showBookings(narrowed: Partial<Filters>): void {
 export function render(ctx: DeskContext): SafeHTML {
   if (mode === 'calendar') return calendar.render(ctx, modeSwitch());
   const { state } = ctx;
-  const results = state.bookings.filter(matches);
-  const total = results.filter(isActive).reduce((sum, b) => sum + b.total, 0);
-  const due = results.filter((b) => isActive(b) && b.status !== 'checked_out').reduce((sum, b) => sum + b.balance, 0);
-  const isFiltered = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS);
+  const days = calendar.shownDays(state);
+  const first = days[0] ?? state.meta.asOf;
+  const last = days[days.length - 1] ?? first;
+  const results = state.bookings
+    .filter((b) => b.date >= first && b.date <= last && matches(b))
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const search = html`
+    <label class="list-search">
+      ${icon('search')}
+      <input class="input" type="search" data-input="search" name="query" value="${query}"
+        placeholder="Guest or booking ID" aria-label="Search guest name or booking ID">
+    </label>`;
 
   return html`
     ${pageHead({
       title: 'Bookings',
-      subtitle: `${plural(results.length, 'booking')}${rangeSummary()} · ${peso(total)} total · ${peso(due)} still due`,
       actions: html`
         ${modeSwitch()}
         ${ctx.can('bookings.write') ? html`
-          <button class="btn btn--primary" type="button" data-action="new-booking">${icon('plus')} New booking</button>` : ''}`,
+          <button class="btn btn--primary" type="button" data-action="new-booking" data-date="${days.length === 1 ? first : ''}">${icon('plus')} New booking</button>` : ''}`,
     })}
 
-    <div class="list-body" data-enter="bookings|list" data-motion="swap">
-    ${filterBar(state)}
-    ${isFiltered ? html`<button class="btn btn--quiet btn--sm filters__clear" type="button" data-action="clear-filters">Clear filters</button>` : ''}
+    <div class="list-body" data-enter="bookings|list:${calendar.enterKey(state)}" data-motion="${calendar.enterMotion()}">
+    ${calendar.navBar(state, search)}
 
     ${results.length ? mobileList(state, results) : ''}
 
@@ -261,16 +161,18 @@ export function render(ctx: DeskContext): SafeHTML {
                 </tr>`)}
             </tbody>
           </table>
-        </div>` : emptyState('No bookings match', 'Try a different search or clear the filters.')}
+        </div>` : query.trim()
+          ? emptyState('No bookings match', `Nobody called "${query.trim()}" in ${calendar.shownLabel(state)}.`)
+          : emptyState('Nothing booked', `${calendar.shownLabel(state)} has no bookings.`)}
     </div>
-    </div>`;
+    </div>
+
+    ${calendar.pickerIfOpen(state)}`;
 }
 
 export const inputs: HandlerMap = {
-  filter: ({ el, ctx }) => {
-    const { name, value } = el as HTMLInputElement | HTMLSelectElement;
-    if (!(name in filters)) return;
-    filters = { ...filters, [name]: value };
+  search: ({ el, ctx }) => {
+    query = (el as HTMLInputElement).value;
     ctx.redraw();
   },
 };
@@ -280,24 +182,6 @@ export const actions: HandlerMap = {
 
   'set-mode': ({ el, ctx }) => {
     mode = el.dataset.mode === 'list' ? 'list' : 'calendar';
-    ctx.redraw();
-  },
-
-  'toggle-filters': ({ ctx }) => {
-    filtersOpen = !filtersOpen;
-    ctx.redraw();
-  },
-
-  'date-shortcut': ({ el, ctx }) => {
-    const { from = '', to = '' } = el.dataset;
-    // Tapping the chip that is already on clears it again.
-    const same = filters.from === from && filters.to === to;
-    filters = { ...filters, from: same ? '' : from, to: same ? '' : to };
-    ctx.redraw();
-  },
-
-  'clear-filters': ({ ctx }) => {
-    filters = { ...DEFAULT_FILTERS };
     ctx.redraw();
   },
 };

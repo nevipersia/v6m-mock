@@ -74,7 +74,7 @@ then removed on request; its inquiries stay in the data as inbox history.
 
 - **V6M Desk** (`/admin/`): staff app — email and password sign-in (two demo accounts, or an invite
   code that also sets a password),
-  Dashboard, Bookings (calendar by month or week, or the searchable list), Finances, Inbox, Events, Users.
+  Dashboard, Bookings (calendar or list, by month, week or day), Finances, Inbox, Events, Users.
 - **Booking link** (`/book/?code=…`): single-use page a staff member sends to one guest; the booking
   they submit lands on the calendar as a hold under that staff member.
 
@@ -175,7 +175,7 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   behind a Filters button (`filtersOpen`).
 - The dashboard is deliberately one screen: four cards for today (Arriving today and In house open
   `components/guest-summary.ts` in the drawer; Collected today opens Finances; Balances due opens
-  Bookings narrowed to today through `showBookings`), Needs attention folded into one line, and a
+  Bookings' list on today through `showBookingsOn`), Needs attention folded into one line, and a
   summary of sales beside income and expenses over one shared 7/30/90-day window. Every chart and
   list behind those figures lives on `views/finances.ts`.
 - Sales analytics on the Finances page come from `core/sales.ts`: bookings are counted by `createdAt`
@@ -215,8 +215,10 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   Bookings). The calendar opens on the month; Week is the only other view. Clicking a day opens it
   in place (`ui.openDay`) with a back button to the month or week it came from — it never switches
   the view. The month and year open a pop-up picker (`pickerDialog`): a year, its months (a month
-  moves the calendar behind straight away) and that month's days. Ranges of dates are the list's job:
-  its filter holds `from`/`to`, either end optional, with one-tap shortcut chips.
+  moves the calendar behind straight away) and that month's days. The list shares all of this: it
+  shows the bookings in the calendar's month, week or open day under the same bar (`navBar`,
+  `shownDays`), with a guest-name search in place of the old type / status / date filters, and no
+  totals. `showBookingsOn(day)` opens it on one day, as the dashboard's Balances due card does.
 - Motion (`components/motion.ts` + the Motion section at the end of `admin.css`): every render
   rebuilds the markup, so nothing animates by class alone. After each render `markEntering` adds
   `.page--enter` when the page is new, `.is-entering` to any `[data-enter="slot|key"]` whose key

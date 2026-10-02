@@ -375,7 +375,7 @@ function pickerDialog(state: State): SafeHTML {
 }
 
 /** The month or week: arrows either side of the month and year, which opens the picker. */
-function periodBar(state: State): SafeHTML {
+function periodBar(state: State, extra: TemplateValue = ''): SafeHTML {
   return html`
     <div class="calendar-bar">
       <div class="period">
@@ -388,16 +388,19 @@ function periodBar(state: State): SafeHTML {
         <button class="btn btn--secondary btn--icon" type="button" data-action="step" data-step="1" aria-label="Next ${ui.range}">${icon('chevronRight')}</button>
       </div>
 
+      <div class="calendar-bar__end">
+      ${extra}
       <div class="segmented" role="group" aria-label="Calendar view">
         ${RANGES.map((range) => html`
           <button class="segmented__option ${ui.range === range.id ? 'is-active' : ''}" type="button"
             data-action="set-range" data-range="${range.id}" aria-pressed="${flag(ui.range === range.id)}">${range.label}</button>`)}
       </div>
+      </div>
     </div>`;
 }
 
 /** One day, opened from the month or week, with the way back to it. */
-function dayBar(state: State, day: ISODate): SafeHTML {
+function dayBar(state: State, day: ISODate, extra: TemplateValue = ''): SafeHTML {
   return html`
     <div class="calendar-bar">
       <div class="period">
@@ -406,7 +409,8 @@ function dayBar(state: State, day: ISODate): SafeHTML {
         </button>
         <h2 class="period__day">${formatDate(day, 'short')}</h2>
       </div>
-      <div class="button-row">
+      <div class="calendar-bar__end">
+        ${extra}
         <button class="btn btn--secondary btn--icon" type="button" data-action="step-day" data-step="-1" aria-label="Previous day">${icon('chevronLeft')}</button>
         <button class="btn btn--secondary btn--icon" type="button" data-action="step-day" data-step="1" aria-label="Next day">${icon('chevronRight')}</button>
       </div>
@@ -449,7 +453,7 @@ export function render(ctx: DeskContext, switcher: SafeHTML): SafeHTML {
             title="New booking on ${formatDate(focused, 'long')}">${icon('plus')} New booking</button>` : ''}`,
     })}
 
-    <div class="cal-body" data-enter="bookings|${ui.range}:${days[0] ?? ''}:${day ?? ''}" data-motion="${motion}">
+    <div class="cal-body" data-enter="bookings|cal:${enterKey(state)}" data-motion="${motion}">
       ${day ? html`
         ${dayBar(state, day)}
         ${dayView(ctx, day)}
@@ -459,6 +463,28 @@ export function render(ctx: DeskContext, switcher: SafeHTML): SafeHTML {
     </div>
 
     ${ui.picker.open ? pickerDialog(state) : ''}`;
+}
+
+/** The days on screen: the open day, else the month or week. The list shows the same ones. */
+export const shownDays = (state: State): ISODate[] => (ui.openDay ? [ui.openDay] : daysInView(state));
+
+/** "Sep 2026", "Sep 14 – Sep 20" or "Fri, Sep 18": what is on screen, in words. */
+export const shownLabel = (state: State): string => (ui.openDay ? formatDate(ui.openDay, 'short') : rangeLabel(state));
+
+/** The bar above the calendar or the list: the period and its selectors, or an open day and Back. */
+export const navBar = (state: State, extra: TemplateValue = ''): SafeHTML =>
+  (ui.openDay ? dayBar(state, ui.openDay, extra) : periodBar(state, extra));
+
+export const pickerIfOpen = (state: State): SafeHTML | '' => (ui.picker.open ? pickerDialog(state) : '');
+
+/** For components/motion.ts: what is on screen, and which way it arrived. */
+export const enterKey = (state: State): string => `${ui.range}:${daysInView(state)[0] ?? ''}:${ui.openDay ?? ''}`;
+export const enterMotion = (): string => motion;
+
+/** Opens one day from elsewhere, such as the dashboard's Balances due card. */
+export function showDay(day: ISODate): void {
+  motion = 'in';
+  openDay(day);
 }
 
 /** Shows a day in place of the month or week, and moves them along with it. */
