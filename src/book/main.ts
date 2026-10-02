@@ -40,7 +40,7 @@ function applyTheme(page: BookingPageSettings): void {
 
 function validate(state: State, page: BookingPageSettings): string {
   if (!page.fields.email && draft.email) draft.email = '';
-  return guestBookingProblem(state, draft, { guestListRequired: page.fields.guestList });
+  return guestBookingProblem(state, draft);
 }
 
 function showPay(page: BookingPageSettings, booking: Booking): void {
@@ -74,7 +74,7 @@ function bind(page: BookingPageSettings): void {
     if (field.dataset.row !== undefined) {
       const shown = readGuestListField(draft.guestList, field);
       if (shown !== null && shown !== field.value) field.value = shown;
-      if (field.name === 'companionName') updateGuestCount(app, draft.guestList, namesAsked(draft.adults + draft.kids));
+      if (field.name === 'companionName') updateGuestCount(app, draft.guestList, namesAsked(draft.adults + draft.kids), false);
       return;
     }
     if (field.name === 'adults' || field.name === 'kids' || field.name === 'scPwd') {

@@ -48,6 +48,11 @@ textarea {
   color: inherit;
 }
 
+/* Text boxes keep the size the layout gives them. */
+textarea {
+  resize: none;
+}
+
 [hidden] {
   display: none !important;
 }
@@ -198,7 +203,7 @@ textarea {
 textarea.input {
   min-height: 96px;
   line-height: 1.5;
-  resize: vertical;
+  resize: none;
 }
 
 .input:hover {

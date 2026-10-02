@@ -161,6 +161,7 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   `productType: 'exclusive'`): a booking needs its whole time window free of every other active
   booking, and while it exists no regular booking whose window overlaps it can be made
   (`bookingWindow`, `bookingsOverlapping`, `exclusiveOverlapping` in `core/rules.ts`). Up to 120 guests.
+- Text boxes (`textarea`) cannot be resized by dragging; `base.css` sets `resize: none`.
 - Headcount limits (pool slots per session, a unit's most guests, an exclusive rental's most guests)
   block the guest booking page only. The desk passes `overLimits: true` to `checkAvailability`, which
   then returns `ok` with an `over` note, and the form shows it with the quote's warnings as an amber
@@ -168,11 +169,11 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 - Guest details from the registration template: complete address, email, SC/PWD count, a guest list
   (`booking.guestList`: name, gender, age, remarks), additional charges (`booking.extras`, typed
   amounts, part of the price) and payment details (`payment.sentAt`, `payment.senderName`).
-- The guest list is required on the booking page and optional at the desk, where any number of names
-  (none, or more than the headcount) saves and the counter reads "… named · optional" without the red. `core/guest-list.ts` holds
+- The guest list is optional everywhere: on the booking page (labelled "(optional)") and at the desk,
+  any number of names (none, some, or more than the headcount) saves, and the counter reads
+  "… named · optional" without the red. `core/guest-list.ts` holds
   the shared rules: `fitGuestList` keeps a row per guest, `namesAsked` caps that at
-  `NAMES_ASKED_CAP` (20, so a 120-guest exclusive rental is not asked for 120 names) and
-  `guestListProblem` is the validation message. Desk-side the list is part of `booking-form.ts`
+  `NAMES_ASKED_CAP` (20, so a 120-guest exclusive rental does not get 120 blank rows). Desk-side the list is part of `booking-form.ts`
   (new and edit; `updateBooking` takes an optional `guestList`) as well as its own section in the
   booking drawer. The Bookings list shows how many are named and carries per-row Edit and Sheet
   (PDF) buttons. Under 640px the table gives way to a day-grouped list of short rows

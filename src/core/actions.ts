@@ -3,7 +3,6 @@
 
 import { update } from './store.js';
 import { addDays, formatDate, isEmail, isPHMobile, peso, plural } from './format.js';
-import { guestListProblem } from './guest-list.js';
 import {
   DOWNPAYMENT_RATE, METHOD_LABELS, STAGE_LABELS, bookingWindow, checkAvailability, depositRequired, discountAmount,
   discountProblem, downpaymentDue, findBooking, findExclusive, findGuest, findPackage, findStaff, findUnit, isActive,
@@ -984,7 +983,7 @@ const isGuestProduct = (state: State, product: string): boolean =>
  * Everything a guest's booking must satisfy, checked on the booking page and
  * again by whoever saves it. @returns the first problem, or '' when it is fine.
  */
-export function guestBookingProblem(state: State, input: GuestBooking, { guestListRequired = false } = {}): string {
+export function guestBookingProblem(state: State, input: GuestBooking): string {
   const guests = input.adults + input.kids;
   if (!input.guestName?.trim()) return 'Enter your name.';
   if (!isPHMobile(input.mobile ?? '')) return 'Enter a PH mobile number, like 0917 123 4567.';
@@ -994,10 +993,6 @@ export function guestBookingProblem(state: State, input: GuestBooking, { guestLi
   if (input.date < state.meta.asOf) return 'Pick a date from today on.';
   if (!isGuestProduct(state, input.product)) return 'Pick what you are booking.';
   if (guests === 0) return 'Add at least one guest.';
-  if (guestListRequired || input.guestList?.some((row) => row.name.trim())) {
-    const listProblem = guestListProblem(input.guestList ?? [], guests);
-    if (listProblem) return listProblem;
-  }
   if ((input.scPwd ?? 0) > guests) return 'Senior / PWD can\'t be more than the number of guests.';
   const availability = checkAvailability(state, input);
   if (!availability.ok) return availability.reason ?? 'That date is not available.';

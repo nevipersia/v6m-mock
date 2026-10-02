@@ -104,15 +104,3 @@ export function fitGuestList(list: Companion[], pax: number): Companion[] {
   while (next.length > want && !next[next.length - 1]!.name.trim()) next.pop();
   return next;
 }
-
-/** Why the list is not complete yet, or '' when everyone the page asks for is named. */
-export function guestListProblem(list: Companion[], pax: number): string {
-  const asked = namesAsked(pax);
-  const named = namedGuests(list).length;
-  if (named >= asked) return '';
-  const missing = asked - named;
-  const rest = pax > asked ? ' The rest can sign the list at the gate.' : '';
-  return named === 0
-    ? `Write the names of everyone coming (${asked}).${rest}`
-    : `${missing} more ${missing === 1 ? 'name' : 'names'} to go — the list needs ${asked}.${rest}`;
-}

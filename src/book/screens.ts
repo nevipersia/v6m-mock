@@ -117,14 +117,14 @@ export function problemScreen(page: BookingPageSettings, message: string): SafeH
 
 /** The rows plus the counter, redrawn together as the headcount changes. */
 export const guestListBody = (draft: Draft): SafeHTML =>
-  guestListEditor(draft.guestList, namesAsked(draft.adults + draft.kids), { remarks: false });
+  guestListEditor(draft.guestList, namesAsked(draft.adults + draft.kids), { remarks: false, required: false });
 
 export function guestListBlock(page: BookingPageSettings, draft: Draft): SafeHTML | '' {
   if (!page.fields.guestList) return '';
   return html`
     <fieldset class="book__fieldset">
-      <legend class="field__label">${page.copy.guestListLabel} <span class="field__req">Required</span></legend>
-      <p class="small muted">Write everyone who is coming, yourself included. They sign this same list at the gate.${draft.adults + draft.kids > namesAsked(draft.adults + draft.kids) ? ` Big group: list the first ${namesAsked(draft.adults + draft.kids)} here and the rest can sign on the day.` : ''}</p>
+      <legend class="field__label">${page.copy.guestListLabel} (optional)</legend>
+      <p class="small muted">Write who is coming if you know already, yourself included. Anyone not listed signs the list at the gate.</p>
       <div data-slot="guest-list">${guestListBody(draft)}</div>
     </fieldset>`;
 }
