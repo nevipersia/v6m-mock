@@ -4,7 +4,7 @@ import type { SafeHTML, TemplateValue } from '../core/dom.js';
 import type { Expense, Permission, Staff, State } from '../core/types.js';
 import type { IconName } from './components/icons.js';
 
-export type PageId = 'dashboard' | 'calendar' | 'bookings' | 'inbox' | 'events' | 'users';
+export type PageId = 'dashboard' | 'calendar' | 'bookings' | 'finances' | 'inbox' | 'events' | 'users';
 
 export interface BookingPrefill {
   product?: string | undefined;
@@ -30,6 +30,8 @@ export interface DeskContext {
   newEvent: () => void;
   /** Pass an expense to edit it, nothing to record a new one. */
   newExpense: (expense?: Expense) => void;
+  /** Who is arriving today, or who is checked in now, in the side panel. */
+  openGuests: (group: 'arriving' | 'inhouse') => void;
   closeDrawer: () => void;
 }
 

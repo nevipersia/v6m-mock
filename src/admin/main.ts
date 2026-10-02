@@ -9,6 +9,7 @@ import { createBookingDetail } from './components/booking-detail.js';
 import { createBookingForm } from './components/booking-form.js';
 import { createEventForm } from './components/event-form.js';
 import { createExpenseForm } from './components/expense-form.js';
+import { createGuestSummary } from './components/guest-summary.js';
 import { createBookingLinkPanel } from './components/booking-link.js';
 import { closeDrawer, openDrawer, syncDrawer } from './components/drawer.js';
 import { jumpBy, refreshJump } from './components/jump.js';
@@ -53,6 +54,7 @@ function buildContext(state: State, staff: Staff): DeskContext {
     editBooking: (bookingId) => openDrawer(createBookingForm({}, { editId: bookingId }), ctx),
     newEvent: () => openDrawer(createEventForm(), ctx),
     newExpense: (expense) => openDrawer(createExpenseForm(expense), ctx),
+    openGuests: (group) => openDrawer(createGuestSummary(group), ctx),
     closeDrawer,
   };
   return ctx;

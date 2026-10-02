@@ -545,101 +545,289 @@ body.has-drawer .jump {
   text-align: center;
 }
 
-.metrics {
+/* ---------- Dashboard ---------- */
+
+/* Four big cards for today: two across on a phone, four across from a tablet. */
+.cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  margin-bottom: 14px;
+}
+
+@media (min-width: 760px) {
+  .cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: var(--orange);
+}
+
+.card__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.card__value {
+  overflow: hidden;
+  font-family: var(--font-serif);
+  font-size: clamp(26px, 3.4vw, 38px);
+  font-weight: 600;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card__detail {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.card__detail .icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+}
+
+.card--warn {
+  background: var(--terra-soft);
+  border-color: transparent;
+}
+
+.card--warn .card__label,
+.card--warn .card__value,
+.card--warn .card__detail {
+  color: var(--terra-ink);
+}
+
+/* Needs attention, folded to one line until it is opened. */
+.attention-line {
+  margin-bottom: 20px;
+  background: var(--cream);
+  border-radius: var(--radius);
+}
+
+.attention-line > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.attention-line > summary::-webkit-details-marker {
+  display: none;
+}
+
+.attention-line > summary .icon:first-child {
+  color: var(--orange-strong);
+}
+
+.attention-line > summary .icon:last-child {
+  margin-left: auto;
+  color: var(--ink-muted);
+  transition: transform 0.15s;
+}
+
+.attention-line[open] > summary .icon:last-child {
+  transform: rotate(180deg);
+}
+
+.attention-line .attention {
+  padding: 0 8px 8px;
+}
+
+.attention-line .attention__item {
+  background: var(--surface);
+}
+
+/* Sales beside income and expenses. */
+.summary {
   margin-bottom: 24px;
 }
 
-.metric {
+.summary__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 14px;
+}
+
+.summary__head .segmented {
+  margin-bottom: 0;
+}
+
+.summary__title {
+  font-size: 20px;
+}
+
+.summary__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+@media (min-width: 760px) {
+  .summary__cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+  }
+
+  .summary__cols--one {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.summary__heading {
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.summary__lines {
+  margin: 0;
+}
+
+.summary__line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+
+.summary__line dt {
+  color: var(--ink-muted);
+}
+
+.summary__line dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary__line--strong dd {
+  font-weight: 600;
+}
+
+.summary__line--total {
+  border-top: 2px solid var(--ink-muted);
+}
+
+.summary__line--total dt,
+.summary__line--total dd {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.summary__line--total dd {
+  font-family: var(--font-serif);
+  font-size: 20px;
+}
+
+.summary__line--warn dt,
+.summary__line--warn dd {
+  color: var(--terra-ink);
+}
+
+.summary__note {
+  margin: 0;
+}
+
+.summary__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 14px;
+  font-weight: 600;
+}
+
+.summary__more .icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------- Guest summary (side panel) ---------- */
+
+.guest-summary__figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.guest-summary__figure {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 14px 16px;
+  gap: 2px;
+  padding: 10px 12px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
-.metric__label {
+.guest-summary__label {
   font-size: 12px;
   font-weight: 600;
   color: var(--ink-muted);
 }
 
-.metric__value {
+.guest-summary__value {
   font-family: var(--font-serif);
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 600;
   line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
-.metric__value small {
-  font-family: var(--font-sans);
+.guest-summary__heading {
+  margin: 4px 0 6px;
   font-size: 14px;
-  font-weight: 500;
-  color: var(--ink-muted);
 }
 
-.metric__detail {
-  font-size: 12px;
-  color: var(--ink-muted);
+.guest-summary__lines {
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
 }
 
-.metric--warn {
-  background: var(--terra-soft);
-  border-color: transparent;
+.guest-summary__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
 }
 
-.metric--warn .metric__label,
-.metric--warn .metric__value,
-.metric--warn .metric__detail {
-  color: var(--terra-ink);
+.guest-summary__line-name {
+  flex: 1;
+  font-weight: 600;
 }
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  /* Named on one column too, so the panels never share an implicit cell. */
-  grid-template-areas:
-    "arriving"
-    "attention"
-    "inhouse"
-    "upcoming"
-    "activity";
-  gap: 16px;
-  align-items: start;
-}
-
-/*
- * Laid out by hand rather than auto-fit: the short panels sit under each
- * other so a tall "Needs attention" doesn't leave a hole beside it.
- */
-@media (min-width: 760px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas:
-      "arriving attention"
-      "inhouse  attention"
-      "upcoming activity";
-  }
-}
-
-@media (min-width: 1200px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-areas:
-      "arriving attention upcoming"
-      "inhouse  attention activity";
-  }
-}
-
-.dashboard-grid__arriving { grid-area: arriving; }
-.dashboard-grid__attention { grid-area: attention; }
-.dashboard-grid__inhouse { grid-area: inhouse; }
-.dashboard-grid__upcoming { grid-area: upcoming; }
-.dashboard-grid__activity { grid-area: activity; }
 
 .rows {
   margin: 0;

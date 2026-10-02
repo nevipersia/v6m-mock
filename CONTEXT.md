@@ -74,7 +74,7 @@ then removed on request; its inquiries stay in the data as inbox history.
 
 - **V6M Desk** (`/admin/`): staff app — email and password sign-in (two demo accounts, or an invite
   code that also sets a password),
-  Dashboard, Calendar (day/week/month with free navigation), Bookings, Inbox, Events, Users.
+  Dashboard, Calendar (day/week/month with free navigation), Bookings, Finances, Inbox, Events, Users.
 - **Booking link** (`/book/?code=…`): single-use page a staff member sends to one guest; the booking
   they submit lands on the calendar as a hold under that staff member.
 
@@ -124,8 +124,8 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     auth.ts                 Roles, page access, permissions
     routes.ts, layout.ts    Navigation, shell, page header
     components/             drawer, booking-detail, booking-form, booking-link, booking-pdf,
-                            event-form, expense-form, badges, icons, toast
-    views/                  login, dashboard, calendar, bookings, inbox, events, users
+                            event-form, expense-form, guest-summary, jump, badges, icons, toast
+    views/                  login, dashboard, calendar, bookings, finances, inbox, events, users
 assets/
   img/                      Logo
   css/                      tokens.css, base.css (shared) · admin.css · book.css
@@ -171,14 +171,19 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   (PDF) buttons. Under 640px the table gives way to a day-grouped list of short rows
   (`mobileList` in `views/bookings.ts`) whose tap opens the drawer, and the filter pickers fold
   behind a Filters button (`filtersOpen`).
-- Sales analytics on the dashboard come from `core/sales.ts`: bookings are counted by `createdAt`
+- The dashboard is deliberately one screen: four cards for today (Arriving today and In house open
+  `components/guest-summary.ts` in the drawer; Collected today opens Finances; Balances due opens
+  Bookings narrowed to today through `showBookings`), Needs attention folded into one line, and a
+  summary of sales beside income and expenses over one shared 7/30/90-day window. Every chart and
+  list behind those figures lives on `views/finances.ts`.
+- Sales analytics on the Finances page come from `core/sales.ts`: bookings are counted by `createdAt`
   (what was sold), payments by `receivedAt` (what came in), over 7, 30 or 90 days back from
   `meta.asOf`. `salesBetween(state, from, to)` does any window; `salesReport(state, days)` adds the
   trend bars, bucketed into weeks past 14 days. Clicking a bar re-cuts the section by running
   `salesBetween` over that bar alone. Sales group into five fixed `SalesGroup`s so the share charts
   never need a sixth colour; the five hues are `--cat-1`…`--cat-5` in `tokens.css`, checked as a set
   with the dataviz validator (all pairs, light surface). No permission gates the section.
-- Expenses and profit and loss (`core/finance.ts`, section in `views/dashboard.ts`, form in
+- Expenses and profit and loss (`core/finance.ts`, section in `views/finances.ts`, form in
   `components/expense-form.ts`): `state.expenses` is what the resort spent, dated on the day the
   money went out. Five categories (payroll, utilities, supplies, upkeep, other) so the breakdown
   never needs a sixth colour. The section sets payments received against expenses over 7, 30 or 90
@@ -190,7 +195,7 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   record staff can delete (behind a confirm step), because it can simply be typed in wrong.
 - `core/period.ts` holds what the sales and finance figures share: `daysBetween`, `buckets` (a
   window's chart bars, one per day up to `DAILY_LIMIT` and one per week past it), `rankSlices` and
-  the `Slice` shape. `trendChart` in the dashboard draws any two-series trend from those buckets,
+  the `Slice` shape. `trendChart` in `views/finances.ts` draws any two-series trend from those buckets,
   which is why both trends hover, read out and pin the same way.
 - Views can export `hovers` beside `actions` and `inputs` (`ViewModule` in `admin/types.ts`), wired
   in `admin/main.ts` for mouseover/mouseout/focusin/focusout. It drives the read-out lines under the

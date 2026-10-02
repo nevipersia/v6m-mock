@@ -63,6 +63,8 @@ const PAGE_REQUIREMENTS: Record<PageId, Permission | null> = {
   dashboard: null,
   calendar: null,
   bookings: null,
+  // Sales for everyone; the income and expenses on it need expenses.manage.
+  finances: null,
   inbox: 'inbox.write',
   events: 'events.manage',
   users: 'users.manage',

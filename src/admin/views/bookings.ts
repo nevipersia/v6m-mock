@@ -184,6 +184,12 @@ function mobileList(state: State, results: Booking[]): SafeHTML {
     </div>`;
 }
 
+/** Opens the list already narrowed, for links from elsewhere such as the dashboard's cards. */
+export function showBookings(narrowed: Partial<Filters>): void {
+  filters = { ...DEFAULT_FILTERS, ...narrowed };
+  location.hash = '#/bookings';
+}
+
 export function render(ctx: DeskContext): SafeHTML {
   const { state } = ctx;
   const results = state.bookings.filter(matches);
