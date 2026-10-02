@@ -14,6 +14,12 @@ import * as calendar from './calendar.js';
 /** The search box: a guest's name or a booking ID, within the days on screen. */
 let query = '';
 
+/** Rows the table shows before Show all. */
+const LIST_SHOWN = 15;
+/** Opened out with Show all; folds again whenever the days on screen change. */
+let listExpanded = false;
+let listKey = '';
+
 function matches(booking: Booking): boolean {
   const words = query.trim().toLowerCase();
   return !words || `${booking.guestName} ${booking.id}`.toLowerCase().includes(words);
@@ -109,6 +115,12 @@ export function render(ctx: DeskContext): SafeHTML {
   const results = state.bookings
     .filter((b) => b.date >= first && b.date <= last && matches(b))
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const key = calendar.enterKey(state);
+  if (key !== listKey) {
+    listKey = key;
+    listExpanded = false;
+  }
+  const rows = listExpanded || query.trim() ? results : results.slice(0, LIST_SHOWN);
   const search = html`
     <label class="list-search">
       ${icon('search')}
@@ -147,7 +159,7 @@ export function render(ctx: DeskContext): SafeHTML {
               </tr>
             </thead>
             <tbody>
-              ${results.map((b) => html`
+              ${rows.map((b) => html`
                 <tr class="data-table__row ${b.date === state.meta.asOf ? 'is-today' : ''}" data-action="open-booking" data-id="${b.id}">
                   <td>
                     <button class="link-button" type="button" data-action="open-booking" data-id="${b.id}">${b.guestName}</button>
@@ -161,6 +173,14 @@ export function render(ctx: DeskContext): SafeHTML {
                   <td>${statusPill(b)}</td>
                   <td class="data-table__go" aria-hidden="true">${icon('chevronRight')}</td>
                 </tr>`)}
+              ${results.length > LIST_SHOWN && !query.trim() ? html`
+                <tr class="fin-more">
+                  <td colspan="8">
+                    <button class="btn btn--quiet btn--sm" type="button" data-action="list-show-all" aria-expanded="${flag(listExpanded)}">
+                      ${listExpanded ? html`${icon('chevronUp')} Show fewer` : html`${icon('chevronDown')} Show all ${results.length} · ${results.length - LIST_SHOWN} more`}
+                    </button>
+                  </td>
+                </tr>` : ''}
             </tbody>
           </table>
         </div>` : query.trim()
@@ -181,6 +201,12 @@ export const inputs: HandlerMap = {
 
 export const actions: HandlerMap = {
   ...calendar.actions,
+
+  'list-show-all': ({ ctx }) => {
+    listExpanded = !listExpanded;
+    ctx.redraw();
+    if (!listExpanded) document.querySelector('[data-part="The list"]')?.scrollIntoView({ block: 'nearest' });
+  },
 
   'set-mode': ({ el, ctx }) => {
     mode = el.dataset.mode === 'list' ? 'list' : 'calendar';
