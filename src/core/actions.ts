@@ -6,12 +6,12 @@ import { addDays, formatDate, isEmail, isPHMobile, peso, plural } from './format
 import {
   DOWNPAYMENT_RATE, METHOD_LABELS, STAGE_LABELS, bookingWindow, checkAvailability, depositRequired, discountAmount,
   discountProblem, downpaymentDue, findBooking, findExclusive, findGuest, findPackage, findStaff, findUnit, isActive,
-  isEditable, findPromo, live, productLabel, quote, sessionFor, type DiscountInput,
+  isEditable, findPromo, live, permissionsFor, productLabel, quote, sessionFor, type DiscountInput,
 } from './rules.js';
 import { formatReference, referenceProblem } from './qr-payment.js';
 import type {
   Booking, BookingLink, BookingSource, Companion, EventPackage, EventStage, Expense, ExpenseCategory, ExtraCharge, Guest,
-  ISODate, Inquiry, Invite, Payment, PaymentMethod, Permission, PriceLine, Promo, ResortEvent, Role, Staff, StaffStatus, State,
+  ISODate, Inquiry, Invite, Payment, PaymentMethod, PriceLine, Promo, ResortEvent, Role, Staff, StaffStatus, State,
   Timestamp,
 } from './types.js';
 
@@ -852,18 +852,17 @@ export interface NewUser {
   name: string;
   email: string;
   role: Role;
-  permissions: Permission[];
 }
 
 /** Creates the account in an invited state plus the single-use code that unlocks it. */
-export function inviteUser({ name, email, role, permissions }: NewUser, staffId: string): { staff: Staff; invite: Invite } {
+export function inviteUser({ name, email, role }: NewUser, staffId: string): { staff: Staff; invite: Invite } {
   return update((state) => {
     const staff: Staff = {
       id: nextId(state.staff, 'ST', 2),
       name: name.trim(),
       email: email.trim(),
       role,
-      permissions: [...permissions],
+      permissions: permissionsFor(role),
       password: null,
       status: 'invited',
       demo: false,
@@ -898,11 +897,13 @@ export function redeemInvite(code: string, password: string): Staff | null {
   });
 }
 
-export function updateUser(targetId: string, changes: Partial<Pick<Staff, 'role' | 'permissions'>>, staffId: string): Staff {
+/** Changes someone's role; what they can do follows it. */
+export function setUserRole(targetId: string, role: Role, staffId: string): Staff {
   return update((state) => {
     const staff = must(state.staff.find((person) => person.id === targetId), `Staff ${targetId}`);
-    Object.assign(staff, changes, changes.permissions ? { permissions: [...changes.permissions] } : {});
-    logActivity(state, staffId, 'user.updated', staff.id, staff.name);
+    staff.role = role;
+    staff.permissions = permissionsFor(role);
+    logActivity(state, staffId, 'user.updated', staff.id, `${staff.name} · ${role}`);
     return staff;
   });
 }

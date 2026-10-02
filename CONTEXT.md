@@ -300,7 +300,7 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   booking itself, re-quotes, keeps payments, re-prices. An unchanged discount is kept as is, so a
   manager can edit a booking an owner discounted without a note.
 - Manual discounts (`applyDiscount` / `removeDiscount`, rules in `core/rules.ts`): permission
-  `discounts.apply` (owner and manager by default). Non-owners must give a note; owners need not.
+  `discounts.apply` (both roles). The reason note is optional for everyone.
   Stored as `booking.discount`; `booking.total` = `pricing.total` − discount, and `reprice()` moves
   the booking between hold and confirmed as the 50% downpayment changes. The total can't drop below
   what was paid.
@@ -311,7 +311,11 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 - Sign-in takes an email and password; demo passwords live in the data in plain text (mock only).
 - V6M Desk is invite only: the owner creates an account and a code, each code works once, and the
   person sets their own password when redeeming it.
-- Permissions live on each staff record, so the owner can change them per account from the Users page.
+- Access follows the role alone (`permissionsFor` in `core/rules.ts`): owners have every permission,
+  managers every one except `users.manage`, so only owners see the Users page. The Users page shows
+  each account's role and a Change role select (not for yourself, so an owner always remains);
+  there are no per-account permission ticks. `setUserRole` and `inviteUser` write the matching
+  permissions, and `store.normalize()` resets saved permissions to the role's on load.
 - Booking links are single use and expire; using one creates a hold for the staff member who sent it.
 
 ## Mock data
@@ -396,6 +400,6 @@ The same build runs on Supabase when `SUPABASE_URL` and `SUPABASE_ANON_KEY` are 
   fields blanked. `useBookingLink` keeps only guest fields (`guestBookingInput`) and re-checks them
   (`guestBookingProblem`, shared with the page); `retry: true` errors go back to the form.
 - Roles are Owner and Manager. The Staff role was removed; `store.normalize()` loads any saved
-  account with an unknown role as a Manager.
+  account with an unknown role as a Manager, and gives every account its role's permissions.
 - Guests are matched on name and mobile (`findOrCreateGuest`), so two guests sharing a name keep
   their own details.

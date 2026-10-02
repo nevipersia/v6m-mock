@@ -9,6 +9,7 @@ import type { Backend } from './backend.js';
 import { createLocalBackend } from './backends/local.js';
 import { createSupabaseBackend } from './backends/supabase.js';
 import { config } from './config.js';
+import { permissionsFor } from './rules.js';
 import { supabaseClient } from './supabase-client.js';
 import type { Role, State } from './types.js';
 
@@ -28,6 +29,8 @@ function normalize(loaded: State): State {
   for (const person of loaded.staff ?? []) {
     // The Staff role was removed; anyone saved with it keeps their permissions as a Manager.
     if (!ROLES.includes(person.role)) person.role = 'manager';
+    // Access follows the role alone: owners get everything, managers all but user accounts.
+    person.permissions = permissionsFor(person.role);
   }
   loaded.bookingLinks ??= [];
   loaded.invites ??= [];

@@ -5,9 +5,10 @@
 // remembers who is signed in per tab. A Supabase build signs in with Supabase
 // Auth; each staff row points at its Auth user through userId.
 //
-// Permissions live on each staff record in the data, so the owner can change
-// them from the Users page. In a Supabase build the database enforces them too
-// (supabase/migrations).
+// What an account can do follows its role (`permissionsFor` in core/rules):
+// owners everything, managers everything but user accounts. The permissions
+// are still written on each staff record, which is what a Supabase build's
+// database checks (supabase/migrations).
 
 import { redeemInvite as redeemInviteInState } from '../core/actions.js';
 import { isMock } from '../core/config.js';
@@ -27,37 +28,11 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 export const ROLE_SUMMARIES: Record<Role, string> = {
-  owner: 'Full access, including cancellations, discounts without a note and user accounts',
-  manager: 'Day-to-day running of bookings, payments, discounts (with a note) and the inbox',
+  owner: 'Everything on the desk, plus the Users page: invites, roles and suspending accounts',
+  manager: 'Everything on the desk except the Users page',
 };
 
 export const ROLES = Object.keys(ROLE_LABELS) as Role[];
-
-export interface PermissionInfo {
-  id: Permission;
-  label: string;
-  detail: string;
-}
-
-/** Everything an account can be granted, in the order the Users page shows them. */
-export const PERMISSIONS: PermissionInfo[] = [
-  { id: 'bookings.write', label: 'Create and edit bookings', detail: 'Also sends single-use booking links' },
-  { id: 'payments.write', label: 'Record payments', detail: 'Deposits, balances and check-in collections' },
-  { id: 'bookings.cancel', label: 'Cancel bookings', detail: 'Frees the slot again' },
-  { id: 'inbox.write', label: 'Use the inbox', detail: 'Reply to inquiries and turn them into bookings' },
-  { id: 'events.manage', label: 'Manage events', detail: 'See the event pipeline and packages' },
-  { id: 'discounts.apply', label: 'Give discounts', detail: 'Owners can skip the note; everyone else must say why' },
-  { id: 'expenses.manage', label: 'Track expenses', detail: 'Records spending and sees the profit and loss figures' },
-  { id: 'packages.manage', label: 'Manage packages and prices', detail: 'Adds, edits and deletes what can be booked, and runs promotions' },
-  { id: 'users.manage', label: 'Manage users', detail: 'Invite accounts and change what they can do' },
-];
-
-export const PERMISSION_IDS: Permission[] = PERMISSIONS.map((permission) => permission.id);
-
-export const ROLE_DEFAULTS: Record<Role, Permission[]> = {
-  owner: [...PERMISSION_IDS],
-  manager: ['bookings.write', 'payments.write', 'inbox.write', 'events.manage', 'discounts.apply', 'expenses.manage'],
-};
 
 /** Pages everyone can open, and the permission each restricted page needs. */
 const PAGE_REQUIREMENTS: Record<PageId, Permission | null> = {

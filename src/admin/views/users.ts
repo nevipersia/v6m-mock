@@ -1,16 +1,14 @@
-// Users: who can sign in, what they can do, and pending invites.
-// Only accounts with users.manage reach this page.
+// Users: who can sign in, their role, and pending invites.
+// Only owners (users.manage) reach this page.
 
-import { inviteUser, revokeInvite, setUserStatus, updateUser } from '../../core/actions.js';
+import { inviteUser, revokeInvite, setUserRole, setUserStatus } from '../../core/actions.js';
 import { html, type SafeHTML } from '../../core/dom.js';
 import { formatDateTime, plural } from '../../core/format.js';
 import { findStaff } from '../../core/rules.js';
-import type { Invite, Permission, Role, Staff, StaffStatus, State } from '../../core/types.js';
+import type { Invite, Role, Staff, StaffStatus, State } from '../../core/types.js';
 import type { Tone } from '../components/badges.js';
 import type { DeskContext, HandlerMap } from '../types.js';
-import {
-  PERMISSIONS, PERMISSION_IDS, ROLES, ROLE_DEFAULTS, ROLE_LABELS, ROLE_SUMMARIES,
-} from '../auth.js';
+import { ROLES, ROLE_LABELS, ROLE_SUMMARIES } from '../auth.js';
 import { avatar } from '../components/badges.js';
 import { icon } from '../components/icons.js';
 import { emptyState, pageHead } from '../layout.js';
@@ -19,10 +17,9 @@ interface UserDraft {
   name: string;
   email: string;
   role: Role;
-  permissions: Permission[];
 }
 
-const blankDraft = (): UserDraft => ({ name: '', email: '', role: 'manager', permissions: [...ROLE_DEFAULTS.manager] });
+const blankDraft = (): UserDraft => ({ name: '', email: '', role: 'manager' });
 
 const ui: { adding: boolean; draft: UserDraft; editingId: string | null; error: string; lastInvite: Invite | null } = {
   adding: false, draft: blankDraft(), editingId: null, error: '', lastInvite: null,
@@ -32,31 +29,6 @@ const STATUS_TONES: Record<StaffStatus, Tone> = { active: 'success', invited: 'w
 const STATUS_LABELS: Record<StaffStatus, string> = { active: 'Active', invited: 'Invite sent', suspended: 'Suspended' };
 
 const isRole = (value: string): value is Role => (ROLES as string[]).includes(value);
-const isPermission = (value: string): value is Permission => (PERMISSION_IDS as string[]).includes(value);
-
-function permissionList(staff: Staff): SafeHTML {
-  const granted = PERMISSIONS.filter((permission) => staff.permissions.includes(permission.id));
-  if (!granted.length) return html`<span class="small muted">No permissions yet</span>`;
-  return html`<span class="chip-row">${granted.map((permission) => html`<span class="pill pill--neutral">${permission.label}</span>`)}</span>`;
-}
-
-function permissionCheckboxes(selected: Permission[], inputName: string): SafeHTML {
-  return html`
-    <fieldset class="form-section">
-      <legend class="form-section__title">Can do</legend>
-      <div class="permission-grid">
-        ${PERMISSIONS.map((permission) => html`
-          <label class="permission">
-            <input type="checkbox" data-input="${inputName}" name="${permission.id}" ${selected.includes(permission.id) ? 'checked' : ''}>
-            <span>
-              <strong>${permission.label}</strong>
-              <span class="small muted">${permission.detail}</span>
-            </span>
-          </label>`)}
-      </div>
-    </fieldset>`;
-}
-
 const roleOptions = (selected: Role): SafeHTML[] => ROLES.map((role) => html`
   <option value="${role}" ${role === selected ? 'selected' : ''}>${ROLE_LABELS[role]}</option>`);
 
@@ -79,7 +51,7 @@ function inviteForm(): SafeHTML {
           <select class="input" name="role" data-input="draft">${roleOptions(ui.draft.role)}</select>
         </label>
       </div>
-      ${permissionCheckboxes(ui.draft.permissions, 'draft-permission')}
+      <p class="small muted">${ROLE_SUMMARIES[ui.draft.role]}.</p>
       <p class="form-error">${ui.error}</p>
       <div class="button-row button-row--end">
         <button class="btn btn--quiet" type="button" data-action="cancel-invite">Cancel</button>
@@ -126,13 +98,12 @@ function userCard(ctx: DeskContext, staff: Staff): SafeHTML {
             <span class="field__label">Role</span>
             <select class="input" name="role" data-input="edit-role" data-id="${staff.id}">${roleOptions(staff.role)}</select>
           </label>
-          ${permissionCheckboxes(staff.permissions, 'edit-permission')}
+          <p class="small muted">${ROLE_SUMMARIES[staff.role]}.</p>
           <p class="form-error">${ui.error}</p>
           <div class="button-row button-row--end">
             <button class="btn btn--quiet" type="button" data-action="cancel-edit">Done editing</button>
           </div>
-        </form>` : html`
-        <div class="user-card__permissions">${permissionList(staff)}</div>`}
+        </form>` : ''}
 
       ${invite ? html`
         <p class="small muted">Invite code <span class="mono">${invite.code}</span> · sent ${formatDateTime(invite.createdAt)}</p>` : ''}
@@ -140,7 +111,7 @@ function userCard(ctx: DeskContext, staff: Staff): SafeHTML {
       <footer class="user-card__foot">
         ${staff.demo ? html`<span class="small muted">Demo account, always available on the sign-in page</span>` : ''}
         <div class="button-row">
-          ${editing ? '' : html`<button class="btn btn--secondary btn--sm" type="button" data-action="edit-user" data-id="${staff.id}">Edit access</button>`}
+          ${editing || isSelf ? '' : html`<button class="btn btn--secondary btn--sm" type="button" data-action="edit-user" data-id="${staff.id}">Change role</button>`}
           ${invite ? html`<button class="btn btn--quiet btn--sm" type="button" data-action="revoke-invite" data-code="${invite.code}">Revoke invite</button>` : ''}
           ${!isSelf && !staff.demo && staff.status !== 'invited' ? html`
             <button class="btn btn--quiet btn--sm" type="button" data-action="toggle-status" data-id="${staff.id}">
@@ -180,17 +151,7 @@ export function render(ctx: DeskContext): SafeHTML {
         ${ROLES.map((role) => html`
           <div class="facts__row"><dt>${ROLE_LABELS[role]}</dt><dd>${ROLE_SUMMARIES[role]}</dd></div>`)}
       </dl>
-      <p class="small muted">Roles are a starting point. Tick or untick anything per account.</p>
     </section>`;
-}
-
-/** Toggles one permission and returns the list in the canonical order. */
-function togglePermission(current: Permission[], checkbox: HTMLInputElement): Permission[] {
-  const set = new Set<Permission>(current);
-  if (!isPermission(checkbox.name)) return current;
-  if (checkbox.checked) set.add(checkbox.name);
-  else set.delete(checkbox.name);
-  return PERMISSION_IDS.filter((id) => set.has(id));
 }
 
 export const inputs: HandlerMap = {
@@ -200,37 +161,18 @@ export const inputs: HandlerMap = {
     if (name === 'name' || name === 'email') ui.draft[name] = value;
     if (name === 'role' && isRole(value)) {
       ui.draft.role = value;
-      ui.draft.permissions = [...ROLE_DEFAULTS[value]];
       ctx.redraw();
     }
-  },
-
-  'draft-permission': ({ el }) => {
-    ui.draft.permissions = togglePermission(ui.draft.permissions, el as HTMLInputElement);
   },
 
   'edit-role': ({ el, ctx }) => {
     const { value } = el as HTMLSelectElement;
-    if (!isRole(value) || !el.dataset.id) return;
-    updateUser(el.dataset.id, { role: value, permissions: [...ROLE_DEFAULTS[value]] }, ctx.staff.id);
-    ctx.toast('Role updated');
-  },
-
-  'edit-permission': ({ el, ctx }) => {
-    const staff = findStaff(ctx.state, ui.editingId);
-    if (!staff) return;
-    const permissions = togglePermission(staff.permissions, el as HTMLInputElement);
-
-    if (staff.id === ctx.staff.id && !permissions.includes('users.manage')) {
-      ui.error = 'You cannot remove your own access to user management.';
-      ctx.redraw();
-      return;
-    }
-    ui.error = '';
-    updateUser(staff.id, { permissions }, ctx.staff.id);
-    const permission = PERMISSIONS.find((item) => item.id === (el as HTMLInputElement).name);
-    const granted = (el as HTMLInputElement).checked;
-    ctx.toast(`${staff.name} ${granted ? 'can now' : 'can no longer'} ${(permission?.label ?? 'do that').toLowerCase()}`, granted ? 'success' : 'warning');
+    const staff = findStaff(ctx.state, el.dataset.id);
+    if (!isRole(value) || !staff || staff.role === value) return;
+    // Your own role stays put, so the desk always keeps an owner.
+    if (staff.id === ctx.staff.id) return;
+    setUserRole(staff.id, value, ctx.staff.id);
+    ctx.toast(`${staff.name} is now ${value === 'owner' ? 'an owner' : 'a manager'}`);
   },
 };
 

@@ -65,10 +65,12 @@
       "permissions": [
         "bookings.write",
         "payments.write",
+        "bookings.cancel",
         "inbox.write",
         "events.manage",
         "discounts.apply",
-        "expenses.manage"
+        "expenses.manage",
+        "packages.manage"
       ],
       "status": "active",
       "demo": true,

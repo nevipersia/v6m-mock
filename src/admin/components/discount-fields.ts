@@ -3,7 +3,7 @@
 
 import { html, type SafeHTML } from '../../core/dom.js';
 import { formatDigits, peso } from '../../core/format.js';
-import { discountAmount, discountNeedsNote } from '../../core/rules.js';
+import { discountAmount } from '../../core/rules.js';
 import type { DiscountKind, Staff } from '../../core/types.js';
 
 export interface DiscountDraft {
@@ -15,8 +15,7 @@ export interface DiscountDraft {
 export const blankDiscount = (): DiscountDraft => ({ kind: 'amount', value: 0, note: '' });
 
 /** `input` is the data-input name the fields report to; each field's `name` says which part changed. */
-export function discountFields(staff: Staff, draft: DiscountDraft, base: number, input: string): SafeHTML {
-  const needsNote = discountNeedsNote(staff);
+export function discountFields(_staff: Staff, draft: DiscountDraft, base: number, input: string): SafeHTML {
   const amount = discountAmount(base, draft.kind, draft.value);
   return html`
     <div class="discount-fields">
@@ -35,9 +34,9 @@ export function discountFields(staff: Staff, draft: DiscountDraft, base: number,
         </label>
       </div>
       <label class="field">
-        <span class="field__label">${needsNote ? 'Reason (required)' : 'Reason (optional for owners)'}</span>
+        <span class="field__label">Reason (optional)</span>
         <input class="input" name="discountNote" data-input="${input}" value="${draft.note}" autocomplete="off"
-          placeholder="${needsNote ? 'Returning guest, promo from Messenger, service issue…' : 'Optional'}">
+          placeholder="Returning guest, promo from Messenger, service issue…">
       </label>
       <p class="small muted" data-slot="discount-preview">${amount ? `Takes ${peso(amount)} off the ${peso(base)} price.` : ''}</p>
     </div>`;

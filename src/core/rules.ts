@@ -3,7 +3,7 @@
 import { addDays, formatDate, parseDate } from './format.js';
 import type {
   Booking, BookingSource, DiscountKind, ExclusivePackage, ExtraCharge, ManualDiscount, Staff, Timestamp, BookingStatus, EventStage, ISODate, PaymentMethod, PoolSession, PriceLine,
-  Pricing, Promo, ResortEvent, State, Unit,
+  Permission, Pricing, Promo, ResortEvent, Role, State, Unit,
 } from './types.js';
 
 export const STATUS_LABELS: Record<BookingStatus, string> = {
@@ -275,8 +275,18 @@ export function quote(state: State, request: BookingRequest & { extras?: ExtraCh
 
 // ---------- Manual discounts ----------
 
-/** Owners may discount without a reason; everyone else with the permission must write one. */
-export const discountNeedsNote = (staff: Staff): boolean => staff.role !== 'owner';
+/** Every permission there is, in the order the desk lists them. */
+export const ALL_PERMISSIONS: Permission[] = [
+  'bookings.write', 'payments.write', 'bookings.cancel', 'inbox.write', 'events.manage',
+  'discounts.apply', 'expenses.manage', 'packages.manage', 'users.manage',
+];
+
+/**
+ * What a role may do. The two roles are the same desk, except that only
+ * owners manage user accounts.
+ */
+export const permissionsFor = (role: Role): Permission[] =>
+  role === 'owner' ? [...ALL_PERMISSIONS] : ALL_PERMISSIONS.filter((permission) => permission !== 'users.manage');
 
 export const canDiscount = (staff: Staff): boolean => staff.permissions.includes('discounts.apply');
 
@@ -308,7 +318,6 @@ export function discountProblem(staff: Staff, input: DiscountInput, base: number
   if (base - discountAmount(base, input.kind, input.value) < floor) {
     return `The guest already paid ${formatPeso(floor)}, so the total can't go below that.`;
   }
-  if (discountNeedsNote(staff) && !input.note?.trim()) return 'Add a note saying why you are giving this discount.';
   return null;
 }
 
