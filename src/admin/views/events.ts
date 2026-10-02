@@ -14,6 +14,11 @@ import { bookAndOpen, stageMoney } from '../components/stage-summary.js';
 
 const STAGES: EventStage[] = ['inquiry', 'reserved', 'paid', 'done'];
 
+/** Inquiries pile up, so their column shows the first few; its header opens them all. */
+const INQUIRIES_SHOWN = 2;
+const shownIn = (stage: EventStage, events: ResortEvent[]): ResortEvent[] =>
+  stage === 'inquiry' ? events.slice(0, INQUIRIES_SHOWN) : events;
+
 function eventCard(ctx: DeskContext, event: ResortEvent): SafeHTML {
   const { state } = ctx;
   const pkg = findPackage(state, event.packageId);
@@ -83,7 +88,11 @@ export function render(ctx: DeskContext): SafeHTML {
                   ${icon('arrowRight')}
                 </span>
               </button>
-              ${inStage.map((event) => eventCard(ctx, event))}
+              ${shownIn(stage, inStage).map((event) => eventCard(ctx, event))}
+              ${inStage.length > shownIn(stage, inStage).length ? html`
+                <button class="pipeline__more" type="button" data-action="open-stage" data-stage="${stage}">
+                  +${inStage.length - shownIn(stage, inStage).length} more · see all ${plural(inStage.length, 'inquiry', 'inquiries')}
+                </button>` : ''}
             </section>`;
         })}
       </div>` : html`<div class="panel">${emptyState('No events in this period', 'Event bookings will show up here by stage.')}</div>`}`;

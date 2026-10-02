@@ -1741,6 +1741,25 @@ button.cal-pool:hover {
   transform: translateY(-3px);
 }
 
+.pipeline__more {
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.pipeline__more:hover {
+  background: var(--surface);
+  border-color: var(--orange);
+  color: var(--ink);
+}
+
 .pipeline__head {
   display: grid;
   gap: 2px;

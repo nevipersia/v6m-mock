@@ -268,6 +268,8 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   the stage to Reserved or Paid there books it. Booked events refuse it and change through the booking.
 - The Edit inquiry panel has Remove inquiry (asks first): `deleteEvent` deletes an unbooked event
   outright (database policy "inquiry remove" allows only `booking_id is null` with `events.manage`).
+- The Inquiry column shows at most `INQUIRIES_SHOWN` (2) cards, then a "+N more · see all" button
+  that opens the Inquiry stage summary, as its header does. Other columns show every card.
 - Events whose booking is cancelled drop off the Events page, its stage summaries, the calendar's event
   row and the dashboard (`liveEvents` in `core/rules.ts`). `cancelBooking` clears the event's
   `blocksCalendar` so the date opens again; `normalize` does the same for older data.
