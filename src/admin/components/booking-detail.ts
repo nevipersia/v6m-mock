@@ -475,7 +475,8 @@ export function createBookingDetail(bookingId: string): DrawerContent {
 
       'remove-discount': ({ ctx }) => {
         const result = removeDiscount(bookingId, ctx.staff.id);
-        ctx.toast(result.error ?? `Discount removed · total back to ${peso(result.booking.total)}`);
+        if (result.error !== undefined) ctx.toast(result.error, 'error');
+        else ctx.toast(`Discount removed · total back to ${peso(result.booking.total)}`);
       },
 
       'open-qr': ({ redraw }) => {
@@ -524,7 +525,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         const booking = findBooking(ctx.state, bookingId);
         if (!booking) return;
         downloadBookingPdf(ctx.state, booking);
-        ctx.toast('Registration sheet downloaded');
+        ctx.toast('Registration sheet downloaded', 'info');
       },
 
       'start-check-in': ({ redraw }) => {
@@ -598,7 +599,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         const reason = $<HTMLSelectElement>('[name="cancelReason"]', root).value;
         ui.confirmCancel = false;
         const booking = cancelBooking(bookingId, reason, ctx.staff.id);
-        ctx.toast(`${booking.guestName}'s booking was cancelled`);
+        ctx.toast(`${booking.guestName}'s booking was cancelled`, 'warning');
       },
     },
   };

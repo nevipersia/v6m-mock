@@ -196,7 +196,7 @@ export function createExpenseForm(existing?: Expense): DrawerContent {
           showError(root);
           return;
         }
-        ctx.toast(`${result.expense.item} removed`);
+        ctx.toast(`${result.expense.item} removed`, 'warning');
         ctx.closeDrawer();
       },
     },

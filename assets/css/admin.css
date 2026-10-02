@@ -2069,29 +2069,124 @@ body.has-drawer {
   color: var(--orange-strong);
 }
 
-/* ---------- Toast ---------- */
+/* ---------- Alerts ---------- */
 
-.toast {
+/* Top right, under the top bar: where the eye goes after pressing Save. */
+.alerts {
   position: fixed;
-  left: 50%;
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-  z-index: 60;
-  max-width: calc(100vw - 32px);
-  padding: 10px 18px;
-  transform: translateX(-50%);
-  background: var(--navy);
-  color: #fff;
-  border-radius: var(--radius-pill);
+  top: 72px;
+  right: 20px;
+  z-index: 70;
+  display: grid;
+  gap: 10px;
+  width: min(380px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.alert {
+  --tone: var(--green);
+  --tone-soft: #E3F1E1;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  overflow: hidden;
+  padding: 14px 12px 16px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--tone);
+  border-radius: 12px;
   box-shadow: var(--shadow-float);
+  pointer-events: auto;
+  animation: alert-in 0.36s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.alert--info { --tone: var(--blue); --tone-soft: var(--blue-soft); }
+.alert--warning { --tone: var(--orange); --tone-soft: var(--orange-soft); }
+.alert--error { --tone: var(--terra); --tone-soft: var(--terra-soft); }
+
+.alert__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  background: var(--tone-soft);
+  border-radius: 50%;
+  color: var(--tone);
+}
+
+.alert__icon .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.alert__text {
+  flex: 1;
+  margin: 4px 0 0;
   font-size: 14px;
   font-weight: 500;
+  line-height: 1.4;
+  color: var(--ink);
 }
 
-@media (max-width: 900px) {
-  .toast {
-    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
-  }
+.alert__close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ink-muted);
+  cursor: pointer;
 }
+
+.alert__close:hover {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
+.alert__close .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* How long is left, draining along the bottom; it waits while pointed at. */
+.alert__timer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: var(--tone);
+  opacity: 0.35;
+  transform-origin: left;
+  animation: alert-timer var(--stay, 4000ms) linear forwards;
+}
+
+.alert:hover .alert__timer {
+  animation-play-state: paused;
+}
+
+.alert.is-leaving {
+  animation: alert-out 0.2s ease-in forwards;
+}
+
+@keyframes alert-in {
+  from { opacity: 0; transform: translateX(24px) scale(0.96); }
+}
+
+@keyframes alert-out {
+  to { opacity: 0; transform: translateX(24px); }
+}
+
+@keyframes alert-timer {
+  to { transform: scaleX(0); }
+}
+
 
 /* ---------- Number and amount fields ---------- */
 
@@ -3447,13 +3542,6 @@ dialog.is-entering::backdrop {
   from { opacity: 0; transform: translateY(10px) scale(0.96); }
 }
 
-.toast:not([hidden]) {
-  animation: toast-in 0.34s var(--ease-spring);
-}
-
-@keyframes toast-in {
-  from { opacity: 0; transform: translate(-50%, 16px) scale(0.96); }
-}
 
 .attention-line[open] .attention {
   animation: rise 0.28s var(--ease-out);

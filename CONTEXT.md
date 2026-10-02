@@ -225,6 +225,10 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   changed (with `data-motion` = on/back/in/out/swap choosing the direction), and `.is-entering` to a
   pop-up that was not open before. `[data-count-up]` figures count up when their page opens. The
   drawer slides out before it hides. `prefers-reduced-motion` turns all of it off.
+- Alerts (`components/toast.ts`, `ctx.toast(message, tone)`): a card in the top right for every
+  change, success by default, `info` for copies and downloads, `warning` for cancellations,
+  removals and revoked access, `error` for anything that failed. They stack (four at most), drain
+  a timer bar, pause on hover and close with ✕; errors stay longest.
 - Drawers can put buttons in their header beside Close (`DrawerContent.tools`); a booking's Edit
   and Sheet live there.
 - Pop-ups are `<dialog data-modal data-cancel="action">`. `admin/main.ts` opens each one as a modal

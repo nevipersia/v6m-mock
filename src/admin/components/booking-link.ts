@@ -176,16 +176,16 @@ export function createBookingLinkPanel(prefill: BookingPrefill = {}): DrawerCont
       'copy-link': async ({ el, ctx }) => {
         try {
           await navigator.clipboard.writeText(linkUrl(el.dataset.code ?? ''));
-          ctx.toast('Link copied');
+          ctx.toast('Link copied', 'info');
         } catch {
-          ctx.toast('Copy blocked by the browser, use Open it instead');
+          ctx.toast('Copy blocked by the browser, use Open it instead', 'warning');
         }
       },
 
       'cancel-link': ({ el, ctx }) => {
         cancelBookingLink(el.dataset.code ?? '', ctx.staff.id);
         if (ui.created?.code === el.dataset.code) ui.created = null;
-        ctx.toast('Link cancelled');
+        ctx.toast('Link cancelled', 'warning');
       },
 
       'open-linked-booking': ({ el, ctx }) => ctx.openBooking(el.dataset.id ?? ''),

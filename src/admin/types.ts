@@ -3,6 +3,7 @@
 import type { SafeHTML, TemplateValue } from '../core/dom.js';
 import type { Expense, Permission, Staff, State } from '../core/types.js';
 import type { IconName } from './components/icons.js';
+import type { AlertTone } from './components/toast.js';
 
 export type PageId = 'dashboard' | 'bookings' | 'finances' | 'inbox' | 'events' | 'users';
 
@@ -21,7 +22,8 @@ export interface DeskContext {
   staff: Staff;
   can: (permission: Permission) => boolean;
   canView: (pageId: string) => boolean;
-  toast: (message: string) => void;
+  /** An alert in the corner; success unless said otherwise. */
+  toast: (message: string, tone?: AlertTone) => void;
   redraw: () => void;
   openBooking: (bookingId: string) => void;
   newBooking: (prefill?: BookingPrefill) => void;
@@ -93,6 +95,7 @@ export interface LoginContext {
   /** Null in a Supabase build until someone signs in: nothing loads before that. */
   readonly state: State | null;
   redraw: () => void;
-  toast: (message: string) => void;
+  /** An alert in the corner; success unless said otherwise. */
+  toast: (message: string, tone?: AlertTone) => void;
   signedIn: (staff: Staff) => void;
 }

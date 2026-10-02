@@ -115,7 +115,7 @@ export const actions: HandlerMap = {
   'book-event': ({ el, ctx }) => {
     const result = bookEvent(el.dataset.id ?? '', ctx.staff.id);
     if (result.error !== undefined) {
-      ctx.toast(result.error);
+      ctx.toast(result.error, 'error');
       return;
     }
     ctx.toast(`${result.event.title} booked · ${peso(result.booking?.total ?? 0)} · on hold until the downpayment`);

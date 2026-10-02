@@ -265,7 +265,7 @@ window.addEventListener('resize', scheduleJumpRefresh);
 
 async function start(): Promise<void> {
   subscribe(draw);
-  onSaveError((error) => showToast(`Not saved: ${error.message}. Reloaded the latest data.`));
+  onSaveError((error) => showToast(`Not saved: ${error.message}. Reloaded the latest data.`, 'error'));
   try {
     await restoreSession();
     if (hasSession()) await loadStore();

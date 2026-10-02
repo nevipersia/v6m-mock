@@ -228,6 +228,9 @@ export const inputs: HandlerMap = {
     }
     ui.error = '';
     updateUser(staff.id, { permissions }, ctx.staff.id);
+    const permission = PERMISSIONS.find((item) => item.id === (el as HTMLInputElement).name);
+    const granted = (el as HTMLInputElement).checked;
+    ctx.toast(`${staff.name} ${granted ? 'can now' : 'can no longer'} ${(permission?.label ?? 'do that').toLowerCase()}`, granted ? 'success' : 'warning');
   },
 };
 
@@ -268,9 +271,9 @@ export const actions: HandlerMap = {
   'copy-invite': async ({ el, ctx }) => {
     try {
       await navigator.clipboard.writeText(el.dataset.code ?? '');
-      ctx.toast('Invite code copied');
+      ctx.toast('Invite code copied', 'info');
     } catch {
-      ctx.toast('Copy blocked by the browser, write the code down instead');
+      ctx.toast('Copy blocked by the browser, write the code down instead', 'warning');
     }
   },
 
@@ -299,7 +302,7 @@ export const actions: HandlerMap = {
   'revoke-invite': ({ el, ctx }) => {
     revokeInvite(el.dataset.code ?? '', ctx.staff.id);
     if (ui.lastInvite?.code === el.dataset.code) ui.lastInvite = null;
-    ctx.toast('Invite revoked');
+    ctx.toast('Invite revoked', 'warning');
   },
 
   'toggle-status': ({ el, ctx }) => {
@@ -307,6 +310,6 @@ export const actions: HandlerMap = {
     if (!staff) return;
     const next: StaffStatus = staff.status === 'active' ? 'suspended' : 'active';
     setUserStatus(staff.id, next, ctx.staff.id);
-    ctx.toast(`${staff.name} ${next === 'active' ? 'reactivated' : 'suspended'}`);
+    ctx.toast(`${staff.name} ${next === 'active' ? 'reactivated' : 'suspended'}`, next === 'active' ? 'success' : 'warning');
   },
 };
