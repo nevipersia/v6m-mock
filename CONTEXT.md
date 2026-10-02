@@ -236,8 +236,10 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   hidden, and receives the value plus input/change events, so views need no changes. A
   MutationObserver picks up new fields, side panels included. Date pickers open next to the button that
   opened them (`components/popover.ts` `placeNear`; the Bookings picker names its button with
-  `data-anchor`), below it or above when there is no room, at a compact 292px. `data-optional` on a date input adds
-  Clear. The guest booking page keeps native pickers.
+  `data-anchor`), below it or above when there is no room, at a compact 292px. `data-optional` on a date or time input
+  adds Clear. Time inputs open an hour / minute / AM-PM picker; text inputs with a `<datalist>` show
+  their suggestions in the same list style, filtered as you type. Layout rules that place a field by
+  `[name=…]` need a matching `[data-field-for=…]` rule for its button. The guest booking page keeps native pickers.
 - Packages (`views/packages.ts`, `components/package-form.ts`, needs `packages.manage`, which
   owners have by default): every bookable thing — entrance sessions, rooms and cottages, exclusive
   rentals, event packages — as cards in four tabs, edited in the side panel, plus the shared

@@ -31,7 +31,7 @@ export function discountFields(staff: Staff, draft: DiscountDraft, base: number,
         <label class="field">
           <span class="field__label">${draft.kind === 'percent' ? 'Percent off' : 'Pesos off'}</span>
           <input class="input input--amount" name="discountValue" data-input="${input}" type="text" inputmode="numeric"
-            autocomplete="off" placeholder="0" value="${draft.kind === 'percent' ? (draft.value || '') : formatDigits(draft.value)}">
+            autocomplete="off" placeholder="0" value="${draft.value ? (draft.kind === 'percent' ? draft.value : formatDigits(draft.value)) : ''}">
         </label>
       </div>
       <label class="field">
@@ -56,7 +56,7 @@ export function readDiscountField(draft: DiscountDraft, field: HTMLInputElement 
   if (field.name === 'discountValue') {
     const digits = Number(field.value.replace(/\D/g, '')) || 0;
     draft.value = draft.kind === 'percent' ? Math.min(digits, 100) : digits;
-    return draft.kind === 'percent' ? String(draft.value || '') : formatDigits(draft.value);
+    return !draft.value ? '' : draft.kind === 'percent' ? String(draft.value) : formatDigits(draft.value);
   }
   if (field.name === 'discountNote') draft.note = field.value;
   return null;

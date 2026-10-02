@@ -156,7 +156,7 @@ export function createEventForm(): DrawerContent {
                   <li class="extra-row">
                     <input class="input" data-input="addon" data-row="${index}" name="addOnItem" value="${addOn.item}"
                       list="addon-presets" placeholder="Sound system, extra hours…" aria-label="Add-on ${index + 1}" autocomplete="off">
-                    <input class="input input--amount" data-input="addon" data-row="${index}" name="addOnAmount" value="${formatDigits(addOn.amount)}"
+                    <input class="input input--amount" data-input="addon" data-row="${index}" name="addOnAmount" value="${addOn.amount ? formatDigits(addOn.amount) : ''}"
                       inputmode="numeric" placeholder="₱0" aria-label="Add-on ${index + 1} amount" autocomplete="off">
                     <button class="guest-row__remove" type="button" data-action="remove-addon" data-row="${index}" aria-label="Remove add-on ${index + 1}">×</button>
                   </li>`)}
@@ -187,7 +187,7 @@ export function createEventForm(): DrawerContent {
               <div class="form-grid">
                 <label class="field">
                   <span class="field__label">Amount (₱)</span>
-                  <input class="input input--amount" name="deposit" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${formatDigits(form.deposit)}">
+                  <input class="input input--amount" name="deposit" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${form.deposit ? formatDigits(form.deposit) : ''}">
                 </label>
                 <label class="field">
                   <span class="field__label">Method</span>

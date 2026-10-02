@@ -1517,6 +1517,7 @@ button.cal-pool:hover {
   .drawer .guest-row__number { grid-area: num; }
   .drawer .guest-row [name="companionName"] { grid-area: name; }
   .drawer .guest-row [name="companionGender"] { grid-area: gender; }
+  .drawer .guest-row [data-field-for="companionGender"] { grid-area: gender; }
   .drawer .guest-row [name="companionAge"] { grid-area: age; }
   .drawer .guest-row [name="companionRemarks"] { grid-area: remarks; }
   .drawer .guest-row__remove { grid-area: remove; }
@@ -4220,4 +4221,96 @@ dialog.is-entering::backdrop {
 
 dialog.picker.is-anchored.is-entering {
   animation: picker-drop 0.18s cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+/* ---------- Form fixes: new buttons in old layouts ---------- */
+
+/* Layouts place fields by name; the buttons over dropdowns go where their field went. */
+.guest-row [data-field-for="companionGender"] { grid-area: gender; }
+.extra-row [data-field-for="extraKind"] { grid-area: kind; }
+
+@media (max-width: 560px) {
+  .guest-row [data-field-for="companionGender"] { grid-area: gender; }
+}
+
+/* Stay: booking and date on their own lines, then adults, kids and SC / PWD in a row. */
+.form-grid--stay {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.form-grid__wide {
+  grid-column: 1 / -1;
+}
+
+/* "+ Add a charge", "+ Add an add-on": on the left like "+ Add a guest", not stretched. */
+.form-section > .btn {
+  justify-self: start;
+}
+
+/* ---------- Time picker ---------- */
+
+.timepick {
+  padding: 8px;
+  overflow: visible;
+}
+
+.timepick__cols {
+  display: grid;
+  grid-template-columns: 64px 64px 64px;
+  gap: 6px;
+}
+
+.timepick__col {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  max-height: 216px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.timepick__col--half {
+  max-height: none;
+}
+
+.timepick__item {
+  justify-content: center;
+  padding: 7px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.timepick__item.is-selected {
+  background: var(--navy);
+  color: #fff;
+}
+
+.timepick__item.is-selected:hover,
+.timepick__item.is-selected:focus-visible {
+  background: var(--navy);
+}
+
+.timepick__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.timepick__foot .btn:first-child {
+  margin-right: auto;
+}
+
+.field-trigger--time .icon:first-child {
+  color: var(--orange-strong);
+}
+
+/* Suggestions under a text field: the same list, without a check mark. */
+.menu--suggest {
+  max-height: 260px;
+}
+
+.menu.is-anchored {
+  position: fixed;
 }

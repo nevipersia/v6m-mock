@@ -220,7 +220,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
                   ${EXTRA_PRESETS.map((preset) => html`<option ${!extra.custom && extra.label === preset ? 'selected' : ''}>${preset}</option>`)}
                   <option value="${EXTRA_OTHER}" ${extra.custom ? 'selected' : ''}>Other…</option>
                 </select>
-                <input class="input input--amount" data-input="extra" data-row="${index}" name="extraAmount" value="${formatDigits(extra.amount)}"
+                <input class="input input--amount" data-input="extra" data-row="${index}" name="extraAmount" value="${extra.amount ? formatDigits(extra.amount) : ''}"
                   inputmode="numeric" placeholder="₱0" aria-label="Charge ${index + 1} amount" autocomplete="off">
                 <button class="guest-row__remove" type="button" data-action="remove-extra" data-row="${index}" aria-label="Remove charge ${index + 1}">×</button>
                 ${extra.custom ? html`
@@ -310,15 +310,15 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
 
           <fieldset class="form-section">
             <legend class="form-section__title">Stay</legend>
-            <div class="form-grid">
-              <label class="field">
+            <div class="form-grid form-grid--stay">
+              <label class="field form-grid__wide">
                 <span class="field__label">Booking</span>
                 <select class="input" name="product" data-input="field">
                   ${productGroups(state).map((group) => html`
                     <optgroup label="${group.label}">${group.options.map((item) => option(item.value, item.label, form.product))}</optgroup>`)}
                 </select>
               </label>
-              <label class="field">
+              <label class="field form-grid__wide">
                 <span class="field__label">Date</span>
                 <input class="input" name="date" data-input="field" type="date" value="${form.date}">
                 ${closingEvent(state, form.date) ? html`<span class="small muted">Closed that day for a private event.</span>` : ''}
@@ -358,7 +358,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
               <div class="form-grid">
                 <label class="field">
                   <span class="field__label">Amount (₱)</span>
-                  <input class="input input--amount" name="deposit" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${formatDigits(form.deposit)}">
+                  <input class="input input--amount" name="deposit" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${form.deposit ? formatDigits(form.deposit) : ''}">
                 </label>
                 <label class="field">
                   <span class="field__label">Method</span>

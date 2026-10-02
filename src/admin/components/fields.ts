@@ -13,6 +13,7 @@ import { parseDate } from '../../core/format.js';
 import type { ISODate } from '../../core/types.js';
 import { openDatePicker } from './date-picker.js';
 import { icon } from './icons.js';
+import { placeNear } from './popover.js';
 
 let today: ISODate = new Date().toISOString().slice(0, 10);
 
@@ -252,11 +253,259 @@ function hide(control: HTMLElement): void {
   control.setAttribute('aria-hidden', 'true');
 }
 
+// ---------- Times ----------
+//
+// A time field opens three short columns — hour, minute, AM or PM — next to
+// its button, the same card as a dropdown. Each pick writes straight into the
+// real <input type="time"> (24-hour "HH:MM"), so the form reads it as before.
+
+let openTime: { popup: HTMLElement; trigger: HTMLButtonElement; cleanup: () => void } | null = null;
+
+function closeTime(focusTrigger = false): void {
+  if (!openTime) return;
+  const { popup, trigger, cleanup } = openTime;
+  openTime = null;
+  cleanup();
+  trigger.setAttribute('aria-expanded', 'false');
+  popup.classList.add('is-leaving');
+  setTimeout(() => popup.remove(), 120);
+  if (focusTrigger && trigger.isConnected) trigger.focus();
+}
+
+/** "14:05" as "2:05 PM". */
+const timeText = (value: string): string => {
+  const [hours = NaN, minutes = NaN] = value.split(':').map(Number);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return 'Pick a time';
+  const half = hours >= 12 ? 'PM' : 'AM';
+  return `${hours % 12 || 12}:${String(minutes).padStart(2, '0')} ${half}`;
+};
+
+function showTime(input: HTMLInputElement, trigger: HTMLButtonElement): void {
+  closeTime();
+  closeMenu();
+  const popup = document.createElement('div');
+  popup.className = 'menu timepick';
+  popup.setAttribute('role', 'dialog');
+  popup.setAttribute('aria-label', trigger.getAttribute('aria-label') ?? 'Pick a time');
+  document.body.append(popup);
+
+  // Without a value yet, start from the current clock rather than midnight.
+  const now = new Date();
+  const [startHours = now.getHours(), startMinutes = now.getMinutes()] = input.value ? input.value.split(':').map(Number) : [];
+  let hour12 = startHours % 12 || 12;
+  let minute = startMinutes;
+  let pm = startHours >= 12;
+  const value = () => `${String((hour12 % 12) + (pm ? 12 : 0)).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+
+  const draw = (focusKey?: string) => {
+    render(popup, html`
+      <div class="timepick__cols">
+        <div class="timepick__col" role="listbox" aria-label="Hour">
+          ${Array.from({ length: 12 }, (_, index) => index + 1).map((hour) => html`
+            <button class="menu__item timepick__item ${hour === hour12 ? 'is-selected' : ''}" type="button" role="option"
+              aria-selected="${hour === hour12 ? 'true' : 'false'}" data-part="hour" data-value="${hour}" data-key="h${hour}">${hour}</button>`)}
+        </div>
+        <div class="timepick__col" role="listbox" aria-label="Minute">
+          ${Array.from({ length: 60 }, (_, index) => index).map((item) => html`
+            <button class="menu__item timepick__item ${item === minute ? 'is-selected' : ''}" type="button" role="option"
+              aria-selected="${item === minute ? 'true' : 'false'}" data-part="minute" data-value="${item}" data-key="m${item}">${String(item).padStart(2, '0')}</button>`)}
+        </div>
+        <div class="timepick__col timepick__col--half" role="listbox" aria-label="AM or PM">
+          ${['AM', 'PM'].map((half) => html`
+            <button class="menu__item timepick__item ${(half === 'PM') === pm ? 'is-selected' : ''}" type="button" role="option"
+              aria-selected="${(half === 'PM') === pm ? 'true' : 'false'}" data-part="half" data-value="${half}" data-key="${half}">${half}</button>`)}
+        </div>
+      </div>
+      <div class="timepick__foot">
+        <button class="btn btn--quiet btn--sm" type="button" data-part="now">Now</button>
+        ${'optional' in input.dataset ? html`<button class="btn btn--quiet btn--sm" type="button" data-part="clear">Clear</button>` : ''}
+        <button class="btn btn--secondary btn--sm" type="button" data-part="done">Done</button>
+      </div>`);
+    // Each column scrolls to its pick, so 2:35 shows 2 and 35 without hunting.
+    popup.querySelectorAll<HTMLElement>('.timepick__col .is-selected').forEach((item) => {
+      const column = item.parentElement as HTMLElement;
+      column.scrollTop = item.offsetTop - column.clientHeight / 2 + item.offsetHeight / 2;
+    });
+    if (focusKey) popup.querySelector<HTMLElement>(`[data-key="${focusKey}"]`)?.focus({ preventScroll: true });
+  };
+
+  const write = () => {
+    commit(input, value());
+    trigger.querySelector('.field-trigger__text')!.textContent = timeText(value());
+    trigger.classList.remove('is-placeholder');
+    nameAfterField(trigger, input);
+  };
+
+  popup.addEventListener('click', (event) => {
+    const el = (event.target as Element).closest<HTMLElement>('[data-part]');
+    if (!el) return;
+    const part = el.dataset.part;
+    if (part === 'hour') hour12 = Number(el.dataset.value);
+    else if (part === 'minute') minute = Number(el.dataset.value);
+    else if (part === 'half') pm = el.dataset.value === 'PM';
+    else if (part === 'now') {
+      const clock = new Date();
+      hour12 = clock.getHours() % 12 || 12;
+      minute = clock.getMinutes();
+      pm = clock.getHours() >= 12;
+    } else if (part === 'clear') {
+      commit(input, '');
+      trigger.querySelector('.field-trigger__text')!.textContent = timeText('');
+      trigger.classList.add('is-placeholder');
+      closeTime(true);
+      return;
+    } else if (part === 'done') {
+      write();
+      closeTime(true);
+      return;
+    }
+    write();
+    draw(el.dataset.key);
+  });
+
+  popup.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation(); // the side panel would close too
+      closeTime(true);
+      return;
+    }
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    const current = document.activeElement as HTMLElement | null;
+    const column = current?.closest('.timepick__col');
+    if (!current || !column) return;
+    event.preventDefault();
+    const items = [...column.querySelectorAll<HTMLElement>('.timepick__item')];
+    const at = items.indexOf(current);
+    items[event.key === 'ArrowDown' ? Math.min(items.length - 1, at + 1) : Math.max(0, at - 1)]?.focus();
+  });
+
+  const away = (event: Event) => {
+    if (!popup.contains(event.target as Node) && !trigger.contains(event.target as Node)) closeTime();
+  };
+  document.addEventListener('pointerdown', away, true);
+  openTime = { popup, trigger, cleanup: () => document.removeEventListener('pointerdown', away, true) };
+  trigger.setAttribute('aria-expanded', 'true');
+  draw();
+  placeNear(popup, trigger);
+  popup.querySelector<HTMLElement>('.timepick__col .is-selected')?.focus({ preventScroll: true });
+}
+
+function enhanceTime(input: HTMLInputElement): void {
+  input.dataset.enhanced = '';
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = `input field-trigger field-trigger--time ${input.value ? '' : 'is-placeholder'}`;
+  trigger.dataset.fieldFor = input.name;
+  trigger.disabled = input.disabled;
+  trigger.setAttribute('aria-haspopup', 'dialog');
+  trigger.setAttribute('aria-expanded', 'false');
+  render(trigger, html`${icon('clock')}<span class="field-trigger__text">${timeText(input.value)}</span>${icon('chevronDown')}`);
+  nameAfterField(trigger, input);
+  trigger.addEventListener('click', () => {
+    if (openTime?.trigger === trigger) closeTime();
+    else showTime(input, trigger);
+  });
+  hide(input);
+  input.before(trigger);
+}
+
+// ---------- Suggestions ----------
+//
+// A text field with a <datalist> keeps its typing, but its suggestions open in
+// the desk's own list under the field instead of the browser's, filtered by
+// what has been typed. Arrow down moves into them; Enter or a click fills the
+// field in.
+
+let openSuggest: { menu: HTMLElement; input: HTMLInputElement; cleanup: () => void } | null = null;
+
+function closeSuggest(): void {
+  if (!openSuggest) return;
+  const { menu, cleanup } = openSuggest;
+  openSuggest = null;
+  cleanup();
+  menu.remove();
+}
+
+function showSuggest(input: HTMLInputElement, options: string[]): void {
+  const typed = input.value.trim().toLowerCase();
+  const matches = options.filter((option) => option.toLowerCase().includes(typed) && option.toLowerCase() !== typed);
+  if (!matches.length) {
+    closeSuggest();
+    return;
+  }
+  if (openSuggest?.input !== input) closeSuggest();
+  let menu = openSuggest?.menu;
+  if (!menu) {
+    menu = document.createElement('div');
+    menu.className = 'menu menu--suggest';
+    menu.setAttribute('role', 'listbox');
+    document.body.append(menu);
+    const list = menu;
+    list.addEventListener('pointerdown', (event) => event.preventDefault()); // keep the field focused
+    list.addEventListener('click', (event) => {
+      const item = (event.target as Element).closest<HTMLButtonElement>('.menu__item');
+      if (!item) return;
+      commit(input, item.dataset.value ?? '');
+      closeSuggest();
+      input.focus();
+    });
+    list.addEventListener('keydown', (event) => {
+      const items = [...list.querySelectorAll<HTMLButtonElement>('.menu__item')];
+      const at = items.indexOf(document.activeElement as HTMLButtonElement);
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (event.key === 'ArrowUp' && at <= 0) input.focus();
+        else items[event.key === 'ArrowDown' ? Math.min(items.length - 1, at + 1) : at - 1]?.focus();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        closeSuggest();
+        input.focus();
+      }
+    });
+    const away = (event: Event) => {
+      if (!list.contains(event.target as Node) && event.target !== input) closeSuggest();
+    };
+    document.addEventListener('pointerdown', away, true);
+    openSuggest = { menu: list, input, cleanup: () => document.removeEventListener('pointerdown', away, true) };
+  }
+  render(menu, html`${matches.map((option) => html`
+    <button class="menu__item" type="button" role="option" aria-selected="false" data-value="${option}" tabindex="-1">${option}</button>`)}`);
+  menu.style.minWidth = `${input.getBoundingClientRect().width}px`;
+  placeNear(menu, input);
+}
+
+function enhanceSuggestions(input: HTMLInputElement): void {
+  const list = document.getElementById(input.getAttribute('list') ?? '');
+  const options = list ? [...list.querySelectorAll('option')].map((option) => option.value).filter(Boolean) : [];
+  input.dataset.enhanced = '';
+  input.removeAttribute('list'); // no browser list on top of ours
+  input.setAttribute('autocomplete', 'off');
+  input.setAttribute('aria-autocomplete', 'list');
+  input.addEventListener('focus', () => showSuggest(input, options));
+  input.addEventListener('input', () => showSuggest(input, options));
+  input.addEventListener('blur', () => setTimeout(() => {
+    if (openSuggest?.input === input && !openSuggest.menu.contains(document.activeElement)) closeSuggest();
+  }, 0));
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown' && openSuggest?.input === input) {
+      event.preventDefault();
+      openSuggest.menu.querySelector<HTMLElement>('.menu__item')?.focus();
+    } else if (event.key === 'Escape' && openSuggest?.input === input) {
+      event.stopPropagation();
+      closeSuggest();
+    }
+  });
+}
+
 // ---------- Watching for new fields ----------
 
 function enhanceAll(root: ParentNode): void {
   root.querySelectorAll<HTMLSelectElement>('select.input:not([data-enhanced]):not([multiple])').forEach(enhanceSelect);
   root.querySelectorAll<HTMLInputElement>('input.input[type="date"]:not([data-enhanced])').forEach(enhanceDate);
+  root.querySelectorAll<HTMLInputElement>('input.input[type="time"]:not([data-enhanced])').forEach(enhanceTime);
+  root.querySelectorAll<HTMLInputElement>('input.input[list]:not([data-enhanced])').forEach(enhanceSuggestions);
 }
 
 /** Starts watching the page. Call once. */
@@ -270,6 +519,8 @@ export function startFields(): void {
       pending = false;
       // A redraw under an open list replaced its button: the list is stale.
       if (openMenu && !openMenu.trigger.isConnected) closeMenu();
+      if (openTime && !openTime.trigger.isConnected) closeTime();
+      if (openSuggest && !openSuggest.input.isConnected) closeSuggest();
       enhanceAll(document);
     });
   }).observe(document.body, { childList: true, subtree: true });
