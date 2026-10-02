@@ -56,23 +56,28 @@ export function readGuestListField(list: Companion[], field: HTMLInputElement | 
  * many names are wanted: the headcount at the desk, `namesAsked` on the
  * booking page, where the list is required.
  */
-export function guestListEditor(list: Companion[], target: number, { input = 'companion', remarks = true } = {}): SafeHTML {
+export function guestListEditor(list: Companion[], target: number, { input = 'companion', remarks = true, required = true } = {}): SafeHTML {
   const named = namedGuests(list).length;
+  const short = required && named < target;
   return html`
     ${guestListRows(list, input, { remarks })}
     <div class="guest-rows__foot">
       <button class="btn btn--quiet btn--sm" type="button" data-action="add-companion">+ Add a guest</button>
-      <span class="guest-count ${named < target ? 'guest-count--short' : ''}">${named} of ${target} named</span>
+      <span class="guest-count ${short ? 'guest-count--short' : ''}" data-required="${required ? 'true' : 'false'}">${countText(named, target, required)}</span>
     </div>`;
 }
 
+/** "2 of 4 named", or at the desk, where names are optional, "2 named · optional". */
+const countText = (named: number, target: number, required: boolean): string =>
+  required ? `${named} of ${target} named` : `${named} of ${target} named · optional`;
+
 /** Updates just the counter while someone types, leaving the rows alone. */
-export function updateGuestCount(scope: ParentNode, list: Companion[], target: number): void {
+export function updateGuestCount(scope: ParentNode, list: Companion[], target: number, required = true): void {
   const label = scope.querySelector('.guest-count');
   if (!label) return;
   const named = namedGuests(list).length;
-  label.textContent = `${named} of ${target} named`;
-  label.classList.toggle('guest-count--short', named < target);
+  label.textContent = countText(named, target, required);
+  label.classList.toggle('guest-count--short', required && named < target);
 }
 
 /** Rows with a name typed in. */

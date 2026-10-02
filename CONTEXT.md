@@ -161,10 +161,15 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   `productType: 'exclusive'`): a booking needs its whole time window free of every other active
   booking, and while it exists no regular booking whose window overlaps it can be made
   (`bookingWindow`, `bookingsOverlapping`, `exclusiveOverlapping` in `core/rules.ts`). Up to 120 guests.
+- Headcount limits (pool slots per session, a unit's most guests, an exclusive rental's most guests)
+  block the guest booking page only. The desk passes `overLimits: true` to `checkAvailability`, which
+  then returns `ok` with an `over` note, and the form shows it with the quote's warnings as an amber
+  "Saving anyway is fine" line. Clashes (closed dates, a unit already taken, exclusive overlaps) still block.
 - Guest details from the registration template: complete address, email, SC/PWD count, a guest list
   (`booking.guestList`: name, gender, age, remarks), additional charges (`booking.extras`, typed
   amounts, part of the price) and payment details (`payment.sentAt`, `payment.senderName`).
-- The guest list is required on the booking page and optional at the desk. `core/guest-list.ts` holds
+- The guest list is required on the booking page and optional at the desk, where any number of names
+  (none, or more than the headcount) saves and the counter reads "… named · optional" without the red. `core/guest-list.ts` holds
   the shared rules: `fitGuestList` keeps a row per guest, `namesAsked` caps that at
   `NAMES_ASKED_CAP` (20, so a 120-guest exclusive rental is not asked for 120 names) and
   `guestListProblem` is the validation message. Desk-side the list is part of `booking-form.ts`

@@ -11,7 +11,7 @@ import {
 } from '../../core/rules.js';
 import type { Booking, BookingSource, Companion, ExtraCharge, PaymentMethod, State } from '../../core/types.js';
 import { asField, type BookingPrefill, type DrawerContent } from '../types.js';
-import { blankCompanion, fitGuestList, guestListEditor, namedGuests, readGuestListField, updateGuestCount } from '../../core/guest-list.js';
+import { blankCompanion, fitGuestList, guestListEditor, readGuestListField, updateGuestCount } from '../../core/guest-list.js';
 import { blankDiscount, discountFields, readDiscountField, type DiscountDraft } from './discount-fields.js';
 import { icon } from './icons.js';
 
@@ -117,7 +117,7 @@ function summaryTemplate(state: State, draft: Draft, { discount, editing }: Summ
   const guests = draft.adults + draft.kids;
   if (guests === 0) return html`<p class="small muted">Add guests to see the price.</p>`;
 
-  const availability = checkAvailability(state, { ...draft, excludeId: editing?.id });
+  const availability = checkAvailability(state, { ...draft, excludeId: editing?.id, overLimits: true });
   const { estimate, off, total } = priced(state, draft, discount);
   const required = depositRequired(state, draft.product, total);
   const paid = editing ? editing.paid : draft.deposit;
@@ -127,7 +127,7 @@ function summaryTemplate(state: State, draft: Draft, { discount, editing }: Summ
     <div class="quote-box">
       <div class="quote-box__status">
         ${availability.ok
-          ? html`<span class="pill pill--success">Available</span>${availability.slotsLeft != null ? html` <span class="small muted">${availability.slotsLeft} pool slots left${editing ? '' : ' before this booking'}</span>` : ''}`
+          ? html`<span class="pill pill--success">Available</span>${availability.slotsLeft != null && !availability.over ? html` <span class="small muted">${availability.slotsLeft} pool slots left${editing ? '' : ' before this booking'}</span>` : ''}`
           : html`<span class="pill pill--danger">Not available</span> <span class="small">${availability.reason}</span>`}
       </div>
       <dl class="line-items">
@@ -144,7 +144,7 @@ function summaryTemplate(state: State, draft: Draft, { discount, editing }: Summ
         ${editing ? html`<div class="line-items__row"><dt>Already paid</dt><dd>${peso(editing.paid)}</dd></div>` : ''}
         <div class="line-items__row"><dt>${editing ? 'Balance' : 'Balance after this payment'}</dt><dd>${peso(Math.max(0, total - paid))}</dd></div>
       </dl>
-      ${estimate.warnings.map((warning) => html`<p class="form-error">${warning}</p>`)}
+      ${[availability.over, ...estimate.warnings].filter(Boolean).map((warning) => html`<p class="small is-due">${warning} Saving anyway is fine.</p>`)}
       ${editing && total < editing.paid ? html`<p class="form-error">The guest already paid ${peso(editing.paid)}, so the total can't go below that.</p>` : ''}
       <p class="small ${short ? 'is-due' : 'muted'}">
         ${paid >= required
@@ -195,7 +195,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
   };
 
   /** The rows and the counter: redrawn on their own when the headcount changes. */
-  const guestListBody = (form: Draft): SafeHTML => guestListEditor(form.guestList, form.adults + form.kids);
+  const guestListBody = (form: Draft): SafeHTML => guestListEditor(form.guestList, form.adults + form.kids, { required: false });
 
   function guestListSection(form: Draft): SafeHTML {
     return html`
@@ -426,7 +426,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         const field = asField(el) as HTMLInputElement | HTMLSelectElement;
         const shown = readGuestListField(draft.guestList, field);
         if (shown !== null && shown !== field.value) field.value = shown;
-        if (field.name === 'companionName') updateGuestCount(root, draft.guestList, draft.adults + draft.kids);
+        if (field.name === 'companionName') updateGuestCount(root, draft.guestList, draft.adults + draft.kids, false);
       },
 
       discount: ({ el, ctx, root }) => {
@@ -519,9 +519,8 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         const { state } = ctx;
         const editing = editingBooking(state);
         const guests = draft.adults + draft.kids;
-        const availability = checkAvailability(state, { ...draft, excludeId: editing?.id });
+        const availability = checkAvailability(state, { ...draft, excludeId: editing?.id, overLimits: true });
         const { estimate, total } = priced(state, draft, activeDiscount());
-        const unit = findUnit(state, draft.product);
         const chosen = activeDiscount();
         const discountChanged = !sameDiscount(discount, startingDiscount);
         const discountError = chosen && canDiscount && discountChanged
@@ -534,10 +533,8 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         else if (draft.email.trim() && !isEmail(draft.email)) error = 'Enter an email address like maria@example.com, or leave it blank.';
         else if (draft.scPwd > guests) error = 'SC / PWD can\'t be more than the number of guests.';
         else if (draft.extras.some((extra) => extra.amount > 0 && !extra.label.trim())) error = 'Name each additional charge.';
-        else if (namedGuests(draft.guestList).length > guests) error = `You listed ${namedGuests(draft.guestList).length} names but only ${guests} ${guests === 1 ? 'guest' : 'guests'}. Raise the headcount or take a name off.`;
         else if (guests === 0) error = 'Add at least one guest.';
         else if (!availability.ok) error = availability.reason ?? 'Not available.';
-        else if (unit && guests > unit.capacityMax) error = `${unit.name} fits up to ${unit.capacityMax} guests.`;
         else if (discountError) error = discountError;
         else if (!chosen && discount.note.trim() && canDiscount && discountChanged) error = 'Enter the discount amount, or clear the reason.';
         else if (editing && total < editing.paid) error = `The guest already paid ${peso(editing.paid)}, so the total can't go below that.`;

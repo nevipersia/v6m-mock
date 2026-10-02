@@ -130,15 +130,19 @@ export interface BookingRequest {
   kids?: number;
   nights?: number;
   excludeId?: string;
+  /** The desk may go past a headcount limit; it only gets a note saying so. */
+  overLimits?: boolean;
 }
 
 export interface Availability {
   ok: boolean;
   reason?: string;
   slotsLeft?: number;
+  /** Set when the booking goes past a headcount limit the desk allowed. */
+  over?: string;
 }
 
-export function checkAvailability(state: State, { product, date, adults = 0, kids = 0, excludeId }: BookingRequest): Availability {
+export function checkAvailability(state: State, { product, date, adults = 0, kids = 0, excludeId, overLimits = false }: BookingRequest): Availability {
   if (closingEvent(state, date)) {
     return { ok: false, reason: `V6M is closed on ${formatDate(date)} for a private event.` };
   }
@@ -150,7 +154,10 @@ export function checkAvailability(state: State, { product, date, adults = 0, kid
     if (clash) {
       return { ok: false, reason: `Another group is booked then (${clash.guestName}, ${productLabel(state, clash.product)}). An exclusive rental needs the whole time free.` };
     }
-    if (adults + kids > pkg.maxGuests) return { ok: false, reason: `Exclusive rentals take up to ${pkg.maxGuests} guests.` };
+    if (adults + kids > pkg.maxGuests) {
+      const reason = `Exclusive rentals take up to ${pkg.maxGuests} guests.`;
+      return overLimits ? { ok: true, over: reason } : { ok: false, reason };
+    }
     return { ok: true };
   }
 
@@ -166,6 +173,9 @@ export function checkAvailability(state: State, { product, date, adults = 0, kid
 
   const session = sessionFor(state, product);
   const slotsLeft = session.capacity - poolGuests(state, date, session.id, excludeId);
+  if (adults + kids > slotsLeft && overLimits) {
+    return { ok: true, slotsLeft, over: `Over the ${session.label.toLowerCase()} limit: ${Math.max(0, slotsLeft)} slots were left on ${formatDate(date)}.` };
+  }
   if (adults + kids > slotsLeft) {
     return {
       ok: false,

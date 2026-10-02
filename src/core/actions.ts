@@ -352,12 +352,10 @@ export function updateBooking(bookingId: string, input: BookingEdit, staffId: st
     if (!isEditable(state, booking)) return { error: 'This booking can no longer be edited.' };
 
     const guests = input.adults + input.kids;
-    const unit = findUnit(state, input.product);
-    const availability = checkAvailability(state, { ...input, excludeId: booking.id });
+    const availability = checkAvailability(state, { ...input, excludeId: booking.id, overLimits: true });
     if (!input.guestName.trim()) return { error: 'Enter the guest name.' };
     if (guests === 0) return { error: 'Add at least one guest.' };
     if (!availability.ok) return { error: availability.reason ?? 'Not available.' };
-    if (unit && guests > unit.capacityMax) return { error: `${unit.name} fits up to ${unit.capacityMax} guests.` };
 
     const extras = cleanExtras(input.extras);
     const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, { ...input, extras });

@@ -177,7 +177,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         <section class="detail-section">
           <h3 class="detail-section__title">Guest list</h3>
           <form class="guest-list-form" data-submit="save-guest-list" novalidate>
-            ${guestListEditor(ui.guestList, pax)}
+            ${guestListEditor(ui.guestList, pax, { required: false })}
             <div class="button-row button-row--end">
               <button class="btn btn--quiet" type="button" data-action="cancel-guest-list">Cancel</button>
               <button class="btn btn--primary" type="submit">Save guest list</button>
