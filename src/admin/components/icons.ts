@@ -19,6 +19,8 @@ const PATHS = {
   message: '<path d="M4 5h16v11H9l-5 4z"/>',
   wallet: '<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M16 13h2M3 10h18M7 6V4h10v2"/>',
   arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  arrowLeft: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
   chevronDown: '<path d="M6 9l6 6 6-6"/>',
   chevronUp: '<path d="M6 15l6-6 6 6"/>',
   chevronLeft: '<path d="M15 6l-6 6 6 6"/>',

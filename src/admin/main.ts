@@ -97,6 +97,24 @@ function restoreFocus(saved: SavedFocus | null): void {
   }
 }
 
+/** What had focus inside a pop-up, so the redrawn one can give it back. */
+const focusKey = (): string | null =>
+  (document.activeElement as HTMLElement | null)?.closest('dialog[data-modal]')
+    ? (document.activeElement as HTMLElement).dataset.focusKey ?? null
+    : null;
+
+/**
+ * A view's pop-up is a <dialog data-modal>. Each render builds a fresh one, so
+ * open it as a modal again (backdrop, focus kept inside, Esc) and put focus
+ * back on the control that had it before the redraw.
+ */
+function showModals(key: string | null): void {
+  app.querySelectorAll<HTMLDialogElement>('dialog[data-modal]').forEach((dialog) => {
+    if (!dialog.open) dialog.showModal();
+    if (key) dialog.querySelector<HTMLElement>(`[data-focus-key="${key}"]`)?.focus();
+  });
+}
+
 function drawLogin(state: State | null): void {
   activeRoute = null;
   context = null;
@@ -121,6 +139,10 @@ function draw(): void {
     return;
   }
 
+  if (currentPageId() === 'calendar') {
+    location.replace('#/bookings');
+    return;
+  }
   const route = findRoute(currentPageId());
   if (!route || !canView(staff, route.id)) {
     location.replace(`#/${homePage(staff)}`);
@@ -128,11 +150,13 @@ function draw(): void {
   }
 
   const focus = rememberFocus();
+  const modalFocus = focusKey();
   context = buildContext(state, staff);
   activeRoute = route;
   document.title = `${route.label} · V6M Desk`;
   render(app, renderShell(context, route, route.view.render(context)));
   restoreFocus(focus);
+  showModals(modalFocus);
   syncDrawer(context);
   // A new page has its own parts, and may not be long enough to need the buttons.
   refreshJump();
@@ -203,6 +227,19 @@ on(app, 'input', '[data-input]', (event, el) => dispatch('input', el.dataset.inp
 // handler reads event.type to tell arriving from leaving.
 (['mouseover', 'mouseout', 'focusin', 'focusout'] as const).forEach((type) => {
   on(app, type, '[data-hover]', (event, el) => dispatch('hover', el.dataset.hover, { el, event }));
+});
+
+// Esc on a pop-up, and a click on its backdrop (the dialog itself, outside its
+// body), both run the action the dialog names in data-cancel.
+app.addEventListener('cancel', (event) => {
+  const dialog = event.target as HTMLElement;
+  if (!dialog.matches('dialog[data-cancel]')) return;
+  event.preventDefault();
+  dispatch('action', dialog.dataset.cancel, { el: dialog, event });
+}, true);
+
+on(app, 'click', 'dialog[data-cancel]', (event, dialog) => {
+  if (event.target === dialog) dispatch('action', dialog.dataset.cancel, { el: dialog, event });
 });
 
 window.addEventListener('hashchange', draw);

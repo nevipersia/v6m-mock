@@ -74,7 +74,7 @@ then removed on request; its inquiries stay in the data as inbox history.
 
 - **V6M Desk** (`/admin/`): staff app — email and password sign-in (two demo accounts, or an invite
   code that also sets a password),
-  Dashboard, Calendar (day/week/month with free navigation), Bookings, Finances, Inbox, Events, Users.
+  Dashboard, Bookings (calendar by month or week, or the searchable list), Finances, Inbox, Events, Users.
 - **Booking link** (`/book/?code=…`): single-use page a staff member sends to one guest; the booking
   they submit lands on the calendar as a hold under that staff member.
 
@@ -210,12 +210,16 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   (both throw on the `event` product) — `makeEventBooking` prices the package plus add-ons and takes
   its hours from `EventPackage.hours`. `blocksCalendar` is set only when the event is both exclusive
   and booked, and an event cannot close a day that already has active bookings.
-- Date ranges: the calendar has a fourth range, `custom` (`ui.from`/`ui.to`, capped at
-  `MAX_RANGE_DAYS`), drawn with the same grid as the week. Both date controls live in the popover
-  under the heading (`datePicker` in `views/calendar.ts`, `ui.datesOpen`): `jump` for one day,
-  `range-from`/`range-to` for a stretch, which switches the view to `custom`. The popover dismisses
-  through a fixed backdrop button rather than a document listener, so it needs no global state. The bookings filter holds `from`/`to`,
-  either end optional, with one-tap shortcut chips.
+- Bookings is one tab with a Calendar / List switch (`mode` in `views/bookings.ts`); the calendar
+  side is `views/calendar.ts`, no longer a route of its own (an old `#/calendar` link lands on
+  Bookings). The calendar opens on the month; Week is the only other view. Clicking a day opens it
+  in place (`ui.openDay`) with a back button to the month or week it came from — it never switches
+  the view. The month and year open a pop-up picker (`pickerDialog`): a year, its months (a month
+  moves the calendar behind straight away) and that month's days. Ranges of dates are the list's job:
+  its filter holds `from`/`to`, either end optional, with one-tap shortcut chips.
+- Pop-ups are `<dialog data-modal data-cancel="action">`. `admin/main.ts` opens each one as a modal
+  after every render, runs the `data-cancel` action on Esc or a backdrop click, and gives focus back
+  to the control with the same `data-focus-key` once a redraw has replaced it.
 - The booking PDF is the guest registration sheet (companions template): details, guest list with
   signature column, charges, total / downpayment / overall amount, "Received by". Multi-page.
 - Every booking needs a 50% downpayment (`depositRequired`, rounded up to the peso)

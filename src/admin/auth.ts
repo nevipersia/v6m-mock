@@ -61,7 +61,6 @@ export const ROLE_DEFAULTS: Record<Role, Permission[]> = {
 /** Pages everyone can open, and the permission each restricted page needs. */
 const PAGE_REQUIREMENTS: Record<PageId, Permission | null> = {
   dashboard: null,
-  calendar: null,
   bookings: null,
   // Sales for everyone; the income and expenses on it need expenses.manage.
   finances: null,
@@ -227,4 +226,4 @@ export const canView = (staff: Staff, pageId: string): boolean => {
 };
 
 export const homePage = (staff: Staff): PageId =>
-  (['dashboard', 'calendar', 'bookings'] as const).find((page) => canView(staff, page)) ?? 'dashboard';
+  (['dashboard', 'bookings'] as const).find((page) => canView(staff, page)) ?? 'dashboard';

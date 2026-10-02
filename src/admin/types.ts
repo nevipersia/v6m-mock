@@ -4,7 +4,7 @@ import type { SafeHTML, TemplateValue } from '../core/dom.js';
 import type { Expense, Permission, Staff, State } from '../core/types.js';
 import type { IconName } from './components/icons.js';
 
-export type PageId = 'dashboard' | 'calendar' | 'bookings' | 'finances' | 'inbox' | 'events' | 'users';
+export type PageId = 'dashboard' | 'bookings' | 'finances' | 'inbox' | 'events' | 'users';
 
 export interface BookingPrefill {
   product?: string | undefined;

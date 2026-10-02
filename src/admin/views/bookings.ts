@@ -1,4 +1,5 @@
-// Bookings: searchable, filterable list of every booking in the data period.
+// Bookings: the calendar (the default) and the searchable, filterable list of
+// every booking, one page with a switch between them.
 
 import { flag, html, type SafeHTML } from '../../core/dom.js';
 import { addDays, formatDate, peso, plural, timeOf } from '../../core/format.js';
@@ -11,6 +12,7 @@ import { kindDot, statusPill } from '../components/badges.js';
 import { downloadBookingPdf } from '../components/booking-pdf.js';
 import { icon } from '../components/icons.js';
 import { emptyState, pageHead } from '../layout.js';
+import * as calendar from './calendar.js';
 
 interface Filters {
   query: string;
@@ -184,13 +186,29 @@ function mobileList(state: State, results: Booking[]): SafeHTML {
     </div>`;
 }
 
+type Mode = 'calendar' | 'list';
+/** Which side of the page is showing. Kept while the app is open. */
+let mode: Mode = 'calendar';
+
+function modeSwitch(): SafeHTML {
+  const options: { id: Mode; label: string }[] = [{ id: 'calendar', label: 'Calendar' }, { id: 'list', label: 'List' }];
+  return html`
+    <div class="segmented" role="group" aria-label="Show bookings as">
+      ${options.map((option) => html`
+        <button class="segmented__option ${mode === option.id ? 'is-active' : ''}" type="button"
+          data-action="set-mode" data-mode="${option.id}" aria-pressed="${flag(mode === option.id)}">${option.label}</button>`)}
+    </div>`;
+}
+
 /** Opens the list already narrowed, for links from elsewhere such as the dashboard's cards. */
 export function showBookings(narrowed: Partial<Filters>): void {
   filters = { ...DEFAULT_FILTERS, ...narrowed };
+  mode = 'list';
   location.hash = '#/bookings';
 }
 
 export function render(ctx: DeskContext): SafeHTML {
+  if (mode === 'calendar') return calendar.render(ctx, modeSwitch());
   const { state } = ctx;
   const results = state.bookings.filter(matches);
   const total = results.filter(isActive).reduce((sum, b) => sum + b.total, 0);
@@ -201,8 +219,10 @@ export function render(ctx: DeskContext): SafeHTML {
     ${pageHead({
       title: 'Bookings',
       subtitle: `${plural(results.length, 'booking')}${rangeSummary()} · ${peso(total)} total · ${peso(due)} still due`,
-      actions: ctx.can('bookings.write') ? html`
-        <button class="btn btn--primary" type="button" data-action="new-booking">${icon('plus')} New booking</button>` : '',
+      actions: html`
+        ${modeSwitch()}
+        ${ctx.can('bookings.write') ? html`
+          <button class="btn btn--primary" type="button" data-action="new-booking">${icon('plus')} New booking</button>` : ''}`,
     })}
 
     ${filterBar(state)}
@@ -261,6 +281,13 @@ export const inputs: HandlerMap = {
 };
 
 export const actions: HandlerMap = {
+  ...calendar.actions,
+
+  'set-mode': ({ el, ctx }) => {
+    mode = el.dataset.mode === 'list' ? 'list' : 'calendar';
+    ctx.redraw();
+  },
+
   'toggle-filters': ({ ctx }) => {
     filtersOpen = !filtersOpen;
     ctx.redraw();

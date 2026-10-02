@@ -1,7 +1,8 @@
-// Calendar with day, week and month views. Navigation is free: staff can step
+// The calendar side of the Bookings page: a month (by default) or a week, and
+// any day opened from them in their place. Navigation is free: staff can step
 // back through past dates or jump ahead, not just the sample data week.
 
-import { flag, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
+import { $maybe, flag, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { addDays, formatDate, parseDate, peso, plural, timeOf, toISODate } from '../../core/format.js';
 import {
   bookingWindow, closingEvent, exclusiveOn, exclusiveOverlapping, findSession, isActive, poolGuests, productLabel, unitBookingOn,
@@ -12,17 +13,14 @@ import { paymentPill } from '../components/badges.js';
 import { icon } from '../components/icons.js';
 import { emptyState, pageHead } from '../layout.js';
 
-type RangeId = 'day' | 'week' | 'month' | 'custom';
+type RangeId = 'week' | 'month';
 
 const RANGES: { id: RangeId; label: string }[] = [
-  { id: 'day', label: 'Day' },
-  { id: 'week', label: 'Week' },
   { id: 'month', label: 'Month' },
-  { id: 'custom', label: 'Range' },
+  { id: 'week', label: 'Week' },
 ];
 
-/** A hand-picked range is capped: a year of columns would be unreadable. */
-const MAX_RANGE_DAYS = 31;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // Anchor is the date the view is centred on; null means "follow the demo date".
 // pickedDay is the day the narrow-screen strip has open; null means "today, or
@@ -31,48 +29,37 @@ const ui: {
   range: RangeId;
   anchor: ISODate | null;
   pickedDay: ISODate | null;
-  /** Ends of the hand-picked range, used when range is 'custom'. */
-  from: ISODate | null;
-  to: ISODate | null;
-  /** The date picker under the heading is open. */
-  datesOpen: boolean;
-} = { range: 'week', anchor: null, pickedDay: null, from: null, to: null, datesOpen: false };
+  /** A day opened from the month or week, shown in their place until Back. */
+  openDay: ISODate | null;
+  /** The pop-up date picker, and the month its small calendar is showing. */
+  picker: { open: boolean; year: number; month: number };
+} = { range: 'month', anchor: null, pickedDay: null, openDay: null, picker: { open: false, year: 0, month: 0 } };
 
 const anchorOf = (state: State): ISODate => ui.anchor ?? state.meta.asOf;
 
 const startOfWeek = (date: ISODate): ISODate => addDays(date, -((parseDate(date).getDay() + 6) % 7)); // Monday
 const startOfMonth = (date: ISODate): ISODate => `${date.slice(0, 8)}01`;
 
-/** The hand-picked range, filled in from the demo date until the reader sets it. */
-function customRange(state: State): { from: ISODate; to: ISODate } {
-  const from = ui.from ?? anchorOf(state);
-  const to = ui.to && ui.to >= from ? ui.to : addDays(from, 6);
-  return { from, to };
-}
-
-function daysInView(state: State): ISODate[] {
-  const anchor = anchorOf(state);
-  if (ui.range === 'day') return [anchor];
-  if (ui.range === 'custom') {
-    const { from, to } = customRange(state);
-    const days: ISODate[] = [];
-    for (let day = from; day <= to && days.length < MAX_RANGE_DAYS; day = addDays(day, 1)) days.push(day);
-    return days;
-  }
-  if (ui.range === 'week') return Array.from({ length: 7 }, (_, index) => addDays(startOfWeek(anchor), index));
-  const first = parseDate(startOfMonth(anchor));
+/** Every day of a month, from any date inside it. */
+function monthDays(date: ISODate): ISODate[] {
+  const first = parseDate(startOfMonth(date));
   const length = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
   return Array.from({ length }, (_, index) => addDays(toISODate(first), index));
 }
 
+function daysInView(state: State): ISODate[] {
+  const anchor = anchorOf(state);
+  if (ui.range === 'week') return Array.from({ length: 7 }, (_, index) => addDays(startOfWeek(anchor), index));
+  return monthDays(anchor);
+}
+
+/** "September 2026", or "Sep 14 – Sep 20" for a week. */
 function rangeLabel(state: State): string {
   const days = daysInView(state);
   const first = days[0] ?? state.meta.asOf;
   const last = days[days.length - 1] ?? first;
-  if (ui.range === 'day') return formatDate(first, 'long');
   if (ui.range === 'month') return parseDate(first).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const label = `${formatDate(first, 'monthDayLong')} – ${formatDate(last, 'monthDayLong')}`;
-  return ui.range === 'custom' ? `${label} · ${plural(days.length, 'day')}` : label;
+  return `${formatDate(first, 'monthDayLong')} – ${formatDate(last, 'monthDayLong')}`;
 }
 
 const shortName = (name: string): string => {
@@ -244,8 +231,10 @@ function weekView(ctx: DeskContext, days: ISODate[]): SafeHTML {
               <th scope="col" class="calendar__corner"></th>
               ${days.map((day) => html`
                 <th scope="col" class="${day === state.meta.asOf ? 'is-today' : ''}">
-                  <span class="calendar__weekday">${formatDate(day, 'weekday')}</span>
-                  <span class="calendar__day">${parseDate(day).getDate()}</span>
+                  <button class="calendar__head-day" type="button" data-action="open-day" data-date="${day}" aria-label="Open ${formatDate(day, 'long')}">
+                    <span class="calendar__weekday">${formatDate(day, 'weekday')}</span>
+                    <span class="calendar__day">${parseDate(day).getDate()}</span>
+                  </button>
                 </th>`)}
             </tr>
           </thead>
@@ -326,152 +315,209 @@ function monthView(ctx: DeskContext, days: ISODate[]): SafeHTML {
 }
 
 /**
- * The dates under the heading: a button that says what is on screen, and the
- * panel behind it for picking one day or a stretch of them.
+ * The pop-up behind the month and year: a year, its twelve months, and the
+ * picked month's days. A month moves the calendar behind it straight away; a
+ * day opens that day and closes the pop-up.
  */
-function datePicker(state: State, first: ISODate, last: ISODate): SafeHTML {
-  const picking = ui.range === 'custom';
+function pickerDialog(state: State): SafeHTML {
+  const { year, month } = ui.picker;
+  const shown = parseDate(anchorOf(state));
+  const first = new Date(year, month, 1);
+  const days = monthDays(toISODate(first));
+  const leading = (first.getDay() + 6) % 7; // Monday first
+  const selected = ui.openDay;
+  const label = first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
   return html`
-    <div class="date-picker">
-      <button class="date-picker__toggle" type="button" data-action="toggle-dates"
-        aria-expanded="${flag(ui.datesOpen)}" aria-haspopup="dialog">
-        <span>${rangeLabel(state)}</span>
-        ${icon('chevronDown')}
-      </button>
+    <dialog class="picker" data-modal data-cancel="close-picker" aria-labelledby="picker-title">
+      <div class="picker__body">
+        <header class="picker__head">
+          <h2 class="picker__title" id="picker-title">Go to a date</h2>
+          <button class="picker__icon" type="button" data-action="close-picker" data-focus-key="picker-close" aria-label="Close">${icon('x')}</button>
+        </header>
 
-      ${ui.datesOpen ? html`
-        <button class="date-picker__backdrop" type="button" data-action="close-dates" aria-label="Close the date picker"></button>
-        <div class="date-picker__panel" role="dialog" aria-label="Pick dates">
-          <label class="field">
-            <span class="field__label">A day</span>
-            <input class="input" type="date" data-input="jump" value="${first}">
-          </label>
-          <p class="small muted">Shows that ${ui.range === 'month' ? 'month' : ui.range === 'week' ? 'week' : 'day'}.</p>
+        <div class="picker__year">
+          <button class="picker__icon" type="button" data-action="picker-year" data-step="-1" data-focus-key="year-back" aria-label="Previous year">${icon('chevronLeft')}</button>
+          <span class="picker__year-label" aria-live="polite">${year}</span>
+          <button class="picker__icon" type="button" data-action="picker-year" data-step="1" data-focus-key="year-on" aria-label="Next year">${icon('chevronRight')}</button>
+        </div>
 
-          <div class="date-picker__or"><span>or</span></div>
+        <div class="picker__months" role="group" aria-label="Months of ${year}">
+          ${MONTHS.map((name, index) => {
+            const isPicked = index === month;
+            const isShown = year === shown.getFullYear() && index === shown.getMonth();
+            return html`
+              <button class="picker__month ${isPicked ? 'is-picked' : ''} ${isShown ? 'is-shown' : ''}" type="button"
+                data-action="picker-month" data-month="${index}" data-focus-key="month-${index}"
+                aria-pressed="${flag(isPicked)}" aria-label="${new Date(year, index, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}">${name}</button>`;
+          })}
+        </div>
 
-          <div class="field">
-            <span class="field__label">A range of days</span>
-            <div class="date-range">
-              <input class="input" type="date" data-input="range-from" value="${first}" aria-label="Range from">
-              <span class="date-range__to" aria-hidden="true">–</span>
-              <input class="input" type="date" data-input="range-to" value="${last}" aria-label="Range until">
-            </div>
+        <div class="picker__days">
+          <p class="picker__days-label">${label}</p>
+          <div class="picker__grid">
+            ${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((letter) => html`<span class="picker__weekday" aria-hidden="true">${letter}</span>`)}
+            ${Array.from({ length: leading }, () => html`<span></span>`)}
+            ${days.map((day) => {
+              const count = bookingsOn(state, day).length;
+              return html`
+                <button class="picker__day ${day === state.meta.asOf ? 'is-today' : ''} ${day === selected ? 'is-picked' : ''}" type="button"
+                  data-action="picker-day" data-date="${day}" aria-label="${formatDate(day, 'long')}${count ? `, ${plural(count, 'booking')}` : ''}">
+                  ${parseDate(day).getDate()}
+                  ${count ? html`<span class="picker__dot" aria-hidden="true"></span>` : ''}
+                </button>`;
+            })}
           </div>
-          <p class="small muted">${picking ? `${plural(daysInView(state).length, 'day')} on screen.` : 'Shows exactly those days.'}</p>
+        </div>
 
-          <div class="button-row button-row--end">
-            <button class="btn btn--quiet btn--sm" type="button" data-action="close-dates">Done</button>
-          </div>
-        </div>` : ''}
-    </div>`;
+        <div class="picker__shortcuts">
+          <button class="btn btn--secondary btn--sm" type="button" data-action="picker-today">Today</button>
+          <button class="btn btn--secondary btn--sm" type="button" data-action="picker-week">This week</button>
+        </div>
+      </div>
+    </dialog>`;
 }
 
-export function render(ctx: DeskContext): SafeHTML {
-  const { state } = ctx;
-  const days = daysInView(state);
-  const first = days[0] ?? state.meta.asOf;
-  const last = days[days.length - 1] ?? first;
-  // The day a new booking starts on: the day tapped in the strip, else the day
-  // the reader picked, else today, else the first day on screen.
-  const anchor = anchorOf(state);
-  const focused = (ui.pickedDay && days.includes(ui.pickedDay) && ui.pickedDay)
-    || (days.includes(anchor) && anchor)
-    || pickedDay(state, days);
-  const isFollowingToday = ui.range === 'custom'
-    ? days.includes(state.meta.asOf)
-    : !ui.anchor || (ui.range === 'day' ? ui.anchor === state.meta.asOf : days.includes(state.meta.asOf));
-
+/** The month or week: arrows either side of the month and year, which opens the picker. */
+function periodBar(state: State): SafeHTML {
   return html`
-    ${pageHead({
-      title: 'Calendar',
-      subtitle: datePicker(state, first, last),
-      actions: ctx.can('bookings.write')
-        ? html`<button class="btn btn--primary" type="button" data-action="new-booking" data-date="${focused}"
-            title="New booking on ${formatDate(focused, 'long')}">${icon('plus')} New booking</button>`
-        : '',
-    })}
-
     <div class="calendar-bar">
-      <div class="button-row">
+      <div class="period">
         <button class="btn btn--secondary btn--icon" type="button" data-action="step" data-step="-1" aria-label="Previous ${ui.range}">${icon('chevronLeft')}</button>
-        <button class="btn btn--secondary btn--sm ${isFollowingToday ? '' : 'is-off-today'}" type="button" data-action="go-today">Today</button>
+        <button class="period__label" type="button" data-action="open-picker" aria-haspopup="dialog" aria-expanded="${flag(ui.picker.open)}"
+          title="Go to a date">
+          <span>${rangeLabel(state)}</span>
+          ${icon('chevronDown')}
+        </button>
         <button class="btn btn--secondary btn--icon" type="button" data-action="step" data-step="1" aria-label="Next ${ui.range}">${icon('chevronRight')}</button>
       </div>
 
-      <div class="segmented" role="group" aria-label="Date range">
+      <div class="segmented" role="group" aria-label="Calendar view">
         ${RANGES.map((range) => html`
           <button class="segmented__option ${ui.range === range.id ? 'is-active' : ''}" type="button"
             data-action="set-range" data-range="${range.id}" aria-pressed="${flag(ui.range === range.id)}">${range.label}</button>`)}
       </div>
-
-    </div>
-
-    ${ui.range === 'custom' && days.length === MAX_RANGE_DAYS && customRange(state).to > (days[days.length - 1] ?? '') ? html`
-      <p class="notice">Showing the first ${MAX_RANGE_DAYS} days of that range.</p>` : ''}
-
-    ${ui.range === 'day' ? dayView(ctx, first) : ui.range === 'month' ? monthView(ctx, days) : weekView(ctx, days)}
-
-    ${ui.range === 'month' ? '' : html`
-      <ul class="legend" data-part="What the colours mean">
-        <li><span class="legend__swatch legend__swatch--room"></span>Rooms</li>
-        <li><span class="legend__swatch legend__swatch--cottage"></span>Cottages</li>
-        <li><span class="legend__swatch legend__swatch--exclusive"></span>Exclusive rental</li>
-        <li><span class="legend__swatch legend__swatch--event"></span>Events</li>
-        <li><span class="legend__swatch legend__swatch--hold"></span>On hold, downpayment due</li>
-        <li><span class="legend__swatch legend__swatch--done"></span>Checked out</li>
-      </ul>`}`;
+    </div>`;
 }
 
-export const inputs: HandlerMap = {
-  /** One day from the picker: go there, keeping the shape unless a range was on screen. */
-  jump: ({ el, ctx }) => {
-    const { value } = el as HTMLInputElement;
-    if (!value) return;
-    if (ui.range === 'custom') ui.range = 'day';
-    ui.anchor = value;
-    ui.pickedDay = value;
-    // One day is a finished choice; a range needs its other end, so that stays open.
-    ui.datesOpen = false;
-    ctx.redraw();
-  },
+/** One day, opened from the month or week, with the way back to it. */
+function dayBar(state: State, day: ISODate): SafeHTML {
+  return html`
+    <div class="calendar-bar">
+      <div class="period">
+        <button class="btn btn--secondary btn--sm" type="button" data-action="close-day">
+          ${icon('arrowLeft')} ${rangeLabel(state)}
+        </button>
+        <h2 class="period__day">${formatDate(day, 'long')}</h2>
+      </div>
+      <div class="button-row">
+        <button class="btn btn--secondary btn--icon" type="button" data-action="step-day" data-step="-1" aria-label="Previous day">${icon('chevronLeft')}</button>
+        <button class="btn btn--secondary btn--icon" type="button" data-action="step-day" data-step="1" aria-label="Next day">${icon('chevronRight')}</button>
+      </div>
+    </div>`;
+}
 
-  // The two ends of a hand-picked range, shown only in that view.
-  'range-from': ({ el, ctx }) => {
-    const { value } = el as HTMLInputElement;
-    if (!value) return;
-    const shown = daysInView(ctx.state);
-    const end = ui.range === 'custom' ? customRange(ctx.state).to : shown[shown.length - 1] ?? value;
-    ui.range = 'custom';
-    ui.from = value;
-    ui.to = end < value ? value : end;
-    ui.pickedDay = null;
-    ctx.redraw();
-  },
+const LEGEND = html`
+  <ul class="legend" data-part="What the colours mean">
+    <li><span class="legend__swatch legend__swatch--room"></span>Rooms</li>
+    <li><span class="legend__swatch legend__swatch--cottage"></span>Cottages</li>
+    <li><span class="legend__swatch legend__swatch--exclusive"></span>Exclusive rental</li>
+    <li><span class="legend__swatch legend__swatch--event"></span>Events</li>
+    <li><span class="legend__swatch legend__swatch--hold"></span>On hold, downpayment due</li>
+    <li><span class="legend__swatch legend__swatch--done"></span>Checked out</li>
+  </ul>`;
 
-  'range-to': ({ el, ctx }) => {
-    const { value } = el as HTMLInputElement;
-    if (!value) return;
-    const shown = daysInView(ctx.state);
-    const start = ui.range === 'custom' ? customRange(ctx.state).from : shown[0] ?? value;
-    ui.range = 'custom';
-    ui.from = value < start ? value : start;
-    ui.to = value;
-    ui.pickedDay = null;
-    ctx.redraw();
-  },
-};
+/**
+ * The calendar side of the Bookings page. `switcher` is the page's Calendar /
+ * List toggle, which sits with New booking in the heading.
+ */
+export function render(ctx: DeskContext, switcher: SafeHTML): SafeHTML {
+  const { state } = ctx;
+  const days = daysInView(state);
+  const day = ui.openDay;
+  // The day a new booking starts on: the open day, else the one tapped in the
+  // strip, else today when it is on screen, else the first day shown.
+  const anchor = anchorOf(state);
+  const focused = day
+    || (ui.pickedDay && days.includes(ui.pickedDay) && ui.pickedDay)
+    || (days.includes(anchor) && anchor)
+    || pickedDay(state, days);
+
+  return html`
+    ${pageHead({
+      title: 'Bookings',
+      actions: html`
+        ${switcher}
+        ${ctx.can('bookings.write') ? html`
+          <button class="btn btn--primary" type="button" data-action="new-booking" data-date="${focused}"
+            title="New booking on ${formatDate(focused, 'long')}">${icon('plus')} New booking</button>` : ''}`,
+    })}
+
+    ${day ? html`
+      ${dayBar(state, day)}
+      ${dayView(ctx, day)}
+      ${LEGEND}` : html`
+      ${periodBar(state)}
+      ${ui.range === 'month' ? monthView(ctx, days) : html`${weekView(ctx, days)}${LEGEND}`}`}
+
+    ${ui.picker.open ? pickerDialog(state) : ''}`;
+}
+
+/** Shows a day in place of the month or week, and moves them along with it. */
+function openDay(day: ISODate): void {
+  ui.openDay = day;
+  ui.anchor = day;
+  ui.pickedDay = null;
+}
 
 const isRange = (value: string | undefined): value is RangeId => RANGES.some((range) => range.id === value);
 
 export const actions: HandlerMap = {
-  'toggle-dates': ({ ctx }) => {
-    ui.datesOpen = !ui.datesOpen;
+  'open-picker': ({ ctx }) => {
+    const shown = parseDate(ui.openDay ?? anchorOf(ctx.state));
+    ui.picker = { open: true, year: shown.getFullYear(), month: shown.getMonth() };
     ctx.redraw();
   },
 
-  'close-dates': ({ ctx }) => {
-    ui.datesOpen = false;
+  'close-picker': ({ ctx }) => {
+    ui.picker.open = false;
+    ctx.redraw();
+    $maybe<HTMLElement>('[data-action="open-picker"]')?.focus();
+  },
+
+  'picker-year': ({ el, ctx }) => {
+    ui.picker.year += Number(el.dataset.step) || 0;
+    ctx.redraw();
+  },
+
+  // A month moves the calendar behind the pop-up too, so it can be read through it.
+  'picker-month': ({ el, ctx }) => {
+    ui.picker.month = Number(el.dataset.month) || 0;
+    ui.anchor = toISODate(new Date(ui.picker.year, ui.picker.month, 1));
+    ui.openDay = null;
+    ui.pickedDay = null;
+    ctx.redraw();
+  },
+
+  'picker-day': ({ el, ctx }) => {
+    if (!el.dataset.date) return;
+    openDay(el.dataset.date);
+    ui.picker.open = false;
+    ctx.redraw();
+  },
+
+  'picker-today': ({ ctx }) => {
+    openDay(ctx.state.meta.asOf);
+    ui.picker.open = false;
+    ctx.redraw();
+  },
+
+  'picker-week': ({ ctx }) => {
+    ui.range = 'week';
+    ui.anchor = null;
+    ui.openDay = null;
+    ui.pickedDay = null;
+    ui.picker.open = false;
     ctx.redraw();
   },
 
@@ -481,30 +527,16 @@ export const actions: HandlerMap = {
   },
 
   'set-range': ({ el, ctx }) => {
-    ui.datesOpen = false;
-    const shown = daysInView(ctx.state);
     if (isRange(el.dataset.range)) ui.range = el.dataset.range;
     ui.pickedDay = null;
-    // Range keeps whatever was on screen, so the switch changes nothing but the shape.
-    if (ui.range === 'custom') {
-      ui.from = shown[0] ?? anchorOf(ctx.state);
-      ui.to = shown[shown.length - 1] ?? ui.from;
-    }
     ctx.redraw();
   },
 
   step: ({ el, ctx }) => {
-    ui.datesOpen = false;
     const direction = Number(el.dataset.step);
     const anchor = anchorOf(ctx.state);
     ui.pickedDay = null;
-    if (ui.range === 'custom') {
-      const { from, to } = customRange(ctx.state);
-      const span = daysInView(ctx.state).length;
-      ui.from = addDays(from, direction * span);
-      ui.to = addDays(to, direction * span);
-    } else if (ui.range === 'day') ui.anchor = addDays(anchor, direction);
-    else if (ui.range === 'week') ui.anchor = addDays(startOfWeek(anchor), direction * 7);
+    if (ui.range === 'week') ui.anchor = addDays(startOfWeek(anchor), direction * 7);
     else {
       const first = parseDate(startOfMonth(anchor));
       ui.anchor = toISODate(new Date(first.getFullYear(), first.getMonth() + direction, 1));
@@ -512,20 +544,21 @@ export const actions: HandlerMap = {
     ctx.redraw();
   },
 
-  'go-today': ({ ctx }) => {
-    ui.datesOpen = false;
-    ui.anchor = null;
-    ui.pickedDay = null;
-    if (ui.range === 'custom') {
-      ui.from = ctx.state.meta.asOf;
-      ui.to = addDays(ctx.state.meta.asOf, 6);
-    }
+  'open-day': ({ el, ctx }) => {
+    if (!el.dataset.date) return;
+    openDay(el.dataset.date);
+    ctx.redraw();
+    window.scrollTo({ top: 0 });
+  },
+
+  'step-day': ({ el, ctx }) => {
+    if (!ui.openDay) return;
+    openDay(addDays(ui.openDay, Number(el.dataset.step) || 0));
     ctx.redraw();
   },
 
-  'open-day': ({ el, ctx }) => {
-    ui.range = 'day';
-    ui.anchor = el.dataset.date ?? null;
+  'close-day': ({ ctx }) => {
+    ui.openDay = null;
     ctx.redraw();
   },
 };

@@ -2488,11 +2488,13 @@ body.has-drawer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 10px 16px;
   margin-bottom: 16px;
 }
 
-.calendar-bar .segmented {
+.calendar-bar .segmented,
+.page-head__actions .segmented {
   margin-bottom: 0;
 }
 
@@ -2569,11 +2571,6 @@ body.has-drawer {
   background: var(--navy);
   border-color: var(--navy);
   color: #fff;
-}
-
-.btn.is-off-today {
-  box-shadow: inset 0 0 0 1.5px var(--orange);
-  color: var(--orange-strong);
 }
 
 .day-grid {
@@ -2686,87 +2683,236 @@ body.has-drawer {
   box-shadow: inset 0 0 0 1px var(--navy);
 }
 
-/* ---------- The dates under the Calendar heading ---------- */
+/* ---------- The month and year, and the pop-up behind them ---------- */
 
-.date-picker {
-  position: relative;
-  display: inline-block;
+.period {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
-.date-picker__toggle {
+.period__label {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 8px 2px 0;
-  border: 0;
+  padding: 4px 10px;
   background: none;
-  font: inherit;
-  color: var(--ink-muted);
-  cursor: pointer;
+  border: 0;
   border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.date-picker__toggle:hover {
+.period__label:hover {
+  background: var(--cream-deep);
+}
+
+.period__label .icon {
+  color: var(--ink-muted);
+}
+
+.period__day {
+  margin: 0 0 0 6px;
+  font-size: 22px;
+}
+
+.picker {
+  width: min(360px, calc(100vw - 32px));
+  padding: 0;
+  background: var(--surface);
+  border: 0;
+  border-radius: 18px;
+  box-shadow: var(--shadow-float);
   color: var(--ink);
 }
 
-.date-picker__toggle svg {
-  width: 16px;
-  height: 16px;
-  flex: none;
-  transition: transform 0.15s ease;
+.picker::backdrop {
+  background: rgba(31, 45, 92, 0.45);
 }
 
-.date-picker__toggle[aria-expanded="true"] svg {
-  transform: rotate(180deg);
+.picker[open] {
+  animation: picker-in 0.16s ease-out;
 }
 
-/* Catches the click that closes the panel, without a document listener. */
-.date-picker__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  border: 0;
-  background: none;
-  cursor: default;
+@keyframes picker-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
 }
 
-.date-picker__panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 21;
+@media (prefers-reduced-motion: reduce) {
+  .picker[open] {
+    animation: none;
+  }
+}
+
+.picker__body {
   display: grid;
-  gap: 8px;
-  width: max-content;
-  min-width: 280px;
-  max-width: min(360px, calc(100vw - 32px));
-  padding: 16px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-float);
+  gap: 14px;
+  padding: 18px;
 }
 
-.date-picker__panel .date-range {
-  max-width: none;
-}
-
-.date-picker__or {
+.picker__head,
+.picker__year {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 2px 0;
-  font-size: 12px;
+  justify-content: space-between;
+}
+
+.picker__title {
+  font-size: 18px;
+}
+
+.picker__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.picker__icon:hover {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
+.picker__year-label {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.picker__months {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.picker__month {
+  padding: 8px 0;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.picker__month:hover {
+  border-color: var(--navy);
+}
+
+/* The month the calendar behind is on. */
+.picker__month.is-shown {
+  border-color: var(--orange);
+}
+
+.picker__month.is-picked {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+.picker__days {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.picker__days-label {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--ink-muted);
 }
 
-.date-picker__or::before,
-.date-picker__or::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--line);
+.picker__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  text-align: center;
+}
+
+.picker__weekday {
+  padding-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.picker__day {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.picker__day:hover {
+  background: var(--cream-deep);
+}
+
+.picker__day.is-today {
+  box-shadow: inset 0 0 0 1.5px var(--orange);
+  font-weight: 600;
+}
+
+.picker__day.is-picked {
+  background: var(--navy);
+  color: #fff;
+}
+
+/* A day with bookings on it. */
+.picker__dot {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  background: var(--orange);
+  border-radius: 50%;
+}
+
+.picker__day.is-picked .picker__dot {
+  background: #fff;
+}
+
+.picker__shortcuts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* A day in the week grid's heading opens that day. */
+.calendar__head-day {
+  display: block;
+  width: 100%;
+  padding: 2px 4px;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.calendar__head-day:hover {
+  background: var(--cream-deep);
 }
 
 /* ---------- Month view ---------- */
