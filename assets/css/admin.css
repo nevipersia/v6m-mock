@@ -2071,16 +2071,27 @@ body.has-drawer {
 
 /* ---------- Alerts ---------- */
 
-/* Top right, under the top bar: where the eye goes after pressing Save. */
+/*
+ * Bottom right, just left of the jump buttons so the two never overlap. The
+ * newest lands at the bottom and pushes the older ones up.
+ */
 .alerts {
   position: fixed;
-  top: 72px;
-  right: 20px;
+  right: 76px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   z-index: 70;
   display: grid;
   gap: 10px;
   width: min(380px, calc(100vw - 32px));
   pointer-events: none;
+}
+
+/* Phones: above the tab bar, across the screen. */
+@media (max-width: 900px) {
+  .alerts {
+    right: 16px;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .alert {
@@ -2176,7 +2187,7 @@ body.has-drawer {
 }
 
 @keyframes alert-in {
-  from { opacity: 0; transform: translateX(24px) scale(0.96); }
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
 }
 
 @keyframes alert-out {
