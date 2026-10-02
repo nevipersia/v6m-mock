@@ -225,6 +225,17 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   changed (with `data-motion` = on/back/in/out/swap choosing the direction), and `.is-entering` to a
   pop-up that was not open before. `[data-count-up]` figures count up when their page opens. The
   drawer slides out before it hides. `prefers-reduced-motion` turns all of it off.
+- Finances (`views/finances.ts`, needs `expenses.manage`) is the month's books: a month bar like
+  Bookings', three totals, one In-and-out chart (weekly; clicking a week narrows the page to it),
+  the ledger table of every payment and expense (All / Income / Expenses, rows open the booking or
+  the expense), then Where the money went (categories with bars) beside Still owed by guests for
+  the month. `financeRange(state, from, to)` in `core/finance.ts` serves any stretch of days.
+- Dropdowns and dates (`components/fields.ts`, `components/date-picker.ts`): every `select.input`
+  and `input.input[type=date]` on the desk gets a button that opens a styled list or the shared date
+  pop-up (the same `.picker` look as the Bookings calendar). The real control stays in the form,
+  hidden, and receives the value plus input/change events, so views need no changes. A
+  MutationObserver picks up new fields, side panels included. `data-optional` on a date input adds
+  Clear. The guest booking page keeps native pickers.
 - Alerts (`components/toast.ts`, `ctx.toast(message, tone)`): a card in the top right for every
   change (bottom right, beside the jump buttons), success by default, `info` for copies and downloads, `warning` for cancellations,
   removals and revoked access, `error` for anything that failed. They stack (four at most), drain

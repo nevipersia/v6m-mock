@@ -177,7 +177,7 @@ export function createEventForm(): DrawerContent {
               </label>
               <label class="field">
                 <span class="field__label">Ocular visit (optional)</span>
-                <input class="input" name="ocularDate" data-input="field" type="date" value="${form.ocularDate}">
+                <input class="input" name="ocularDate" data-input="field" data-optional type="date" value="${form.ocularDate}">
               </label>
             </div>
             <label class="field">

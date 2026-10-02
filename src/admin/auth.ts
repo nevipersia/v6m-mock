@@ -62,8 +62,8 @@ export const ROLE_DEFAULTS: Record<Role, Permission[]> = {
 const PAGE_REQUIREMENTS: Record<PageId, Permission | null> = {
   dashboard: null,
   bookings: null,
-  // Sales for everyone; the income and expenses on it need expenses.manage.
-  finances: null,
+  // The books: payments in, expenses out, what is owed.
+  finances: 'expenses.manage',
   inbox: 'inbox.write',
   events: 'events.manage',
   users: 'users.manage',

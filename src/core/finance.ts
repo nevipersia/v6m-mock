@@ -106,10 +106,9 @@ export function financeBetween(state: State, from: ISODate, to: ISODate): Financ
   };
 }
 
-export function financeReport(state: State, days: number): FinanceReport {
-  const to = state.meta.asOf;
-  const from = addDays(to, -(days - 1));
-  const split = buckets(to, from, to, days);
+/** Any stretch of days with its trend bars: one per day, or per week past a fortnight. */
+export function financeRange(state: State, from: ISODate, to: ISODate): FinanceReport {
+  const split = buckets(state.meta.asOf, from, to, daysBetween(from, to));
   return {
     ...financeBetween(state, from, to),
     weekly: split.weekly,
@@ -119,4 +118,10 @@ export function financeReport(state: State, days: number): FinanceReport {
       spend: totalOf(spentBetween(state, bucket.from, bucket.to)),
     })),
   };
+}
+
+/** The last `days` days up to the demo date. */
+export function financeReport(state: State, days: number): FinanceReport {
+  const to = state.meta.asOf;
+  return financeRange(state, addDays(to, -(days - 1)), to);
 }

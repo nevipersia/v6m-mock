@@ -189,7 +189,7 @@ function summarySection(ctx: DeskContext): SafeHTML {
           </div>` : ''}
       </div>
 
-      <a class="summary__more small" href="#/finances">Full financial report ${icon('arrowRight')}</a>
+      ${ctx.canView('finances') ? html`<a class="summary__more small" href="#/finances">Full financial report ${icon('arrowRight')}</a>` : ''}
     </section>`;
 }
 
@@ -224,7 +224,9 @@ export function render(ctx: DeskContext): SafeHTML {
     <div class="cards" data-part="Today">
       ${card({ label: 'Arriving today', value: String(arriving.length), detail: plural(headcount(arriving), 'guest'), action: 'show-arriving', opens: 'See who is arriving today' })}
       ${card({ label: 'In house', value: String(inHouse.length), detail: `${plural(headcount(inHouse), 'guest')} checked in`, action: 'show-inhouse', opens: 'See who is checked in now' })}
-      ${card({ label: 'Collected today', value: peso(collected), detail: plural(payments.length, 'payment'), href: '#/finances', opens: 'Open the financial report' })}
+      ${ctx.canView('finances')
+        ? card({ label: 'Collected today', value: peso(collected), detail: plural(payments.length, 'payment'), href: '#/finances', opens: 'Open the books' })
+        : card({ label: 'Collected today', value: peso(collected), detail: plural(payments.length, 'payment'), action: 'show-balances', opens: "Open today's bookings" })}
       ${card({
         label: 'Balances due',
         value: peso(balancesDue),

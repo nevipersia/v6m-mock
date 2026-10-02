@@ -11,6 +11,7 @@ import { createEventForm } from './components/event-form.js';
 import { createExpenseForm } from './components/expense-form.js';
 import { createGuestSummary } from './components/guest-summary.js';
 import { markEntering } from './components/motion.js';
+import { setFieldsToday, startFields } from './components/fields.js';
 import { createBookingLinkPanel } from './components/booking-link.js';
 import { closeDrawer, openDrawer, syncDrawer } from './components/drawer.js';
 import { jumpBy, refreshJump } from './components/jump.js';
@@ -154,6 +155,7 @@ function draw(): void {
   const modalFocus = focusKey();
   const modalWasOpen = !!app.querySelector('dialog[data-modal][open]');
   context = buildContext(state, staff);
+  setFieldsToday(state.meta.asOf);
   activeRoute = route;
   document.title = `${route.label} · V6M Desk`;
   render(app, renderShell(context, route, route.view.render(context)));
@@ -265,6 +267,7 @@ window.addEventListener('resize', scheduleJumpRefresh);
 
 async function start(): Promise<void> {
   subscribe(draw);
+  startFields();
   onSaveError((error) => showToast(`Not saved: ${error.message}. Reloaded the latest data.`, 'error'));
   try {
     await restoreSession();

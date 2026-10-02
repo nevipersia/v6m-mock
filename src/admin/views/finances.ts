@@ -1,44 +1,41 @@
-// Finances: the complete picture behind the dashboard's summary — what sold,
-// how guests paid, money in against money out, where it went and every
-// expense recorded. Sales are open to every account; income and expenses only
-// to accounts that track expenses.
+// Finances: the month's books. Every payment that came in and every expense
+// that went out, as one ledger table; how the weeks went, in one chart; where
+// the money went, as a ranked table with bars; and what guests still owe for
+// the month. Cash in, cash out — a booking still owed for shows under Owed,
+// never as income. Only accounts that track expenses can open it.
 
-import { flag, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
-import { formatDate, peso, pesoShort, plural } from '../../core/format.js';
-import { findStaff } from '../../core/rules.js';
-import {
-  CATEGORY_LABELS, financeBetween, financeReport, type FinancePoint, type FinanceSummary,
-} from '../../core/finance.js';
-import type { Bucket, Slice } from '../../core/period.js';
-import {
-  SALES_RANGES, salesBetween, salesReport, type SalesPoint, type SalesSummary,
-} from '../../core/sales.js';
-import type { Expense } from '../../core/types.js';
+import { flag, html, type SafeHTML } from '../../core/dom.js';
+import { formatDate, parseDate, peso, pesoShort, plural, toISODate } from '../../core/format.js';
+import { CATEGORY_LABELS, financeRange, type FinancePoint } from '../../core/finance.js';
+import { dayOf, rankSlices, sumOf, within, type Bucket, type Slice } from '../../core/period.js';
+import { METHOD_LABELS, findBooking, isActive } from '../../core/rules.js';
+import type { ExpenseCategory, ISODate, PaymentMethod, PaymentType, State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
+import { paymentPill } from '../components/badges.js';
+import { openDatePicker } from '../components/date-picker.js';
 import { icon } from '../components/icons.js';
 import { emptyState, pageHead } from '../layout.js';
 
-/** How many days of sales the dashboard is showing. Kept while the app is open. */
-let salesDays: number = SALES_RANGES[0];
-/** The trend bar the reader pinned by clicking or tapping it, by start date. */
-let pinnedPoint: string | null = null;
-/** The same two, for the income and expenses section. A month is its natural window. */
-let moneyDays = 30;
-let pinnedMoney: string | null = null;
+/** The month on screen, by its 1st; null follows the demo date. */
+let month: ISODate | null = null;
+/** Which side of the ledger is showing. */
+let view: 'all' | 'in' | 'out' = 'all';
+/** A week of the chart the reader pinned, by its first day: the tables narrow to it. */
+let pinned: string | null = null;
+/** Which way the last step went, for the slide. */
+let motion: 'back' | 'on' | 'swap' = 'swap';
 
-function salesStat(label: string, value: string, detail: TemplateValue = '', tone = ''): SafeHTML {
-  return html`
-    <div class="stat ${tone ? `stat--${tone}` : ''}">
-      <span class="stat__label">${label}</span>
-      <span class="stat__value">${value}</span>
-      ${detail ? html`<span class="stat__detail">${detail}</span>` : ''}
-    </div>`;
-}
+const firstOf = (day: ISODate): ISODate => `${day.slice(0, 8)}01`;
+const lastOf = (first: ISODate): ISODate => {
+  const date = parseDate(first);
+  return toISODate(new Date(date.getFullYear(), date.getMonth() + 1, 0));
+};
+const monthLabel = (first: ISODate): string => parseDate(first).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-/**
- * One series of a trend chart. `key` carries the colour, `legend` names it above
- * the chart and `word` is how it reads out: "₱42,300 booked".
- */
+const TYPE_LABELS: Record<PaymentType, string> = { deposit: 'Downpayment', balance: 'Balance', full: 'Paid in full' };
+
+// ---------- The chart ----------
+
 interface TrendSeries<P> {
   key: string;
   legend: string;
@@ -46,7 +43,11 @@ interface TrendSeries<P> {
   value: (point: P) => number;
 }
 
-/** The key and its name, above the chart. Both trends on the page use it. */
+const MONEY_SERIES: TrendSeries<FinancePoint>[] = [
+  { key: 'in', legend: 'Income', word: 'income', value: (point) => point.income },
+  { key: 'out', legend: 'Expenses', word: 'spent', value: (point) => point.spend },
+];
+
 function trendLegend<P>(series: TrendSeries<P>[]): SafeHTML {
   return html`
     <p class="chart__legend small muted">
@@ -55,45 +56,28 @@ function trendLegend<P>(series: TrendSeries<P>[]): SafeHTML {
     </p>`;
 }
 
-interface TrendOptions<P extends Bucket> {
-  points: P[];
-  series: TrendSeries<P>[];
-  /** Bars are weeks rather than days. */
-  weekly: boolean;
-  days: number;
-  /** The bar the reader pinned, by start date. */
-  pinned: string | null;
-  /** Action name for clicking a bar. */
-  action: string;
-  /** What the chart is, for the screen-reader line. */
-  caption: string;
-}
-
 /**
- * Two figures per day (per week over longer windows), as pairs of bars. Every
- * bar is a button: hovering reads it out under the chart, clicking pins it.
+ * Income beside expenses for each week (or day) of the month. Every pair is a
+ * button: hovering reads it out under the chart, clicking narrows the tables
+ * to that week, clicking again lets go.
  */
-function trendChart<P extends Bucket>({ points, series, weekly, days, pinned, action, caption }: TrendOptions<P>): SafeHTML {
-  const peak = Math.max(1, ...points.flatMap((point) => series.map((one) => one.value(point))));
+function trendChart(points: FinancePoint[], weekly: boolean): SafeHTML {
+  const peak = Math.max(1, ...points.flatMap((point) => MONEY_SERIES.map((one) => one.value(point))));
   const height = (value: number) => `${Math.max(value > 0 ? 2 : 0, Math.round((value / peak) * 100))}%`;
-  const readout = (point: P) => `${point.title} · ${series.map((one) => `${peso(one.value(point))} ${one.word}`).join(' · ')}`;
+  const readout = (point: FinancePoint) => `${point.title} · ${MONEY_SERIES.map((one) => `${peso(one.value(point))} ${one.word}`).join(' · ')}`;
   const focus = points.find((point) => point.from === pinned);
-  // What the line under the chart says when nothing is hovered.
-  const resting = focus
-    ? readout(focus)
-    : `Tallest bar ${pesoShort(peak)}${weekly ? ' · one bar per week' : ' · one bar per day'}`;
+  const resting = focus ? readout(focus) : `Tallest bar ${pesoShort(peak)}${weekly ? ' · one pair per week' : ' · one pair per day'}`;
 
   return html`
     <figure class="trend">
-      <p class="sr-only">${caption} over the last ${days} days. Each bar reads out below the chart.</p>
-      <div class="chart">
+      <p class="sr-only">Money received and money spent, ${weekly ? 'week' : 'day'} by ${weekly ? 'week' : 'day'}. Each pair reads out below the chart.</p>
+      <div class="chart chart--short">
         ${points.map((point) => html`
           <button class="chart__col ${point.isNow ? 'is-now' : ''} ${point.from === pinned ? 'is-pinned' : ''}"
-            type="button" data-action="${action}" data-hover="chart-point" data-point="${point.from}"
-            data-readout="${readout(point)}" aria-pressed="${flag(point.from === pinned)}"
-            aria-label="${readout(point)}">
+            type="button" data-action="pin-week" data-hover="chart-point" data-point="${point.from}"
+            data-readout="${readout(point)}" aria-pressed="${flag(point.from === pinned)}" aria-label="${readout(point)}">
             <span class="chart__bars">
-              ${series.map((one) => html`
+              ${MONEY_SERIES.map((one) => html`
                 <span class="chart__bar chart__bar--${one.key}" style="height:${height(one.value(point))}"></span>`)}
             </span>
             <span class="chart__label">${point.label}</span>
@@ -104,305 +88,301 @@ function trendChart<P extends Bucket>({ points, series, weekly, days, pinned, ac
     </figure>`;
 }
 
-const SALES_SERIES: TrendSeries<SalesPoint>[] = [
-  { key: 'booked', legend: 'Booked', word: 'booked', value: (point) => point.booked },
-  { key: 'collected', legend: 'Collected', word: 'collected', value: (point) => point.collected },
-];
+// ---------- The ledger ----------
 
-const MONEY_SERIES: TrendSeries<FinancePoint>[] = [
-  { key: 'in', legend: 'Income', word: 'income', value: (point) => point.income },
-  { key: 'out', legend: 'Expenses', word: 'spent', value: (point) => point.spend },
-];
-
-/**
- * Part-to-whole: one stacked bar, then the legend that names every slice. The
- * slice keys carry the colour, so a group keeps its colour whatever it sold
- * and wherever it lands in the ranking.
- */
-function shareChart(slices: Slice[], total: number, empty: string, name: string): SafeHTML {
-  if (!slices.length) return html`<p class="small muted">${empty}</p>`;
-  const readout = (slice: Slice) => `${slice.label} · ${peso(slice.amount)} · ${Math.round(slice.share * 100)}% of ${peso(total)}`;
-
-  return html`
-    <figure class="share">
-      <div class="share__bar" role="img" aria-label="${name}: ${slices.map((slice) => `${slice.label} ${Math.round(slice.share * 100)}%`).join(', ')}">
-        ${slices.map((slice) => html`
-          <span class="share__seg share__seg--${slice.key}" style="flex-basis:${(slice.share * 100).toFixed(2)}%"
-            data-hover="share-slice" data-readout="${readout(slice)}"></span>`)}
-      </div>
-      <figcaption class="share__readout small muted" data-slot="share-readout"
-        data-resting="${peso(total)} across ${plural(slices.length, 'group', 'groups')}">${peso(total)} across ${plural(slices.length, 'group', 'groups')}</figcaption>
-      <ul class="share__legend">
-        ${slices.map((slice) => html`
-          <li class="share__row" data-hover="share-slice" data-readout="${readout(slice)}">
-            <span class="share__key share__key--${slice.key}" aria-hidden="true"></span>
-            <span class="share__label">${slice.label}</span>
-            <span class="share__amount">${peso(slice.amount)}</span>
-            <span class="share__meta small muted">${Math.round(slice.share * 100)}% · ${slice.count}</span>
-          </li>`)}
-      </ul>
-    </figure>`;
+interface LedgerRow {
+  date: ISODate;
+  /** For ordering two entries on one day. */
+  at: string;
+  what: string;
+  sub: string;
+  category: string;
+  method: PaymentMethod;
+  amountIn: number;
+  amountOut: number;
+  /** What a click opens. */
+  action: 'open-booking' | 'edit-expense';
+  id: string;
 }
 
-/** "vs the 7 days before", "vs the day before". */
-const comparedWith = (days: number): string => `vs the ${days === 1 ? 'day' : `${days} days`} before`;
+function ledgerRows(state: State, from: ISODate, to: ISODate): LedgerRow[] {
+  const income: LedgerRow[] = state.payments
+    .filter((payment) => within(dayOf(payment.receivedAt), from, to))
+    .map((payment) => {
+      const booking = findBooking(state, payment.bookingId);
+      return {
+        date: dayOf(payment.receivedAt),
+        at: payment.receivedAt,
+        what: booking?.guestName ?? 'Removed booking',
+        sub: payment.bookingId,
+        category: `Booking · ${TYPE_LABELS[payment.type]}`,
+        method: payment.method,
+        amountIn: payment.amount,
+        amountOut: 0,
+        action: 'open-booking',
+        id: payment.bookingId,
+      };
+    });
+  const spending: LedgerRow[] = state.expenses
+    .filter((expense) => within(expense.date, from, to))
+    .map((expense) => ({
+      date: expense.date,
+      at: expense.createdAt,
+      what: expense.item,
+      sub: expense.vendor ?? '',
+      category: CATEGORY_LABELS[expense.category],
+      method: expense.method,
+      amountIn: 0,
+      amountOut: expense.amount,
+      action: 'edit-expense',
+      id: expense.id,
+    }));
+  return [...income, ...spending].sort((a, b) => (b.date === a.date ? b.at.localeCompare(a.at) : b.date.localeCompare(a.date)));
+}
 
-function salesSection(ctx: DeskContext): SafeHTML {
-  const report = salesReport(ctx.state, salesDays);
-  // Clicking a bar re-cuts the whole section to that day or week; the chart
-  // itself keeps showing the full window so there is a way back.
-  const focus = report.points.find((point) => point.from === pinnedPoint) ?? null;
-  const shown: SalesSummary = focus ? salesBetween(ctx.state, focus.from, focus.to) : report;
-  const changeTone = shown.change === null ? '' : shown.change < 0 ? 'down' : 'up';
+function ledger(state: State, rows: LedgerRow[], label: string): SafeHTML {
+  const shown = rows.filter((row) => (view === 'in' ? row.amountIn : view === 'out' ? row.amountOut : true));
+  const totalIn = sumOf(shown.map((row) => row.amountIn));
+  const totalOut = sumOf(shown.map((row) => row.amountOut));
+  const views: { id: typeof view; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'in', label: 'Income' },
+    { id: 'out', label: 'Expenses' },
+  ];
 
   return html`
-    <section class="sales" aria-label="Sales" data-part="Sales">
-      <header class="sales__head">
-        <div>
-          <h2 class="sales__title">Sales</h2>
-          <p class="small muted">
-            ${focus
-              ? html`<strong>${focus.title}</strong> · ${report.weekly ? 'this week' : 'this day'} only`
-              : `${formatDate(report.from, 'monthDay')} – ${formatDate(report.to, 'monthDay')} · bookings taken in this window`}
-          </p>
-        </div>
-        <div class="sales__controls">
-          ${focus ? html`
-            <button class="btn btn--quiet btn--sm" type="button" data-action="clear-point">Show all ${salesDays} days</button>` : ''}
-          <div class="segmented" role="group" aria-label="Sales period">
-            ${SALES_RANGES.map((days) => html`
-              <button class="segmented__option ${days === salesDays ? 'is-active' : ''}" type="button"
-                data-action="sales-range" data-days="${days}" aria-pressed="${flag(days === salesDays)}">${days} days</button>`)}
-          </div>
+    <section class="panel panel--flush fin-ledger" data-part="Ledger">
+      <header class="fin-ledger__head">
+        <h2 class="panel__title">Ledger <span class="panel__count">${shown.length}</span></h2>
+        <div class="segmented" role="group" aria-label="Show in the ledger">
+          ${views.map((option) => html`
+            <button class="segmented__option ${view === option.id ? 'is-active' : ''}" type="button"
+              data-action="ledger-view" data-view="${option.id}" aria-pressed="${flag(view === option.id)}">${option.label}</button>`)}
         </div>
       </header>
-
-      <div class="stats ${focus ? 'is-focused' : ''}" data-enter="sales|${salesDays}:${pinnedPoint ?? ''}">
-        ${salesStat('Sales booked', peso(shown.booked), `${plural(shown.bookings, 'booking')} taken`)}
-        ${salesStat('Collected', peso(shown.collected), shown.change === null
-          ? 'Nothing to compare with'
-          : html`<span class="stat__change stat__change--${changeTone}">${shown.change > 0 ? '▲' : shown.change < 0 ? '▼' : '='} ${Math.abs(shown.change)}%</span> ${comparedWith(shown.days)}`)}
-        ${salesStat('Average booking', peso(shown.averageBooking), 'Per booking taken')}
-        ${salesStat('Still to collect', peso(shown.outstanding), 'On these bookings', shown.outstanding ? 'warn' : '')}
-      </div>
-
-      <div class="sales__grid">
-        <section class="panel sales__trend">
-          <header class="panel__head">
-            <h3 class="panel__title">Trend</h3>
-            ${trendLegend(SALES_SERIES)}
-          </header>
-          ${trendChart({
-            points: report.points,
-            series: SALES_SERIES,
-            weekly: report.weekly,
-            days: report.days,
-            pinned: pinnedPoint,
-            action: 'pin-point',
-            caption: 'Sales taken and money collected',
-          })}
-        </section>
-
-        <section class="panel">
-          <header class="panel__head">
-            <h3 class="panel__title">What sold</h3>
-            ${focus ? html`<span class="pill pill--info">${focus.label}</span>` : ''}
-          </header>
-          ${shareChart(shown.byProduct, shown.booked, focus ? 'Nothing was booked then.' : 'No bookings taken in this window.', 'What sold')}
-        </section>
-
-        <section class="panel">
-          <header class="panel__head">
-            <h3 class="panel__title">How guests paid</h3>
-            ${focus ? html`<span class="pill pill--info">${focus.label}</span>` : ''}
-          </header>
-          ${shareChart(shown.byMethod, shown.collected, focus ? 'Nothing came in then.' : 'No payments in this window.', 'How guests paid')}
-        </section>
-      </div>
+      ${shown.length ? html`
+        <div class="table-scroll">
+          <table class="data-table fin-table">
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">What</th>
+                <th scope="col">Category</th>
+                <th scope="col">Method</th>
+                <th scope="col" class="num">In</th>
+                <th scope="col" class="num">Out</th>
+                <th scope="col" class="data-table__go"><span class="sr-only">Open</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${shown.map((row) => html`
+                <tr class="data-table__row ${row.date === state.meta.asOf ? 'is-today' : ''}" data-action="${row.action}" data-id="${row.id}">
+                  <td>${row.date === state.meta.asOf ? html`<span class="data-table__today">Today</span>` : formatDate(row.date, 'monthDay')}</td>
+                  <td>
+                    <button class="link-button" type="button" data-action="${row.action}" data-id="${row.id}">${row.what}</button>
+                    ${row.sub ? html`<span class="data-table__sub ${row.action === 'open-booking' ? 'mono' : ''}">${row.sub}</span>` : ''}
+                  </td>
+                  <td class="muted">${row.category}</td>
+                  <td class="muted">${METHOD_LABELS[row.method]}</td>
+                  <td class="num fin-in">${row.amountIn ? peso(row.amountIn) : ''}</td>
+                  <td class="num fin-out">${row.amountOut ? peso(row.amountOut) : ''}</td>
+                  <td class="data-table__go" aria-hidden="true">${icon('chevronRight')}</td>
+                </tr>`)}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row" colspan="4">Total for ${label}</th>
+                <td class="num fin-in">${view === 'out' ? '' : peso(totalIn)}</td>
+                <td class="num fin-out">${view === 'in' ? '' : peso(totalOut)}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>` : html`<div class="fin-empty">${emptyState('Nothing recorded', `No ${view === 'in' ? 'income' : view === 'out' ? 'expenses' : 'money in or out'} for ${label}.`)}</div>`}
     </section>`;
 }
 
-/** How many expenses the list shows before it says how many more there are. */
-const EXPENSES_SHOWN = 6;
+// ---------- Where it went, and what is owed ----------
 
-/** One recorded expense, with the amount and a way into the form. */
-function expenseRow(ctx: DeskContext, expense: Expense): SafeHTML {
-  const who = expense.recordedBy ? findStaff(ctx.state, expense.recordedBy)?.name : null;
+function whereItWent(slices: Slice[], label: string): SafeHTML {
+  const top = slices[0]?.amount ?? 0;
   return html`
-    <li class="spend-row">
-      <button class="spend-row__main" type="button" data-action="edit-expense" data-id="${expense.id}">
-        <span class="spend-row__title">${expense.item}</span>
-        <span class="spend-row__meta small muted">
-          ${formatDate(expense.date)} · ${CATEGORY_LABELS[expense.category]}${expense.vendor ? ` · ${expense.vendor}` : ''}${who ? ` · ${who}` : ''}
-        </span>
-      </button>
-      <span class="spend-row__amount">${peso(expense.amount)}</span>
-    </li>`;
-}
-
-/**
- * Money in against money out. Income is what the payments brought in, so the
- * profit here is cash that has actually arrived — a booking that is still owed
- * for counts under Sales, not here.
- */
-function moneySection(ctx: DeskContext): SafeHTML {
-  const report = financeReport(ctx.state, moneyDays);
-  // Clicking a bar cuts the whole section down to that day or week.
-  const focus = report.points.find((point) => point.from === pinnedMoney) ?? null;
-  const shown: FinanceSummary = focus ? financeBetween(ctx.state, focus.from, focus.to) : report;
-  const loss = shown.profit < 0;
-  // Nothing moved in the window before: there is no honest comparison to draw.
-  const swing = shown.profitBefore === null ? null : shown.profit - shown.profitBefore;
-  const biggest = shown.byCategory[0];
-  const canTrack = ctx.can('expenses.manage');
-
-  return html`
-    <section class="sales money" aria-label="Income and expenses" data-part="Income and expenses">
-      <header class="sales__head">
-        <div>
-          <h2 class="sales__title">Income and expenses</h2>
-          <p class="small muted">
-            ${focus
-              ? html`<strong>${focus.title}</strong> · ${report.weekly ? 'this week' : 'this day'} only`
-              : `${formatDate(report.from, 'monthDay')} – ${formatDate(report.to, 'monthDay')} · money received against money spent`}
-          </p>
-        </div>
-        <div class="sales__controls">
-          ${focus ? html`
-            <button class="btn btn--quiet btn--sm" type="button" data-action="clear-money">Show all ${moneyDays} days</button>` : ''}
-          <div class="segmented" role="group" aria-label="Income and expenses period">
-            ${SALES_RANGES.map((days) => html`
-              <button class="segmented__option ${days === moneyDays ? 'is-active' : ''}" type="button"
-                data-action="money-range" data-days="${days}" aria-pressed="${flag(days === moneyDays)}">${days} days</button>`)}
-          </div>
-        </div>
-      </header>
-
-      <div class="stats ${focus ? 'is-focused' : ''}" data-enter="money|${moneyDays}:${pinnedMoney ?? ''}">
-        ${salesStat('Income', peso(shown.income), 'Payments received')}
-        ${salesStat('Expenses', peso(shown.spend), `${plural(shown.count, 'expense')} recorded`)}
-        ${salesStat(loss ? 'Loss' : 'Profit', peso(Math.abs(shown.profit)), html`
-          ${shown.margin === null ? 'Nothing came in' : `${Math.round(shown.margin * 100)}% of income`}
-          ${swing === null ? '· nothing to compare with' : html`
-            · <span class="stat__change stat__change--${swing < 0 ? 'down' : 'up'}">${swing < 0 ? '▼' : '▲'} ${peso(Math.abs(swing))}</span> ${comparedWith(shown.days)}`}`,
-        loss ? 'warn' : '')}
-        ${salesStat('Biggest cost', biggest ? peso(biggest.amount) : peso(0),
-        biggest ? `${biggest.label} · ${Math.round(biggest.share * 100)}% of spending` : 'Nothing spent in this window')}
-      </div>
-
-      <div class="sales__grid">
-        <section class="panel sales__trend">
-          <header class="panel__head">
-            <h3 class="panel__title">In and out</h3>
-            ${trendLegend(MONEY_SERIES)}
-          </header>
-          ${trendChart({
-            points: report.points,
-            series: MONEY_SERIES,
-            weekly: report.weekly,
-            days: report.days,
-            pinned: pinnedMoney,
-            action: 'pin-money',
-            caption: 'Money received and money spent',
-          })}
-        </section>
-
-        <section class="panel">
-          <header class="panel__head">
-            <h3 class="panel__title">Where it went</h3>
-            ${focus ? html`<span class="pill pill--info">${focus.label}</span>` : ''}
-          </header>
-          ${shareChart(shown.byCategory, shown.spend, focus ? 'Nothing was spent then.' : 'No expenses recorded in this window.', 'Where it went')}
-        </section>
-
-        <section class="panel">
-          <header class="panel__head">
-            <h3 class="panel__title">Expenses</h3>
-            <span class="panel__count">${shown.count}</span>
-          </header>
-          ${shown.expenses.length ? html`
-            <ul class="spend-rows">
-              ${shown.expenses.slice(0, EXPENSES_SHOWN).map((expense) => expenseRow(ctx, expense))}
-            </ul>
-            ${shown.expenses.length > EXPENSES_SHOWN ? html`
-              <p class="small muted">${plural(shown.expenses.length - EXPENSES_SHOWN, 'older expense')} in this window.</p>` : ''}`
-          : emptyState('Nothing spent yet', canTrack
-            ? 'Record what the resort pays out and the profit here follows.'
-            : 'Only accounts that track expenses can add them.')}
-        </section>
-      </div>
+    <section class="panel panel--flush fin-side" data-part="Where the money went">
+      <header class="fin-ledger__head"><h2 class="panel__title">Where the money went</h2></header>
+      ${slices.length ? html`
+        <table class="data-table fin-table fin-table--compact">
+          <thead>
+            <tr><th scope="col">Category</th><th scope="col"><span class="sr-only">Share</span></th><th scope="col" class="num">Spent</th></tr>
+          </thead>
+          <tbody>
+            ${slices.map((slice) => html`
+              <tr>
+                <td>${slice.label}<span class="data-table__sub">${plural(slice.count, 'expense')} · ${Math.round(slice.share * 100)}%</span></td>
+                <td class="fin-bar-cell"><span class="fin-bar"><span style="width:${top ? Math.round((slice.amount / top) * 100) : 0}%"></span></span></td>
+                <td class="num">${peso(slice.amount)}</td>
+              </tr>`)}
+          </tbody>
+        </table>` : html`<div class="fin-empty">${emptyState('Nothing spent', `No expenses for ${label}.`)}</div>`}
     </section>`;
 }
+
+function owedTable(state: State, from: ISODate, to: ISODate, label: string): SafeHTML {
+  const owing = state.bookings
+    .filter((b) => within(b.date, from, to) && isActive(b) && b.balance > 0)
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const total = sumOf(owing.map((b) => b.balance));
+  return html`
+    <section class="panel panel--flush fin-side" data-part="Still owed by guests">
+      <header class="fin-ledger__head">
+        <h2 class="panel__title">Still owed by guests <span class="panel__count">${owing.length}</span></h2>
+      </header>
+      ${owing.length ? html`
+        <table class="data-table fin-table fin-table--compact">
+          <thead>
+            <tr><th scope="col">Guest</th><th scope="col">Date</th><th scope="col" class="num">Owed</th></tr>
+          </thead>
+          <tbody>
+            ${owing.map((b) => html`
+              <tr class="data-table__row ${b.date === state.meta.asOf ? 'is-today' : ''}" data-action="open-booking" data-id="${b.id}">
+                <td>
+                  <button class="link-button" type="button" data-action="open-booking" data-id="${b.id}">${b.guestName}</button>
+                  <span class="data-table__sub">${paymentPill(b)}</span>
+                </td>
+                <td>${b.date === state.meta.asOf ? html`<span class="data-table__today">Today</span>` : formatDate(b.date, 'monthDay')}</td>
+                <td class="num fin-owed">${peso(b.balance)}</td>
+              </tr>`)}
+          </tbody>
+          <tfoot>
+            <tr><th scope="row" colspan="2">Total owed</th><td class="num fin-owed">${peso(total)}</td></tr>
+          </tfoot>
+        </table>` : html`<div class="fin-empty">${emptyState('Nothing owed', `Every booking in ${label} is paid.`)}</div>`}
+    </section>`;
+}
+
+// ---------- The page ----------
 
 export function render(ctx: DeskContext): SafeHTML {
-  const canTrack = ctx.can('expenses.manage');
+  const { state } = ctx;
+  const first = month ?? firstOf(state.meta.asOf);
+  const last = lastOf(first);
+  const report = financeRange(state, first, last);
+  const week = report.points.find((point) => point.from === pinned) as Bucket | undefined;
+  // A pinned week narrows the totals and the tables; the chart keeps the month.
+  const from = week?.from ?? first;
+  const to = week?.to ?? last;
+  const label = week ? `${formatDate(week.from, 'monthDay')} – ${formatDate(week.to, 'monthDay')}` : monthLabel(first);
+  const rows = ledgerRows(state, from, to);
+  const income = sumOf(rows.map((row) => row.amountIn));
+  const spend = sumOf(rows.map((row) => row.amountOut));
+  const profit = income - spend;
+  const categories = rankSlices(Object.entries(CATEGORY_LABELS).map(([key, text]) => {
+    const spent = state.expenses.filter((expense) => expense.category === (key as ExpenseCategory) && within(expense.date, from, to));
+    return { key, label: text, amount: sumOf(spent.map((expense) => expense.amount)), count: spent.length, share: 0 };
+  }));
+
   return html`
     ${pageHead({
       title: 'Finances',
-      subtitle: canTrack ? 'Sales, income and expenses in full' : 'Sales in full',
-      actions: canTrack ? html`
-        <button class="btn btn--primary" type="button" data-action="add-expense">${icon('plus')} Record an expense</button>` : '',
+      actions: html`
+        <button class="btn btn--primary" type="button" data-action="add-expense">${icon('plus')} Record an expense</button>`,
     })}
 
-    ${salesSection(ctx)}
+    <div class="calendar-bar">
+      <div class="period">
+        <button class="btn btn--secondary btn--icon" type="button" data-action="fin-step" data-step="-1" aria-label="Previous month">${icon('chevronLeft')}</button>
+        <button class="period__label" type="button" data-action="fin-pick" aria-haspopup="dialog" title="Go to a month">
+          <span>${monthLabel(first)}</span>
+          ${icon('chevronDown')}
+        </button>
+        <button class="btn btn--secondary btn--icon" type="button" data-action="fin-step" data-step="1" aria-label="Next month">${icon('chevronRight')}</button>
+      </div>
+      ${week ? html`
+        <button class="btn btn--quiet btn--sm" type="button" data-action="pin-week" data-point="${week.from}">
+          ${icon('x')} Showing ${label} only
+        </button>` : ''}
+    </div>
 
-    ${canTrack ? moneySection(ctx) : ''}`;
+    <div class="fin-body" data-enter="finances|${first}:${pinned ?? ''}" data-motion="${motion}">
+      <div class="fin-totals" data-part="Totals">
+        <div class="fin-total">
+          <span class="fin-total__label"><span class="chart__key chart__key--in"></span>Income</span>
+          <span class="fin-total__value">${peso(income)}</span>
+        </div>
+        <div class="fin-total">
+          <span class="fin-total__label"><span class="chart__key chart__key--out"></span>Expenses</span>
+          <span class="fin-total__value">${peso(spend)}</span>
+        </div>
+        <div class="fin-total ${profit < 0 ? 'fin-total--loss' : ''}">
+          <span class="fin-total__label">${profit < 0 ? 'Loss' : 'Profit'}</span>
+          <span class="fin-total__value">${peso(Math.abs(profit))}
+            <small>${income ? `${Math.round((profit / income) * 100)}% of income` : 'nothing came in'}</small>
+          </span>
+        </div>
+      </div>
+
+      <section class="panel fin-chart" data-part="In and out">
+        <header class="panel__head">
+          <h2 class="panel__title">In and out, ${report.weekly ? 'week by week' : 'day by day'}</h2>
+          ${trendLegend(MONEY_SERIES)}
+        </header>
+        ${trendChart(report.points, report.weekly)}
+      </section>
+
+      ${ledger(state, rows, label)}
+
+      <div class="fin-sides">
+        ${whereItWent(categories, label)}
+        ${owedTable(state, from, to, label)}
+      </div>
+    </div>`;
 }
 
 export const hovers: HandlerMap = {
-  // Each figure has its own read-out line, so write into the one this slice sits in.
-  'share-slice': ({ el, event }) => {
-    const readout = el.closest('.share')?.querySelector<HTMLElement>('[data-slot="share-readout"]');
-    if (!readout) return;
-    const arriving = event.type === 'mouseover' || event.type === 'focusin';
-    readout.textContent = arriving ? el.dataset.readout ?? '' : readout.dataset.resting ?? '';
-    readout.classList.toggle('muted', !arriving);
-  },
-
-  // Arriving shows that bar's figures; leaving puts the resting line back. The
-  // page has two trends, so write into the one this bar belongs to.
+  // Arriving shows that pair's figures; leaving puts the resting line back.
   'chart-point': ({ el, event }) => {
     const readout = el.closest('.trend')?.querySelector<HTMLElement>('[data-slot="chart-readout"]');
     if (!readout) return;
     const arriving = event.type === 'mouseover' || event.type === 'focusin';
-    const resting = readout.dataset.resting ?? '';
-    readout.textContent = arriving ? el.dataset.readout ?? '' : resting;
-    // The resting line is only emphasised while a bar stays pinned.
+    readout.textContent = arriving ? el.dataset.readout ?? '' : readout.dataset.resting ?? '';
     readout.classList.toggle('muted', !arriving && !el.closest('.chart')?.querySelector('.is-pinned'));
   },
 };
 
 export const actions: HandlerMap = {
-  'sales-range': ({ el, ctx }) => {
-    salesDays = Number(el.dataset.days) || SALES_RANGES[0];
-    pinnedPoint = null;
+  'fin-step': ({ el, ctx }) => {
+    const step = Number(el.dataset.step) || 0;
+    const date = parseDate(month ?? firstOf(ctx.state.meta.asOf));
+    month = toISODate(new Date(date.getFullYear(), date.getMonth() + step, 1));
+    pinned = null;
+    motion = step < 0 ? 'back' : 'on';
     ctx.redraw();
   },
 
-  // Clicking a bar cuts the section down to it; clicking it again undoes that.
-  'pin-point': ({ el, ctx }) => {
-    pinnedPoint = pinnedPoint === el.dataset.point ? null : el.dataset.point ?? null;
+  'fin-pick': ({ ctx }) => {
+    openDatePicker({
+      mode: 'month',
+      value: month ?? firstOf(ctx.state.meta.asOf),
+      today: ctx.state.meta.asOf,
+      onPick: (value) => {
+        if (!value) return;
+        month = firstOf(value);
+        pinned = null;
+        motion = 'swap';
+        ctx.redraw();
+      },
+    });
+  },
+
+  // Clicking a week narrows everything to it; clicking it again lets go.
+  'pin-week': ({ el, ctx }) => {
+    pinned = pinned === el.dataset.point ? null : el.dataset.point ?? null;
+    motion = 'swap';
     ctx.redraw();
   },
 
-  'clear-point': ({ ctx }) => {
-    pinnedPoint = null;
-    ctx.redraw();
-  },
-
-  'money-range': ({ el, ctx }) => {
-    moneyDays = Number(el.dataset.days) || 30;
-    pinnedMoney = null;
-    ctx.redraw();
-  },
-
-  'pin-money': ({ el, ctx }) => {
-    pinnedMoney = pinnedMoney === el.dataset.point ? null : el.dataset.point ?? null;
-    ctx.redraw();
-  },
-
-  'clear-money': ({ ctx }) => {
-    pinnedMoney = null;
+  'ledger-view': ({ el, ctx }) => {
+    const next = el.dataset.view;
+    view = next === 'in' || next === 'out' ? next : 'all';
     ctx.redraw();
   },
 
@@ -413,3 +393,4 @@ export const actions: HandlerMap = {
     if (expense) ctx.newExpense(expense);
   },
 };
+
