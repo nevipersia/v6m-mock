@@ -5,14 +5,15 @@
 
 import { html, type SafeHTML } from '../../core/dom.js';
 import { formatDate, peso, plural } from '../../core/format.js';
-import { STAGE_LABELS, findBooking, findGuest, findPackage, findStaff, liveEvents } from '../../core/rules.js';
+import { STAGE_LABELS, findBooking, findGuest, findPackage, findStaff, pipelineEvents } from '../../core/rules.js';
 import type { EventStage, ResortEvent } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { icon } from '../components/icons.js';
 import { emptyState, pageHead } from '../layout.js';
 import { bookAndOpen, stageMoney } from '../components/stage-summary.js';
 
-const STAGES: EventStage[] = ['inquiry', 'reserved', 'paid', 'done'];
+/** Done is not a column: a finished event shows in Bookings, as its booking. */
+const STAGES: EventStage[] = ['inquiry', 'reserved', 'paid'];
 
 /** Inquiries pile up, so their column shows the first few; its header opens them all. */
 const INQUIRIES_SHOWN = 2;
@@ -59,13 +60,13 @@ function eventCard(ctx: DeskContext, event: ResortEvent): SafeHTML {
 
 export function render(ctx: DeskContext): SafeHTML {
   const { state } = ctx;
-  const events = [...liveEvents(state)].sort((a, b) => a.date.localeCompare(b.date));
+  const events = [...pipelineEvents(state)].sort((a, b) => a.date.localeCompare(b.date));
   const usedStages = STAGES.filter((stage) => stage !== 'inquiry' || events.some((event) => event.stage === 'inquiry'));
 
   return html`
     ${pageHead({
       title: 'Events',
-      subtitle: `${plural(events.length, 'event')} in this period`,
+      subtitle: html`${plural(events.length, 'event')} coming up · finished events are in <a href="#/bookings">Bookings</a>`,
       actions: html`
         ${ctx.canView('packages') ? html`<a class="btn btn--secondary" href="#/packages">${icon('tag')} Packages and prices</a>` : ''}
         ${ctx.can('events.manage') ? html`

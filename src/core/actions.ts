@@ -489,6 +489,12 @@ export function checkOut(bookingId: string, staffId: string): Booking {
     const booking = must(findBooking(state, bookingId), `Booking ${bookingId}`);
     Object.assign(booking, { status: 'checked_out', checkedOutAt: demoNow(state) } satisfies Partial<Booking>);
     logActivity(state, staffId, 'booking.checked_out', booking.id);
+    // An event checked out has happened; it leaves the Events page for Bookings.
+    const event = state.events.find((item) => item.bookingId === booking.id);
+    if (event && event.stage !== 'done') {
+      event.stage = 'done';
+      logActivity(state, staffId, 'event.done', event.id, event.title);
+    }
     return booking;
   });
 }

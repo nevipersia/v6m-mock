@@ -53,6 +53,17 @@ export const findBooking = (state: State, id: string | null | undefined) => stat
 /** Events still on: an event whose booking was cancelled drops off the Events page. */
 export const liveEvents = (state: State): ResortEvent[] =>
   state.events.filter((event) => findBooking(state, event.bookingId)?.status !== 'cancelled');
+
+/** An event that has happened: marked done, checked out, or booked for a day already past. */
+export function eventFinished(state: State, event: ResortEvent): boolean {
+  if (event.stage === 'done') return true;
+  const booking = findBooking(state, event.bookingId);
+  return !!booking && (booking.status === 'checked_out' || event.date < state.meta.asOf);
+}
+
+/** What the Events page tracks: live events still to happen. Finished ones live on in Bookings. */
+export const pipelineEvents = (state: State): ResortEvent[] =>
+  liveEvents(state).filter((event) => !eventFinished(state, event));
 export const findGuest = (state: State, id: string | null | undefined) => state.guests.find((guest) => guest.id === id);
 export const findStaff = (state: State, id: string | null | undefined) => state.staff.find((person) => person.id === id);
 export const findPackage = (state: State, id: string | null | undefined) => state.eventPackages.find((pkg) => pkg.id === id);

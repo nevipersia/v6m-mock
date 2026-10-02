@@ -270,6 +270,9 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   outright (database policy "inquiry remove" allows only `booking_id is null` with `events.manage`).
 - The Inquiry column shows at most `INQUIRIES_SHOWN` (2) cards, then a "+N more · see all" button
   that opens the Inquiry stage summary, as its header does. Other columns show every card.
+- The Events page has no Done column. An event that has happened (stage `done`, its booking checked
+  out, or a booked date already past: `eventFinished`) leaves the page and lives on as its booking in
+  Bookings (`pipelineEvents` in `core/rules.ts`). `checkOut` sets the event's stage to `done`.
 - Events whose booking is cancelled drop off the Events page, its stage summaries, the calendar's event
   row and the dashboard (`liveEvents` in `core/rules.ts`). `cancelBooking` clears the event's
   `blocksCalendar` so the date opens again; `normalize` does the same for older data.
