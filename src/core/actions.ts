@@ -612,11 +612,16 @@ export function createEvent(input: NewEvent, staffId: string): EventResult {
 
     const pkg = findPackage(state, input.packageId);
     if (!pkg) return { error: 'Pick an event package.' };
-    if (!input.title.trim()) return { error: 'Give the event a name.' };
-    if (!input.contactName.trim()) return { error: 'Enter who is arranging it.' };
+    // An inquiry is only a lead: whatever is known so far saves, and the rest
+    // is asked for once it is reserved.
+    const inquiry = input.stage === 'inquiry';
     if (!input.date) return { error: 'Pick the event date.' };
-    if (input.guests < 1) return { error: 'Add how many guests are coming.' };
-    if (input.guests > pkg.maxGuests) return { error: `${pkg.name} takes up to ${pkg.maxGuests} guests.` };
+    if (!inquiry) {
+      if (!input.title.trim()) return { error: 'Give the event a name.' };
+      if (!input.contactName.trim()) return { error: 'Enter who is arranging it.' };
+      if (input.guests < 1) return { error: 'Add how many guests are coming.' };
+      if (input.guests > pkg.maxGuests) return { error: `${pkg.name} takes up to ${pkg.maxGuests} guests.` };
+    }
 
     const taken = BOOKED_STAGES.includes(input.stage);
     const closes = input.exclusive;
@@ -629,22 +634,23 @@ export function createEvent(input: NewEvent, staffId: string): EventResult {
 
     const addOns = input.addOns.filter((addOn) => addOn.item.trim() && addOn.amount > 0)
       .map((addOn) => ({ item: addOn.item.trim(), amount: Math.round(addOn.amount) }));
-    const contact = findOrCreateGuest(state, { name: input.contactName, mobile: input.contactMobile || null });
+    const contactName = input.contactName.trim() || input.contactMobile.trim();
+    const contact = contactName ? findOrCreateGuest(state, { name: contactName, mobile: input.contactMobile || null }) : null;
 
     const event: ResortEvent = {
       id: nextId(state.events, 'EV', 3),
-      title: input.title.trim(),
+      title: input.title.trim() || (contact ? `${contact.name} inquiry` : 'Event inquiry'),
       type: pkg.id.replace('PKG-', '').toLowerCase(),
       date: input.date,
       packageId: pkg.id,
       packagePrice: pkg.price,
       addOns,
       total: 0,
-      guests: Math.round(input.guests),
+      guests: Math.max(0, Math.round(input.guests) || 0),
       exclusive: closes,
       blocksCalendar: taken && closes,
       stage: input.stage,
-      contactGuestId: contact.id,
+      contactGuestId: contact?.id ?? '',
       coordinatorId: input.coordinatorId || staffId,
       bookingId: null,
       notes: input.notes.trim() || null,
@@ -656,7 +662,7 @@ export function createEvent(input: NewEvent, staffId: string): EventResult {
 
     let booking: Booking | null = null;
     if (taken) {
-      booking = makeEventBooking(state, event, contact.name, staffId);
+      booking = makeEventBooking(state, event, contact?.name ?? event.title, staffId);
       if (input.deposit > 0) applyPayment(state, booking, { amount: Math.min(input.deposit, booking.total), method: input.method }, staffId);
     }
     return { event, booking };

@@ -26,7 +26,7 @@ function eventCard(ctx: DeskContext, event: ResortEvent): SafeHTML {
     <article class="event-card ${booking ? 'event-card--opens' : ''}" ${booking ? html`data-action="open-booking" data-id="${booking.id}" title="Open the booking"` : ''}>
       <p class="event-card__date">${formatDate(event.date, 'long')}</p>
       <h3 class="event-card__title">${event.title}</h3>
-      <p class="small muted">${pkg?.name ?? 'Custom package'} · ${plural(event.guests, 'guest')}${event.exclusive ? ' · closes resort' : ''}</p>
+      <p class="small muted">${pkg?.name ?? 'Custom package'} · ${event.guests ? plural(event.guests, 'guest') : 'guests not set'}${event.exclusive ? ' · closes resort' : ''}</p>
       ${event.addOns.length ? html`<p class="small">Add-ons: ${event.addOns.map((addOn) => `${addOn.item} (${peso(addOn.amount)})`).join(', ')}</p>` : ''}
 
       ${booking ? html`

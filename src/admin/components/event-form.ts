@@ -72,7 +72,7 @@ export function createEventForm(): DrawerContent {
               ? closes
                 ? `Saved as a booking and the resort closes on that date, up to ${plural(pkg.maxGuests, 'guest')}.`
                 : 'Saved as a booking. Other guests can still book that day.'
-              : 'Kept in the pipeline only. Nothing is booked and the date stays open.'}
+              : 'Kept in the pipeline only. Nothing is booked and the date stays open. Every detail is optional for an inquiry.'}
         </p>
       </div>`;
   }

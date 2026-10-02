@@ -258,6 +258,9 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   still use it. Event packages now take their promotion when an event is booked, like stays do.
   Supabase: the five catalog tables are written under `packages.manage` (not `users.manage`), have a
   `retired` column, no delete policy, and are in the realtime publication.
+- An event saved at the Inquiry stage needs only its date (always filled in): name, contact and
+  guests may be blank (`createEvent` names it "<contact> inquiry" or "Event inquiry", leaves
+  `contactGuestId` empty, and cards say "guests not set"). Reserved and Paid still require them.
 - Events has three stages on screen — Reserved, Paid, Done (Inquiry shows only when one waits).
   The ocular visit stage and date were dropped; `normalize` turns an old `ocular` event into an
   inquiry. Each stage is a dashboard-style card that opens `components/stage-summary.ts` in the

@@ -65,7 +65,7 @@ function summary(ctx: DeskContext, stage: EventStage): SafeHTML {
             <li class="row">
               <button class="row__main" type="button" data-action="${booking ? 'open-booking' : 'open-unbooked'}" data-id="${booking?.id ?? event.id}">
                 <span class="row__title">${event.title}</span>
-                <span class="row__meta">${formatDate(event.date)} · ${pkg?.name ?? 'Custom package'} · ${plural(event.guests, 'guest')}</span>
+                <span class="row__meta">${formatDate(event.date)} · ${pkg?.name ?? 'Custom package'} · ${event.guests ? plural(event.guests, 'guest') : 'guests not set'}</span>
               </button>
               <span class="row__badges">
                 ${booking ? paymentPill(booking) : ctx.can('events.manage')
