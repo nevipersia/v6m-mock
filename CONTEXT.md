@@ -332,8 +332,8 @@ corkage charges, 40 inquiries, one event (Cruz 18th debut on Sep 21, reserved, â
 resort), saved replies (including exclusive rental rates), an activity log and the 2 staff accounts. The
 calendar is not limited to that week: staff can page back or forward to any date.
 
-Two demo accounts are ready on the sign-in page (one-click Sign in, or Fill in to see the
-credentials). They exist so anyone can see the tool working against the sample data; the top bar
+Two demo accounts are ready on the sign-in page (click a card to sign in as it; the
+credentials are shown on the card). They exist so anyone can see the tool working against the sample data; the top bar
 shows a "Demo account" badge while one is in use.
 
 | Account | Role | Sign-in |

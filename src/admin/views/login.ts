@@ -27,20 +27,14 @@ function demoHints(state: State | null): SafeHTML | '' {
     <div class="login__demos">
       <p class="field__label">Demo accounts</p>
       ${demoAccounts.map((person) => html`
-        <div class="demo-account">
+        <button class="demo-account" type="button" data-action="demo-sign-in" data-staff="${person.id}"
+          aria-label="Sign in as the demo ${ROLE_LABELS[person.role]}">
           <span class="demo-account__text">
             <strong>${ROLE_LABELS[person.role]}</strong>
             <span class="small muted">${person.email} · ${person.password}</span>
           </span>
-          <span class="button-row">
-            <button class="btn btn--quiet btn--sm" type="button" data-action="use-demo" data-staff="${person.id}">Fill in</button>
-            <button class="btn btn--secondary btn--sm" type="button" data-action="demo-sign-in" data-staff="${person.id}">Sign in</button>
-          </span>
-        </div>`)}
-      <p class="small muted">
-        Open accounts so anyone can see the tool working. They read the sample data in
-        <span class="mono">mock-data.json</span> and never touch real resort bookings or guests.
-      </p>
+          ${icon('arrowRight')}
+        </button>`)}
     </div>`;
 }
 
@@ -133,15 +127,6 @@ export const loginActions: HandlerMap<LoginContext> = {
     if (!person?.password) return;
     const password = person.password;
     return attempt(ctx, () => signInWithPassword(person.email, password));
-  },
-
-  'use-demo': ({ el, ctx }) => {
-    const person = ctx.state?.staff.find((staff) => staff.id === el.dataset.staff);
-    if (!person) return;
-    ui.email = person.email;
-    ui.password = person.password ?? '';
-    ui.error = '';
-    ctx.redraw();
   },
 
   'sign-in': ({ ctx }) => {

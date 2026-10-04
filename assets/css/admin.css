@@ -3131,10 +3131,13 @@ body.has-drawer .alerts {
 
 .demo-account {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8px 10px;
+  gap: 10px;
+  width: 100%;
   padding: 10px 12px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -3145,15 +3148,21 @@ body.has-drawer .alerts {
   border-color: var(--line-strong);
 }
 
+.demo-account > svg {
+  flex: none;
+  color: var(--ink-muted);
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.demo-account:hover > svg {
+  color: var(--ink);
+  transform: translateX(2px);
+}
+
 .demo-account__text {
   display: grid;
   flex: 1 1 60%;
   min-width: 0;
-}
-
-.demo-account .button-row {
-  margin-left: auto;
-  flex-wrap: nowrap;
 }
 
 /* Downpayment */
