@@ -17,7 +17,7 @@ import type {
 
 const pad = (n: number, width = 2): string => String(n).padStart(width, '0');
 
-/** The mock data is frozen on meta.asOf, so "now" is that date at the real clock time. */
+/** "Now" is meta.asOf (today; the mock data is moved to it on load) at the real clock time. */
 export function demoNow(state: State): Timestamp {
   const clock = new Date();
   return `${state.meta.asOf}T${pad(clock.getHours())}:${pad(clock.getMinutes())}:00+08:00`;

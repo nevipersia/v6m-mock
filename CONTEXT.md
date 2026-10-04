@@ -320,7 +320,9 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 
 ## Mock data
 
-`data/mock-data.json` holds one week, **Sep 15–21 2026**, and the apps treat **Sep 17 2026** as today.
+`data/mock-data.json` holds one week, **Sep 15–21 2026**, written as if **Sep 17 2026** (`meta.asOf`)
+were today. On load the demo backend moves every date in it (dates, timestamps and labels) by the
+same number of days so `meta.asOf` is always today in Manila; the dates below are as written in the file.
 It also holds 31 expenses from Jul 24 to Sep 17 — the book starts where the payments do, so the
 dashboard's windows compare like with like: the last 30 days show a profit, the last 7 a small loss
 (payday landed in them) and the 90 days roughly break even.
@@ -344,7 +346,8 @@ Anyone else needs an invite code created on the Users page. The data also carrie
 
 Changes made in the apps are saved to `localStorage` under `v6m-mock-state` and shared between the
 website and V6M Desk, including across tabs. "Reset data" in V6M Desk clears them. Saved state is
-also discarded if `meta.seed` in the JSON changes.
+also discarded if `meta.seed` in the JSON changes. Saved state from an earlier day is moved
+forward to today the same way when it loads.
 
 The data was produced by a seeded generator script that validates its own output (no double bookings,
 pool capacity, event closures, payments matching balances). **That script is not in the repo** — it

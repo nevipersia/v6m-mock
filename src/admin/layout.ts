@@ -85,7 +85,7 @@ export function renderShell(ctx: DeskContext, route: Route, content: TemplateVal
       <div class="desk__main">
         <header class="topbar">
           ${isMock
-            ? html`<span class="pill pill--brand" title="The mock data is frozen on this date">Demo date · ${formatDate(state.meta.asOf, 'short')}</span>`
+            ? html`<span class="pill pill--brand" title="The mock data is moved to today each time it loads">Demo date · ${formatDate(state.meta.asOf, 'short')}</span>`
             : html`<span class="pill pill--brand">Today · ${formatDate(state.meta.asOf, 'short')}</span>`}
           ${staff.demo ? html`<span class="pill pill--warning topbar__hide-sm" title="Sample data only, no real bookings or guests">Demo account</span>` : ''}
           <div class="topbar__actions">
