@@ -5,7 +5,7 @@ import { update } from './store.js';
 import { addDays, formatDate, isEmail, isPHMobile, peso, plural } from './format.js';
 import {
   DOWNPAYMENT_RATE, METHOD_LABELS, STAGE_LABELS, bookingWindow, checkAvailability, depositRequired, discountAmount,
-  discountProblem, downpaymentDue, findBooking, findExclusive, findGuest, findPackage, findStaff, findUnit, isActive,
+  discountProblem, downpaymentDue, findBooking, findExclusive, findGuest, findPackage, findStaff, findUnit, hasGuestLimit, isActive,
   isEditable, findPromo, live, permissionsFor, productLabel, quote, sessionFor, type DiscountInput,
 } from './rules.js';
 import { formatReference, referenceProblem } from './qr-payment.js';
@@ -1064,7 +1064,7 @@ export function guestChoiceProblem(state: State, input: GuestBooking): string {
   const availability = checkAvailability(state, input);
   if (!availability.ok) return availability.reason ?? 'That date is not available.';
   const unit = findUnit(state, input.product);
-  if (unit && guests > unit.capacityMax) return `${unit.name} fits up to ${unit.capacityMax} guests.`;
+  if (unit && hasGuestLimit(unit) && guests > unit.capacityMax) return `${unit.name} fits up to ${unit.capacityMax} guests.`;
   const pkg = findExclusive(state, input.product);
   if (pkg && guests > pkg.maxGuests) return `Exclusive rentals take up to ${pkg.maxGuests} guests.`;
   return '';
@@ -1195,7 +1195,7 @@ export function packageProblem(state: State, draft: PackageDraft): string {
   if (draft.kind === 'unit') {
     if (!isTime(draft.checkIn) || !isTime(draft.checkOut)) return 'Enter the check-in and check-out times.';
     if (!(draft.minGuests >= 1)) return 'It takes at least one guest.';
-    if (draft.maxGuests < draft.minGuests) return 'The most guests cannot be fewer than the fewest.';
+    if (draft.unitKind !== 'room' && draft.maxGuests < draft.minGuests) return 'The most guests cannot be fewer than the fewest.';
     if (!live(state.poolSessions).some((session) => session.id === draft.session)) return 'Pick the entrance it comes with.';
   } else if (!(draft.maxGuests >= 1)) {
     return draft.kind === 'entrance' ? 'Enter how many guests the pool takes.' : 'Enter the most guests it allows.';

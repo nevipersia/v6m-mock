@@ -166,7 +166,7 @@ function kindFields(state: State, draft: PackageDraft): SafeHTML {
         ${select('unitKind', 'Type', draft.unitKind, [['room', 'Room'], ['cottage', 'Cottage']])}
         ${number('price', 'Price (₱)', draft.price, 1)}
         ${number('minGuests', 'Fewest guests', draft.minGuests, 1)}
-        ${number('maxGuests', 'Most guests', draft.maxGuests, 1)}
+        ${draft.unitKind === 'room' ? '' : number('maxGuests', 'Most guests', draft.maxGuests, 1)}
         ${time('checkIn', 'Check-in', draft.checkIn)}
         ${time('checkOut', 'Check-out', draft.checkOut)}
       </div>
@@ -311,7 +311,7 @@ export function createPackageForm(kind: PackageKind, id = '', options: PackageFo
     },
 
     inputs: {
-      pkg: ({ el, root }) => {
+      pkg: ({ el, root, redraw }) => {
         if (!draft) return;
         const field = asField(el);
         const name = field.name as keyof PackageDraft;
@@ -321,6 +321,8 @@ export function createPackageForm(kind: PackageKind, id = '', options: PackageFo
         (draft as unknown as Record<string, unknown>)[name] = value;
         error = '';
         showText(root, 'error', '');
+        // Rooms have no most-guests field, so switching type changes the form.
+        if (name === 'unitKind') redraw();
       },
 
       promo: ({ el, root }) => {

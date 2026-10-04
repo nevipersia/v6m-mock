@@ -168,6 +168,9 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   block the guest booking page only. The desk passes `overLimits: true` to `checkAvailability`, which
   then returns `ok` with an `over` note, and the form shows it with the quote's warnings as an amber
   "Saving anyway is fine" line. Clashes (closed dates, a unit already taken, exclusive overlaps) still block.
+- Rooms (units of kind `room`) have no guest limit: `hasGuestLimit` / `guestRange` in `core/rules.ts`.
+  Cottages keep their fewest and most guests. A room's stored `capacityMax` is kept but not used, and
+  the package editor hides Most guests for rooms.
 - Guest details from the registration template: complete address, email, SC/PWD count, a guest list
   (`booking.guestList`: name, gender, age, remarks), additional charges (`booking.extras`, typed
   amounts, part of the price) and payment details (`payment.sentAt`, `payment.senderName`).

@@ -67,6 +67,15 @@ export const pipelineEvents = (state: State): ResortEvent[] =>
 export const findGuest = (state: State, id: string | null | undefined) => state.guests.find((guest) => guest.id === id);
 export const findStaff = (state: State, id: string | null | undefined) => state.staff.find((person) => person.id === id);
 export const findPackage = (state: State, id: string | null | undefined) => state.eventPackages.find((pkg) => pkg.id === id);
+/** Rooms take any number of guests; cottages keep their fewest and most. */
+export const hasGuestLimit = (unit: Unit): boolean => unit.kind !== 'room';
+
+/** A unit's guest range for labels ("10–15", "up to 6"), or null for a room, which has none. */
+export function guestRange(unit: Unit): string | null {
+  if (!hasGuestLimit(unit)) return null;
+  return unit.capacityMin > 1 ? `${unit.capacityMin}–${unit.capacityMax}` : `up to ${unit.capacityMax}`;
+}
+
 export const findExclusive = (state: State, id: string | null | undefined): ExclusivePackage | undefined =>
   (state.exclusivePackages ?? []).find((pkg) => pkg.id === id);
 
@@ -298,8 +307,8 @@ export function quote(state: State, request: BookingRequest & { extras?: ExtraCh
   const discount = promo ? Math.round((subtotal * promo.percent) / 100) : 0;
 
   const warnings: string[] = [];
-  if (unit && guests > unit.capacityMax) warnings.push(`${unit.name} fits up to ${unit.capacityMax} guests.`);
-  if (unit && unit.capacityMin > 1 && guests > 0 && guests < unit.capacityMin) {
+  if (unit && hasGuestLimit(unit) && guests > unit.capacityMax) warnings.push(`${unit.name} fits up to ${unit.capacityMax} guests.`);
+  if (unit && hasGuestLimit(unit) && unit.capacityMin > 1 && guests > 0 && guests < unit.capacityMin) {
     warnings.push(`${unit.name} is sized for ${unit.capacityMin}–${unit.capacityMax} guests.`);
   }
 

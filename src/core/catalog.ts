@@ -2,7 +2,7 @@
 // session, cottages and rooms, and the exclusive rental packages.
 
 import { formatTime, peso } from './format.js';
-import { exclusiveSessionLabel, findExclusive, findSession, findUnit, live } from './rules.js';
+import { exclusiveSessionLabel, findExclusive, findSession, findUnit, guestRange, live } from './rules.js';
 import type { State } from './types.js';
 
 export interface ProductOption {
@@ -33,10 +33,12 @@ export function productGroups(state: State, style: 'desk' | 'guest' = 'desk'): P
     {
       label: 'Cottages and rooms',
       options: live(state.units).map((unit) => {
-        const range = unit.capacityMin > 1 ? `${unit.capacityMin}–${unit.capacityMax}` : `up to ${unit.capacityMax}`;
+        const range = guestRange(unit);
         return {
           value: unit.id,
-          label: guest ? `${unit.name} · ${range} guests · ${peso(unit.price)} + entrance` : `${unit.name} (${range})`,
+          label: guest
+            ? `${unit.name}${range ? ` · ${range} guests` : ''} · ${peso(unit.price)} + entrance`
+            : range ? `${unit.name} (${range})` : unit.name,
         };
       }),
     },

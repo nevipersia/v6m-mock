@@ -6,7 +6,7 @@
 import type { PackageKind } from '../../core/actions.js';
 import { flag, html, type SafeHTML } from '../../core/dom.js';
 import { formatTime, peso, plural } from '../../core/format.js';
-import { live, promoFor, promoStatus } from '../../core/rules.js';
+import { guestRange, live, promoFor, promoStatus } from '../../core/rules.js';
 import type { State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { KIND_WORDS, STATUS_WORDS, promoWhen } from '../components/package-form.js';
@@ -47,7 +47,7 @@ function cards(state: State, kind: PackageKind): Card[] {
       id: item.id, name: item.name, tag: item.kind === 'room' ? 'Room' : 'Cottage', price: item.price,
       per: item.addsEntrance ? '+ entrance' : '',
       facts: [
-        ['Guests', item.capacityMin > 1 ? `${item.capacityMin} – ${item.capacityMax}` : `up to ${item.capacityMax}`],
+        ['Guests', guestRange(item)?.replace('–', ' – ') ?? 'No limit'],
         ['Check-in', `${formatTime(item.checkIn)} – ${formatTime(item.checkOut)}`],
       ],
     }));
