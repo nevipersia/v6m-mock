@@ -6,6 +6,11 @@
   box-sizing: border-box;
 }
 
+/* Keep the scrollbar's space reserved so pages don't shift sideways when one can't scroll. */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);
