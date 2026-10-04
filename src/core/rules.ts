@@ -201,6 +201,39 @@ export function checkAvailability(state: State, { product, date, adults = 0, kid
   return { ok: true, slotsLeft };
 }
 
+/** How one day looks for one product in a date picker: "Open", "Booked", "Closed". */
+export interface DayAvailability {
+  label: string;
+  tone: 'open' | 'full';
+  /** Can't be picked. The desk may still pick a full entrance session, since it can go over the limit. */
+  disabled: boolean;
+}
+
+export function dayAvailability(state: State, product: string, date: ISODate, { excludeId, strict = false }: { excludeId?: string; strict?: boolean } = {}): DayAvailability {
+  const shut = (label: string): DayAvailability => ({ label, tone: 'full', disabled: true });
+  if (closingEvent(state, date)) return shut('Closed');
+
+  const window = bookingWindow(state, product, date);
+  if (findExclusive(state, product)) {
+    return bookingsOverlapping(state, window, excludeId).length ? shut('Taken') : { label: 'Free', tone: 'open', disabled: false };
+  }
+  if (exclusiveOverlapping(state, window, excludeId)) return shut('Exclusive');
+
+  const unit = findUnit(state, product);
+  if (unit && unitBookingOn(state, product, date, excludeId)) return shut('Booked');
+
+  const session = sessionFor(state, product);
+  const slotsLeft = session.capacity - poolGuests(state, date, session.id, excludeId);
+  if (slotsLeft <= 0) return { label: 'Full', tone: 'full', disabled: strict };
+  return { label: unit ? 'Free' : 'Open', tone: 'open', disabled: false };
+}
+
+/** dayAvailability for one product, ready for a date picker; null for a product the catalog doesn't have. */
+export function availabilityFor(state: State, product: string, options: { excludeId?: string; strict?: boolean } = {}): ((date: ISODate) => DayAvailability) | null {
+  const known = findExclusive(state, product) || findUnit(state, product) || findSession(state, product);
+  return known ? (date) => dayAvailability(state, product, date, options) : null;
+}
+
 // ---------- Pricing ----------
 
 export function findPromo(state: State, { product, date, guests }: { product: string; date: ISODate; guests: number }): Promo | null {

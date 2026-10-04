@@ -1,4 +1,5 @@
-// Markup for the booking page's screens: the form, the downpayment QR, the
+// Markup for the booking page's screens: the form in steps (what and when,
+// your details, who is coming, check and confirm), the downpayment QR, the
 // thank-you and the "this link can't be used" message. Wording comes from
 // booking-page.json.
 
@@ -26,6 +27,20 @@ export interface Draft {
   notes: string;
   guestList: Companion[];
 }
+
+/** The form's steps, in order. The last one shows everything for the guest to check before sending. */
+export type Step = 'booking' | 'details' | 'guests' | 'review';
+
+const STEP_TITLES: Record<Step, string> = {
+  booking: 'What and when',
+  details: 'Your details',
+  guests: 'Who is coming',
+  review: 'Check and confirm',
+};
+
+/** "Who is coming" is skipped when the page asks for neither the guest list nor notes. */
+export const stepsFor = (page: BookingPageSettings): Step[] =>
+  page.fields.guestList || page.fields.notes ? ['booking', 'details', 'guests', 'review'] : ['booking', 'details', 'review'];
 
 const IMG = '../assets/img/';
 
@@ -75,7 +90,9 @@ export function productCard(state: State, product: string): SafeHTML | '' {
 export function summary(state: State, page: BookingPageSettings, draft: Draft): SafeHTML | '' {
   if (!page.fields.priceEstimate) return '';
   const guests = draft.adults + draft.kids;
-  if (!draft.date || guests === 0) return html`<p class="small muted">Pick a date and how many are coming to see the price.</p>`;
+  if (!draft.product || !draft.date || guests === 0) {
+    return html`<p class="small muted">Pick a booking, a date and how many are coming to see the price.</p>`;
+  }
 
   const availability = checkAvailability(state, draft);
   const estimate = quote(state, draft);
@@ -129,85 +146,172 @@ export function guestListBlock(page: BookingPageSettings, draft: Draft): SafeHTM
     </fieldset>`;
 }
 
-export function formScreen(state: State, page: BookingPageSettings, link: BookingLink, draft: Draft, error: string): SafeHTML {
-  const staff = findStaff(state, link.createdBy);
+function progress(steps: Step[], step: Step): SafeHTML {
+  const at = steps.indexOf(step);
+  return html`
+    <div class="book__progress">
+      <ol class="book__steps" aria-label="Steps">
+        ${steps.map((item, index) => html`
+          <li class="book__steps-item ${index < at ? 'is-done' : ''} ${index === at ? 'is-current' : ''}">
+            <span class="sr-only">${STEP_TITLES[item]}${index === at ? ' (this step)' : ''}</span>
+          </li>`)}
+      </ol>
+      <p class="book__step-count">Step ${at + 1} of ${steps.length}</p>
+      <h2 class="book__step-title" tabindex="-1" data-step-title>${STEP_TITLES[step]}</h2>
+    </div>`;
+}
+
+function bookingStep(state: State, page: BookingPageSettings, draft: Draft): SafeHTML {
   const { copy, fields } = page;
+  return html`
+    <label class="field">
+      <span class="field__label">${copy.productLabel}</span>
+      <select class="input" name="product" data-input>
+        <option value="" ${draft.product ? '' : 'selected'}>Choose a booking</option>
+        ${bookableGroups(state, page).map((group) => html`
+          <optgroup label="${group.label}">
+            ${group.options.map((item) => html`<option value="${item.value}" ${item.value === draft.product ? 'selected' : ''}>${item.label}</option>`)}
+          </optgroup>`)}
+      </select>
+    </label>
+    <div data-slot="product">${draft.product ? productCard(state, draft.product) : ''}</div>
+
+    <label class="field">
+      <span class="field__label">Date of reservation</span>
+      <input class="input" name="date" data-input type="date" value="${draft.date}" min="${state.meta.asOf}"
+        data-availability data-legend="Which days are open for the booking you picked.">
+    </label>
+
+    <div class="form-grid">
+      <label class="field">
+        <span class="field__label">Adults</span>
+        <input class="input" name="adults" data-input type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${draft.adults || ''}">
+      </label>
+      ${fields.kids ? html`
+        <label class="field">
+          <span class="field__label">Kids</span>
+          <input class="input" name="kids" data-input type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${draft.kids || ''}">
+        </label>` : ''}
+      <label class="field">
+        <span class="field__label">Senior / PWD</span>
+        <input class="input" name="scPwd" data-input type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${draft.scPwd || ''}">
+      </label>
+    </div>
+
+    <div data-slot="summary">${summary(state, page, draft)}</div>`;
+}
+
+function detailsStep(page: BookingPageSettings, draft: Draft): SafeHTML {
+  const { copy, fields } = page;
+  return html`
+    <label class="field">
+      <span class="field__label">${copy.nameLabel}</span>
+      <input class="input" name="guestName" data-input value="${draft.guestName}" placeholder="Maria Santos" autocomplete="name">
+    </label>
+    <div class="form-grid">
+      <label class="field">
+        <span class="field__label">${copy.mobileLabel}</span>
+        <input class="input" name="mobile" data-input type="tel" inputmode="tel" value="${draft.mobile}" placeholder="0917 123 4567" autocomplete="tel">
+      </label>
+      ${fields.email ? html`
+        <label class="field">
+          <span class="field__label">${copy.emailLabel}</span>
+          <input class="input" name="email" data-input type="email" value="${draft.email}" placeholder="maria@example.com" autocomplete="email">
+        </label>` : ''}
+    </div>
+    <label class="field">
+      <span class="field__label">${copy.addressLabel}</span>
+      <input class="input" name="address" data-input value="${draft.address}" placeholder="House no., street, barangay, city" autocomplete="street-address">
+    </label>`;
+}
+
+function guestsStep(page: BookingPageSettings, draft: Draft): SafeHTML {
+  const { copy, fields } = page;
+  return html`
+    ${guestListBlock(page, draft)}
+    ${fields.notes ? html`
+      <label class="field">
+        <span class="field__label">${copy.notesLabel}</span>
+        <textarea class="input" name="notes" data-input rows="3" placeholder="${copy.notesPlaceholder}">${draft.notes}</textarea>
+      </label>` : ''}`;
+}
+
+const headcount = (draft: Draft): string => [
+  plural(draft.adults, 'adult'),
+  draft.kids ? plural(draft.kids, 'kid') : '',
+  draft.scPwd ? `${draft.scPwd} senior / PWD` : '',
+].filter(Boolean).join(' · ');
+
+type Row = [string, TemplateValue];
+
+/** One block of the review: its rows, and a link back to the step that sets them. */
+function reviewBlock(title: string, step: Step, rows: Row[]): SafeHTML {
+  return html`
+    <section class="book__review">
+      <header class="book__review-head">
+        <h3 class="book__review-title">${title}</h3>
+        <button class="link-button" type="button" data-action="go-step" data-step="${step}" aria-label="Edit ${title.toLowerCase()}">Edit</button>
+      </header>
+      <dl class="facts">
+        ${rows.map(([label, value]) => html`<div class="facts__row"><dt>${label}</dt><dd>${value}</dd></div>`)}
+      </dl>
+    </section>`;
+}
+
+function reviewStep(state: State, page: BookingPageSettings, draft: Draft, steps: Step[]): SafeHTML {
+  const { fields } = page;
+  const named = draft.guestList.map((guest) => guest.name.trim()).filter(Boolean);
+  const guestRows: Row[] = [];
+  if (fields.guestList) guestRows.push(['Guest list', named.length ? named.join(', ') : 'No names yet. Guests sign the list at the gate.']);
+  if (fields.notes) guestRows.push(['Notes', draft.notes.trim() || 'None']);
+  const detailRows: Row[] = [['Name', draft.guestName], ['Mobile', draft.mobile]];
+  if (fields.email) detailRows.push(['Email', draft.email.trim() || 'None']);
+  detailRows.push(['Address', draft.address]);
+
+  return html`
+    ${reviewBlock(STEP_TITLES.booking, 'booking', [
+      ['Booking', productLabel(state, draft.product)],
+      ['Date', formatDate(draft.date, 'long')],
+      ['Guests', headcount(draft)],
+    ])}
+    ${reviewBlock(STEP_TITLES.details, 'details', detailRows)}
+    ${steps.includes('guests') ? reviewBlock(STEP_TITLES.guests, 'guests', guestRows) : ''}
+    <div data-slot="summary">${summary(state, page, draft)}</div>
+    ${houseRules(page)}`;
+}
+
+export function formScreen(state: State, page: BookingPageSettings, link: BookingLink, draft: Draft, step: Step, error: string): SafeHTML {
+  const staff = findStaff(state, link.createdBy);
+  const { copy } = page;
+  const steps = stepsFor(page);
+  const previous = steps[steps.indexOf(step) - 1];
+  const isLast = step === 'review';
 
   return html`
     ${header(page)}
     ${panel(html`
-      <p class="book__intro">
-        ${staff ? `${staff.name} from V6M Resort sent you this link.` : 'V6M Resort sent you this link.'}
-        ${link.note ? html`<span class="book__note">“${link.note}”</span>` : ''}
-        ${copy.intro} It expires ${formatDate(link.expiresAt, 'long')}.
-      </p>
+      ${step === 'booking' ? html`
+        <p class="book__intro">
+          ${staff ? `${staff.name} from V6M Resort sent you this link.` : 'V6M Resort sent you this link.'}
+          ${link.note ? html`<span class="book__note">“${link.note}”</span>` : ''}
+          ${copy.intro} It expires ${formatDate(link.expiresAt, 'long')}.
+        </p>` : ''}
+
+      ${progress(steps, step)}
 
       <form class="book__form" data-form novalidate>
-        <label class="field">
-          <span class="field__label">${copy.nameLabel}</span>
-          <input class="input" name="guestName" data-input value="${draft.guestName}" placeholder="Maria Santos" autocomplete="name">
-        </label>
-        <div class="form-grid">
-          <label class="field">
-            <span class="field__label">${copy.mobileLabel}</span>
-            <input class="input" name="mobile" data-input type="tel" inputmode="tel" value="${draft.mobile}" placeholder="0917 123 4567" autocomplete="tel">
-          </label>
-          ${fields.email ? html`
-            <label class="field">
-              <span class="field__label">${copy.emailLabel}</span>
-              <input class="input" name="email" data-input type="email" value="${draft.email}" placeholder="maria@example.com" autocomplete="email">
-            </label>` : ''}
-        </div>
-        <label class="field">
-          <span class="field__label">${copy.addressLabel}</span>
-          <input class="input" name="address" data-input value="${draft.address}" placeholder="House no., street, barangay, city" autocomplete="street-address">
-        </label>
+        ${step === 'booking' ? bookingStep(state, page, draft)
+          : step === 'details' ? detailsStep(page, draft)
+          : step === 'guests' ? guestsStep(page, draft)
+          : reviewStep(state, page, draft, steps)}
 
-        <label class="field">
-          <span class="field__label">${copy.productLabel}</span>
-          <select class="input" name="product" data-input>
-            ${bookableGroups(state, page).map((group) => html`
-              <optgroup label="${group.label}">
-                ${group.options.map((item) => html`<option value="${item.value}" ${item.value === draft.product ? 'selected' : ''}>${item.label}</option>`)}
-              </optgroup>`)}
-          </select>
-        </label>
-        <div data-slot="product">${productCard(state, draft.product)}</div>
-
-        <div class="form-grid">
-          <label class="field">
-            <span class="field__label">Date of reservation</span>
-            <input class="input" name="date" data-input type="date" value="${draft.date}">
-          </label>
-          <label class="field">
-            <span class="field__label">Adults</span>
-            <input class="input" name="adults" data-input type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${draft.adults || ''}">
-          </label>
-          ${fields.kids ? html`
-            <label class="field">
-              <span class="field__label">Kids</span>
-              <input class="input" name="kids" data-input type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${draft.kids || ''}">
-            </label>` : ''}
-          <label class="field">
-            <span class="field__label">Senior / PWD</span>
-            <input class="input" name="scPwd" data-input type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${draft.scPwd || ''}">
-          </label>
-        </div>
-
-        ${guestListBlock(page, draft)}
-
-        ${fields.notes ? html`
-          <label class="field">
-            <span class="field__label">${copy.notesLabel}</span>
-            <textarea class="input" name="notes" data-input rows="3" placeholder="${copy.notesPlaceholder}">${draft.notes}</textarea>
-          </label>` : ''}
-
-        <div data-slot="summary">${summary(state, page, draft)}</div>
-        ${houseRules(page)}
         <p class="form-error" data-slot="error">${error}</p>
 
-        <button class="btn btn--primary btn--block" type="submit">${copy.submitLabel}</button>
-        <p class="small muted">${copy.paymentNote}</p>
+        <div class="book__nav">
+          ${previous ? html`<button class="btn btn--secondary" type="button" data-action="go-step" data-step="${previous}">Back</button>` : ''}
+          <button class="btn btn--primary" type="submit">${isLast ? copy.submitLabel : 'Continue'}</button>
+        </div>
+        ${isLast ? html`<p class="small muted">${copy.paymentNote}</p>` : ''}
       </form>`)}`;
 }
 

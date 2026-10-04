@@ -10,6 +10,7 @@
 
 import { html, render } from '../../core/dom.js';
 import { parseDate } from '../../core/format.js';
+import type { DayAvailability } from '../../core/rules.js';
 import type { ISODate } from '../../core/types.js';
 import { openDatePicker } from './date-picker.js';
 import { icon } from './icons.js';
@@ -20,6 +21,25 @@ let today: ISODate = new Date().toISOString().slice(0, 10);
 /** The desk's today, for the date picker's Today button. Set on every draw. */
 export function setFieldsToday(day: ISODate): void {
   today = day;
+}
+
+/** For a product (and a booking to leave out), each day's availability; null for a product it doesn't know. */
+type Availability = (product: string, excludeId?: string) => ((day: ISODate) => DayAvailability) | null;
+let availability: Availability | null = null;
+
+/**
+ * How full a day is for a product, for date fields marked data-availability:
+ * their picker shows each day's slots for the form's chosen product. The
+ * attribute's value, if any, is a booking to leave out (the one being edited).
+ */
+export function setDayAvailability(fn: Availability): void {
+  availability = fn;
+}
+
+function dayInfoFor(input: HTMLInputElement): ((day: ISODate) => DayAvailability) | null {
+  if (!availability || !('availability' in input.dataset)) return null;
+  const product = input.form?.querySelector<HTMLSelectElement | HTMLInputElement>('[name="product"]')?.value;
+  return product ? availability(product, input.dataset.availability || undefined) : null;
 }
 
 /** Writes a value into the real control and tells the page, as typing would. */
@@ -205,11 +225,14 @@ function enhanceDate(input: HTMLInputElement): void {
   nameAfterField(trigger, input);
   trigger.addEventListener('click', () => {
     const name = input.name;
+    const dayInfo = dayInfoFor(input);
     openDatePicker({
       value: input.value,
       today,
       min: input.min,
       max: input.max,
+      dayInfo,
+      legend: dayInfo ? input.dataset.legend ?? '' : '',
       // Only a date the form can do without offers Clear: mark it data-optional.
       clearable: 'optional' in input.dataset,
       title: label ?? 'Pick a date',

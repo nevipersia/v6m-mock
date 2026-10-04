@@ -1044,15 +1044,21 @@ const isGuestProduct = (state: State, product: string): boolean =>
  * Everything a guest's booking must satisfy, checked on the booking page and
  * again by whoever saves it. @returns the first problem, or '' when it is fine.
  */
-export function guestBookingProblem(state: State, input: GuestBooking): string {
-  const guests = input.adults + input.kids;
+/** The guest's own details: name, mobile, email and address. */
+export function guestDetailsProblem(input: GuestBooking): string {
   if (!input.guestName?.trim()) return 'Enter your name.';
   if (!isPHMobile(input.mobile ?? '')) return 'Enter a PH mobile number, like 0917 123 4567.';
   if (input.email?.trim() && !isEmail(input.email)) return 'Enter an email address like maria@example.com, or leave it blank.';
   if (!input.address?.trim()) return 'Enter your complete address.';
+  return '';
+}
+
+/** What the guest is booking: the product, a date it is free and the headcount. */
+export function guestChoiceProblem(state: State, input: GuestBooking): string {
+  const guests = input.adults + input.kids;
+  if (!isGuestProduct(state, input.product)) return 'Pick what you are booking.';
   if (!/^\d{4}-\d\d-\d\d$/.test(input.date)) return 'Pick a date.';
   if (input.date < state.meta.asOf) return 'Pick a date from today on.';
-  if (!isGuestProduct(state, input.product)) return 'Pick what you are booking.';
   if (guests === 0) return 'Add at least one guest.';
   if ((input.scPwd ?? 0) > guests) return 'Senior / PWD can\'t be more than the number of guests.';
   const availability = checkAvailability(state, input);
@@ -1062,6 +1068,10 @@ export function guestBookingProblem(state: State, input: GuestBooking): string {
   const pkg = findExclusive(state, input.product);
   if (pkg && guests > pkg.maxGuests) return `Exclusive rentals take up to ${pkg.maxGuests} guests.`;
   return '';
+}
+
+export function guestBookingProblem(state: State, input: GuestBooking): string {
+  return guestChoiceProblem(state, input) || guestDetailsProblem(input);
 }
 
 /** Guest-side submit: creates the booking for the staff member who sent the link. */

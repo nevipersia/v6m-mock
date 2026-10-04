@@ -76,7 +76,9 @@ then removed on request; its inquiries stay in the data as inbox history.
   code that also sets a password),
   Dashboard, Bookings (calendar or list, by month, week or day), Finances, Packages, Inbox, Events, Users.
 - **Booking link** (`/book/?code=…`): single-use page a staff member sends to one guest; the booking
-  they submit lands on the calendar as a hold under that staff member.
+  they submit lands on the calendar as a hold under that staff member. The guest goes through steps
+  (What and when → Your details → Who is coming → Check and confirm), then pays. It starts blank unless
+  staff pre-filled the booking or date when they made the link.
 
 TypeScript (strict) in `src/`, compiled by `tsc` to plain ES modules in `assets/js/` (git-ignored, no
 bundler, no framework). Run `npm install` once, then `npm start` (build + serve) and open
@@ -115,9 +117,9 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     pdf.ts                  Minimal PDF writer, no dependencies
     dom.ts                  Safe html`` templates and event delegation
   book/
-    main.ts                 Booking page: load, validate, submit
+    main.ts                 Booking page: load, steps, validate, submit
     api.ts                  Demo: actions in the browser; Supabase: the booking-link Edge Function
-    screens.ts              Form, downpayment, thank-you and problem screens
+    screens.ts              Form steps, downpayment, thank-you and problem screens
   admin/
     main.ts                 Sign-in, hash routing, event dispatch, focus restore
     types.ts                DeskContext, view and drawer contracts
@@ -130,7 +132,7 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     views/                  login, dashboard, calendar, bookings, finances, packages, inbox, events, users
 assets/
   img/                      Logo
-  css/                      tokens.css, base.css (shared) · admin.css · book.css
+  css/                      tokens.css, base.css, fields.css (shared) · admin.css · book.css
   js/                       Build output of src/ (git-ignored)
 tsconfig.json               Strict TypeScript, ES modules, no bundler
 ```
@@ -245,7 +247,15 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   `data-anchor`), below it or above when there is no room, at a compact 292px. `data-optional` on a date or time input
   adds Clear. Time inputs open an hour / minute / AM-PM picker; text inputs with a `<datalist>` show
   their suggestions in the same list style, filtered as you type. Layout rules that place a field by
-  `[name=…]` need a matching `[data-field-for=…]` rule for its button. The guest booking page keeps native pickers.
+  `[name=…]` need a matching `[data-field-for=…]` rule for its button. The guest booking page uses
+  the same fields (it calls `startFields()` too); their styles live in the shared `css/fields.css`.
+- Availability in the date picker: a date input marked `data-availability` shows, under each day,
+  what is left for the product chosen in the same form (`dayAvailability` in `core/rules.ts`):
+  "Open" or "Full" for an entrance session, "Free" / "Booked" for a room or cottage, "Free" / "Taken" for an
+  exclusive rental, "Closed" / "Exclusive" when the resort is shut. The app supplies the lookup with
+  `setDayAvailability`. The desk's booking form uses it (a full session stays pickable, since staff
+  may go over the limit; the attribute's value is the booking being edited, left out of the count);
+  the guest page blocks full days as well.
 - Packages (`views/packages.ts`, `components/package-form.ts`, needs `packages.manage`, which
   owners have by default): every bookable thing — entrance sessions, rooms and cottages, exclusive
   rentals, event packages — as cards in four tabs, edited in the side panel, plus the shared

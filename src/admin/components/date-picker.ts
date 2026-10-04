@@ -8,6 +8,7 @@
 
 import { html, render, type SafeHTML } from '../../core/dom.js';
 import { formatDate, parseDate, toISODate } from '../../core/format.js';
+import type { DayAvailability } from '../../core/rules.js';
 import type { ISODate } from '../../core/types.js';
 import { icon } from './icons.js';
 import { placeNear } from './popover.js';
@@ -26,6 +27,10 @@ export interface DatePickerOptions {
   title?: string;
   /** Offers a Clear button that answers ''. */
   clearable?: boolean;
+  /** What each day holds for the chosen booking ("Open", "Booked"), shown under its number. */
+  dayInfo?: ((day: ISODate) => DayAvailability) | null;
+  /** A line under the days explaining the labels. */
+  legend?: string;
   /** The button it opened from: the picker sits next to it. */
   anchor?: HTMLElement | null;
   onPick: (value: ISODate | '') => void;
@@ -35,7 +40,7 @@ const monthStart = (year: number, month: number): ISODate => toISODate(new Date(
 const monthEnd = (year: number, month: number): ISODate => toISODate(new Date(year, month + 1, 0));
 
 export function openDatePicker(options: DatePickerOptions): void {
-  const { today, min = '', max = '', mode = 'day', clearable = false, onPick } = options;
+  const { today, min = '', max = '', mode = 'day', clearable = false, dayInfo = null, legend = '', onPick } = options;
   const title = options.title ?? (mode === 'month' ? 'Go to a month' : 'Pick a date');
   const start = parseDate(options.value || today);
   let year = start.getFullYear();
@@ -43,7 +48,7 @@ export function openDatePicker(options: DatePickerOptions): void {
   const returnTo = document.activeElement as HTMLElement | null;
 
   const dialog = document.createElement('dialog');
-  dialog.className = 'picker is-entering';
+  dialog.className = `picker is-entering ${dayInfo ? 'picker--slots' : ''}`;
   dialog.setAttribute('aria-label', title);
   document.body.append(dialog);
 
@@ -89,16 +94,21 @@ export function openDatePicker(options: DatePickerOptions): void {
             <div class="picker__grid">
               ${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((letter) => html`<span class="picker__weekday" aria-hidden="true">${letter}</span>`)}
               ${Array.from({ length: leading }, () => html`<span></span>`)}
-              ${days.map((day) => html`
-                <button class="picker__day ${day === today ? 'is-today' : ''} ${day === chosen ? 'is-picked' : ''}" type="button"
-                  data-pick="day" data-date="${day}" data-key="day-${day}" ${outOfRange(day) ? 'disabled' : ''}
-                  aria-label="${formatDate(day, 'long')}">${parseDate(day).getDate()}</button>`)}
+              ${days.map((day) => {
+                const info = dayInfo && !outOfRange(day) ? dayInfo(day) : null;
+                const label = info ? `${formatDate(day, 'long')}, ${info.label}` : formatDate(day, 'long');
+                return html`
+                <button class="picker__day ${day === today ? 'is-today' : ''} ${day === chosen ? 'is-picked' : ''} ${info ? `is-${info.tone}` : ''}" type="button"
+                  data-pick="day" data-date="${day}" data-key="day-${day}" ${outOfRange(day) || info?.disabled ? 'disabled' : ''}
+                  aria-label="${label}">${parseDate(day).getDate()}${info ? html`<span class="picker__slots">${info.label}</span>` : ''}</button>`;
+              })}
             </div>
+            ${legend ? html`<p class="picker__legend">${legend}</p>` : ''}
           </div>` : ''}
 
         <div class="picker__shortcuts">
           ${mode === 'day'
-            ? html`<button class="btn btn--secondary btn--sm" type="button" data-pick="today" ${outOfRange(today) ? 'disabled' : ''}>Today</button>`
+            ? html`<button class="btn btn--secondary btn--sm" type="button" data-pick="today" ${outOfRange(today) || dayInfo?.(today).disabled ? 'disabled' : ''}>Today</button>`
             : html`<button class="btn btn--secondary btn--sm" type="button" data-pick="this-month">This month</button>`}
           ${clearable ? html`<button class="btn btn--quiet btn--sm" type="button" data-pick="clear">Clear</button>` : ''}
         </div>

@@ -320,7 +320,8 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
               </label>
               <label class="field form-grid__wide">
                 <span class="field__label">Date</span>
-                <input class="input" name="date" data-input="field" type="date" value="${form.date}">
+                <input class="input" name="date" data-input="field" type="date" value="${form.date}"
+                  data-availability="${editId ?? ''}" data-legend="Which days are open for the booking above.">
                 ${closingEvent(state, form.date) ? html`<span class="small muted">Closed that day for a private event.</span>` : ''}
               </label>
               <label class="field">

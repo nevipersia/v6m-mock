@@ -1,8 +1,10 @@
 // Single-use booking page. A staff member sends the link; the guest fills it
-// in once, pays the 50% downpayment by GCash QR, and the booking appears on
-// the V6M Desk calendar (on hold until the downpayment is verified).
+// in once, step by step, checks it all on the last step, pays the 50%
+// downpayment by GCash QR, and the booking appears on the V6M Desk calendar
+// (on hold until the downpayment is verified).
 
-import { guestBookingProblem } from '../core/actions.js';
+import { guestBookingProblem, guestChoiceProblem, guestDetailsProblem } from '../core/actions.js';
+import { setDayAvailability, setFieldsToday, startFields } from '../admin/components/fields.js';
 import { isMock } from '../core/config.js';
 import { $, $maybe, on, render } from '../core/dom.js';
 import { DEFAULT_BOOKING_PAGE, loadBookingPage, readableInk } from '../core/booking-page.js';
@@ -10,21 +12,23 @@ import { parseDigits } from '../core/format.js';
 import { blankCompanion, fitGuestList, namesAsked, readGuestListField, updateGuestCount } from '../core/guest-list.js';
 import { VERIFY_DELAY_MS, type PaymentCardState } from '../core/payment-card.js';
 import { qrPaymentRequest, sampleReference } from '../core/qr-payment.js';
-import { findBooking, findUnit } from '../core/rules.js';
+import { availabilityFor, findBooking, findUnit } from '../core/rules.js';
 import { requireState } from '../core/store.js';
 import type { Booking, BookingLink, BookingPageSettings, State } from '../core/types.js';
 import { openLink, payDownpayment, submitBooking, type OpenResult } from './api.js';
 import {
-  bookableIds, doneScreen, formScreen, guestListBody, payScreen, problemScreen, productCard, summary, type Draft,
+  bookableIds, doneScreen, formScreen, guestListBody, payScreen, problemScreen, productCard, stepsFor, summary,
+  type Draft, type Step,
 } from './screens.js';
 
 const app = $('#app');
 const code = new URLSearchParams(window.location.search).get('code') ?? '';
 
 const draft: Draft = {
-  guestName: '', mobile: '', email: '', address: '', product: 'daytour', date: '', adults: 2, kids: 0, scPwd: 0, notes: '',
-  guestList: [blankCompanion(), blankCompanion()],
+  guestName: '', mobile: '', email: '', address: '', product: '', date: '', adults: 0, kids: 0, scPwd: 0, notes: '',
+  guestList: [blankCompanion()],
 };
+let step: Step = 'booking';
 let error = '';
 const card: PaymentCardState = { reference: '', senderName: '', error: '', checking: false };
 
@@ -38,9 +42,32 @@ function applyTheme(page: BookingPageSettings): void {
   style.setProperty('--book-head-ink', readableInk(page.theme.background));
 }
 
+/** What stops the guest leaving this step; the last step checks everything again. */
 function validate(state: State, page: BookingPageSettings): string {
   if (!page.fields.email && draft.email) draft.email = '';
-  return guestBookingProblem(state, draft);
+  if (step === 'booking') return guestChoiceProblem(state, draft);
+  if (step === 'details') return guestDetailsProblem(draft);
+  if (step === 'review') return guestBookingProblem(state, draft);
+  return '';
+}
+
+function showForm(page: BookingPageSettings, link: BookingLink, focus = true): void {
+  screen = { name: 'form', link };
+  render(app, formScreen(requireState(), page, link, draft, step, error));
+  if (!focus) return;
+  window.scrollTo({ top: 0 });
+  $maybe<HTMLElement>('[data-step-title]', app)?.focus({ preventScroll: true });
+}
+
+/** Fills a slot if this step has it. */
+function fill(name: string, content: Parameters<typeof render>[1]): void {
+  const slot = $maybe(`[data-slot="${name}"]`, app);
+  if (slot) render(slot, content);
+}
+
+function showError(message: string): void {
+  const slot = $maybe('[data-slot="error"]', app);
+  if (slot) slot.textContent = message;
 }
 
 function showPay(page: BookingPageSettings, booking: Booking): void {
@@ -89,10 +116,10 @@ function bind(page: BookingPageSettings): void {
     } else if (['guestName', 'mobile', 'email', 'address', 'product', 'date', 'notes'].includes(field.name)) {
       draft[field.name as 'guestName'] = field.value;
     }
-    if (field.name === 'product') render($('[data-slot="product"]', app), productCard(requireState(), draft.product));
+    if (field.name === 'product') fill('product', draft.product ? productCard(requireState(), draft.product) : '');
     error = '';
-    render($('[data-slot="summary"]', app), summary(requireState(), page, draft));
-    $('[data-slot="error"]', app).textContent = '';
+    fill('summary', summary(requireState(), page, draft));
+    showError('');
   });
 
   on(app, 'click', '[data-action="add-companion"]', () => {
@@ -108,13 +135,28 @@ function bind(page: BookingPageSettings): void {
     redrawGuestList();
   });
 
+  on(app, 'click', '[data-action="go-step"]', (_event, el) => {
+    if (screen.name !== 'form') return;
+    const target = el.dataset.step as Step;
+    if (!stepsFor(page).includes(target)) return;
+    step = target;
+    error = '';
+    showForm(page, screen.link);
+  });
+
   let submitting = false;
   on<HTMLFormElement>(app, 'submit', 'form[data-form]', async (event, form) => {
     event.preventDefault();
     if (screen.name !== 'form' || submitting) return;
     error = validate(requireState(), page);
     if (error) {
-      $('[data-slot="error"]', app).textContent = error;
+      showError(error);
+      return;
+    }
+    if (step !== 'review') {
+      const steps = stepsFor(page);
+      step = steps[steps.indexOf(step) + 1] ?? 'review';
+      showForm(page, screen.link);
       return;
     }
     submitting = true;
@@ -123,7 +165,7 @@ function bind(page: BookingPageSettings): void {
     try {
       const result = await submitBooking(screen.link.code, { ...draft, guestList: page.fields.guestList ? draft.guestList : [] });
       if (result.error !== undefined && result.retry) {
-        $('[data-slot="error"]', app).textContent = result.error;
+        showError(result.error);
         return;
       }
       if (result.error !== undefined) {
@@ -133,7 +175,7 @@ function bind(page: BookingPageSettings): void {
       showPay(page, result.booking);
     } catch (submitError) {
       // Keep what they typed; they can press the button again.
-      $('[data-slot="error"]', app).textContent = (submitError as Error).message;
+      showError((submitError as Error).message);
     } finally {
       submitting = false;
       if (button?.isConnected) button.disabled = false;
@@ -195,6 +237,10 @@ async function start(): Promise<void> {
 
   bind(page);
   const { state, stage } = opened;
+  // The desk's dropdowns and date picker, with each day's availability for the chosen booking.
+  setFieldsToday(state.meta.asOf);
+  setDayAvailability((product) => availabilityFor(requireState(), product, { strict: true }));
+  startFields();
   if (stage.stage === 'problem') {
     render(app, problemScreen(page, stage.message));
     return;
@@ -204,16 +250,16 @@ async function start(): Promise<void> {
     return;
   }
 
+  // Only what the staff member filled in; otherwise the guest starts from blank.
   const { link } = stage;
   const offered = bookableIds(state, page);
-  draft.date = link.date ?? state.meta.asOf;
-  draft.product = link.product && offered.includes(link.product) ? link.product : offered[0] ?? 'daytour';
+  draft.date = link.date && link.date >= state.meta.asOf ? link.date : '';
+  draft.product = link.product && offered.includes(link.product) ? link.product : '';
   const unit = findUnit(state, draft.product);
   if (unit && unit.capacityMin > 1) draft.adults = unit.capacityMin;
   draft.guestList = fitGuestList(draft.guestList, draft.adults + draft.kids);
 
-  screen = { name: 'form', link };
-  render(app, formScreen(state, page, link, draft, error));
+  showForm(page, link, false);
 }
 
 void start();

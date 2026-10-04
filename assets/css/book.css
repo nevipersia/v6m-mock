@@ -278,3 +278,102 @@
     height: 140px;
   }
 }
+
+/* ---------- Steps ----------
+ * A bar per step (done, current, still to come), then "Step 2 of 4" and the
+ * step's name. Back and Continue sit at the foot of each step. */
+
+.book__progress {
+  display: grid;
+  gap: 4px;
+}
+
+.book__steps {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.book__steps-item {
+  height: 4px;
+  background: var(--line);
+  border-radius: var(--radius-pill);
+  transition: background-color 0.2s ease;
+}
+
+.book__steps-item.is-done {
+  background: var(--orange-soft);
+}
+
+.book__steps-item.is-current {
+  background: var(--orange);
+}
+
+.book__step-count {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.book__step-title:focus {
+  outline: none;
+}
+
+.book__nav {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.book__card .book__nav .btn {
+  flex: 1;
+  justify-content: center;
+}
+
+.book__card .book__nav .btn--secondary {
+  flex: 0 0 auto;
+}
+
+/* ---------- Check and confirm ---------- */
+
+.book__review {
+  display: grid;
+  gap: 6px;
+}
+
+.book__review-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.book__review-title {
+  font-size: 16px;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--orange-strong);
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+/* No package picked yet: its card's slot takes no room in the form's gaps. */
+.book__form > [data-slot]:empty {
+  display: none;
+}

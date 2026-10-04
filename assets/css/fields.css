@@ -1,0 +1,474 @@
+/* The pop-ups behind form fields, shared by V6M Desk and the booking page:
+ * the buttons laid over dropdowns and date inputs, the list a dropdown opens
+ * and the date picker (admin/components/fields.ts and date-picker.ts). */
+
+.icon {
+  flex: none;
+}
+
+.picker {
+  width: min(360px, calc(100vw - 32px));
+  padding: 0;
+  background: var(--surface);
+  border: 0;
+  border-radius: 18px;
+  box-shadow: var(--shadow-float);
+  color: var(--ink);
+}
+
+.picker::backdrop {
+  background: rgba(31, 45, 92, 0.45);
+}
+
+
+.picker__body {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.picker__head,
+.picker__year {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.picker__title {
+  font-size: 18px;
+}
+
+.picker__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.picker__icon:hover {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+
+.picker__year-label {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.picker__months {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.picker__month {
+  padding: 8px 0;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.picker__month:hover {
+  border-color: var(--navy);
+}
+
+/* The month the calendar behind is on. */
+.picker__month.is-shown {
+  border-color: var(--orange);
+}
+
+.picker__month.is-picked {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+.picker__days {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.picker__days-label {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.picker__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  text-align: center;
+}
+
+.picker__weekday {
+  padding-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.picker__day {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.picker__day:hover {
+  background: var(--cream-deep);
+}
+
+.picker__day.is-today {
+  box-shadow: inset 0 0 0 1.5px var(--orange);
+  font-weight: 600;
+}
+
+.picker__day.is-picked {
+  background: var(--navy);
+  color: #fff;
+}
+
+/* A day with bookings on it. */
+.picker__dot {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  background: var(--orange);
+  border-radius: 50%;
+}
+
+.picker__day.is-picked .picker__dot {
+  background: #fff;
+}
+
+.picker__shortcuts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.picker__month,
+.picker__day {
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease, color 0.15s ease, transform 0.2s cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.picker__month:active,
+.picker__day:active {
+  transform: scale(0.94);
+}
+
+/* ---------- Dropdowns and date fields ----------
+ * components/fields.ts lays a button over every <select> and date input; the
+ * real control stays in the form, hidden. The button looks like the other
+ * inputs, and opens a list (below) or the shared date picker (.picker). */
+
+.field-native {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0 !important;
+  white-space: nowrap;
+}
+
+.field-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.field-trigger__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-trigger .icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--ink-muted);
+  transition: transform 0.2s cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.field-trigger[aria-expanded="true"] {
+  border-color: var(--blue);
+  box-shadow: var(--focus-ring);
+}
+
+.field-trigger[aria-expanded="true"] .icon:last-child {
+  transform: rotate(180deg);
+}
+
+.field-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.field-trigger.is-placeholder .field-trigger__text {
+  color: var(--ink-hint);
+}
+
+.field-trigger--date .icon:first-child {
+  color: var(--orange-strong);
+}
+
+/* The list a dropdown opens: the same card, rows and hover as the rest of the desk. */
+.menu {
+  position: fixed;
+  z-index: 90;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-float);
+  animation: menu-in 0.16s cubic-bezier(0.2, 0.75, 0.25, 1);
+  transform-origin: top;
+}
+
+.menu.is-leaving {
+  animation: menu-out 0.12s ease-in forwards;
+}
+
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+}
+
+@keyframes menu-out {
+  to { opacity: 0; transform: translateY(-4px); }
+}
+
+.menu__group {
+  margin: 8px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 10px;
+  background: none;
+  border: 0;
+  border-radius: 9px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu__item:hover,
+.menu__item:focus-visible {
+  background: #FFF1E4;
+  outline: none;
+}
+
+.menu__item.is-selected {
+  font-weight: 600;
+  color: var(--orange-strong);
+}
+
+.menu__item.is-placeholder {
+  color: var(--ink-hint);
+}
+
+.menu__item .icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.menu__item:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.picker__day:disabled,
+.picker__month:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.picker__day:disabled:hover,
+.picker__month:disabled:hover {
+  background: none;
+  border-color: var(--line);
+}
+
+/* ---------- Date pickers sit by their button, compact ---------- */
+
+.picker.is-anchored {
+  position: fixed;
+  inset: auto;
+  width: 292px;
+  max-height: calc(100vh - 24px);
+  margin: 0;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(31, 45, 92, 0.18);
+  transform-origin: top left;
+}
+
+.picker.is-anchored[data-side="above"] {
+  transform-origin: bottom left;
+}
+
+/* A light veil only: the page stays readable around a small pop-up. */
+.picker.is-anchored::backdrop {
+  background: rgba(31, 45, 92, 0.08);
+}
+
+.picker.is-anchored .picker__body {
+  gap: 10px;
+  padding: 12px;
+}
+
+.picker.is-anchored .picker__title {
+  font-size: 15px;
+}
+
+.picker.is-anchored .picker__icon {
+  width: 28px;
+  height: 28px;
+}
+
+.picker.is-anchored .picker__year-label {
+  font-size: 16px;
+}
+
+.picker.is-anchored .picker__months {
+  gap: 4px;
+}
+
+.picker.is-anchored .picker__month {
+  padding: 5px 0;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.picker.is-anchored .picker__days {
+  padding-top: 8px;
+}
+
+.picker.is-anchored .picker__days-label {
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.picker.is-anchored .picker__day {
+  aspect-ratio: auto;
+  height: 32px;
+  font-size: 13px;
+}
+
+.picker.is-anchored .picker__weekday {
+  padding-bottom: 2px;
+}
+
+.picker.is-anchored .picker__dot {
+  bottom: 3px;
+}
+
+.picker.is-anchored .picker__shortcuts .btn {
+  min-height: 32px;
+}
+
+/* It grows out of its button rather than rising from the middle. */
+@keyframes picker-drop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+}
+
+dialog.picker.is-anchored.is-entering {
+  animation: picker-drop 0.18s cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+/* Layouts place fields by name; the button over the guest list's gender dropdown goes where it went. */
+.guest-row [data-field-for="companionGender"] { grid-area: gender; }
+
+/* ---------- Date pickers that show each day's availability ----------
+ * The booking date opens with a label under every day ("Open", "Booked"),
+ * for the booking chosen in the same form. Wider, with taller days to fit it. */
+
+.picker--slots,
+.picker--slots.is-anchored {
+  width: min(352px, calc(100vw - 24px));
+}
+
+.picker--slots .picker__day,
+.picker--slots.is-anchored .picker__day {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1px;
+  aspect-ratio: auto;
+  height: 46px;
+  border-radius: 10px;
+  line-height: 1.1;
+}
+
+.picker__slots {
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--green-ink);
+}
+
+.picker__day.is-full .picker__slots {
+  color: var(--terra-ink);
+}
+
+.picker__day.is-picked .picker__slots {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* A day that can't be booked still says why, so it keeps more of its colour. */
+.picker--slots .picker__day:disabled,
+.picker--slots .picker__day:disabled:hover {
+  opacity: 0.55;
+  background: var(--sand);
+}
+
+.picker__legend {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--ink-muted);
+}

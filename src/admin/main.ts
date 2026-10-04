@@ -3,6 +3,7 @@
 import { isMock } from '../core/config.js';
 import { $, html, on, render } from '../core/dom.js';
 import { canReset, getState, loadStore, onSaveError, resetStore, subscribe } from '../core/store.js';
+import { availabilityFor } from '../core/rules.js';
 import type { Staff, State } from '../core/types.js';
 import { can, canView, currentStaff, hasSession, homePage, restoreSession, signOut } from './auth.js';
 import { createBookingDetail } from './components/booking-detail.js';
@@ -14,7 +15,7 @@ import { createStageSummary } from './components/stage-summary.js';
 import { createPackageForm, createPromoForm } from './components/package-form.js';
 import { markEntering } from './components/motion.js';
 import { placeNear } from './components/popover.js';
-import { setFieldsToday, startFields } from './components/fields.js';
+import { setDayAvailability, setFieldsToday, startFields } from './components/fields.js';
 import { createBookingLinkPanel } from './components/booking-link.js';
 import { closeDrawer, openDrawer, syncDrawer } from './components/drawer.js';
 import { jumpBy, refreshJump } from './components/jump.js';
@@ -277,6 +278,10 @@ window.addEventListener('resize', scheduleJumpRefresh);
 async function start(): Promise<void> {
   subscribe(draw);
   startFields();
+  setDayAvailability((product, excludeId) => {
+    const state = getState();
+    return state ? availabilityFor(state, product, { excludeId }) : null;
+  });
   onSaveError((error) => showToast(`Not saved: ${error.message}. Reloaded the latest data.`, 'error'));
   try {
     await restoreSession();
