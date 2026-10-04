@@ -517,6 +517,13 @@ body {
   margin-bottom: 24px;
 }
 
+.page-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
 .page-head__eyebrow {
   font-size: 24px;
   margin-bottom: 2px;
