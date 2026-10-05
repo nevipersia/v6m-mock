@@ -127,7 +127,7 @@ function summaryTemplate(state: State, draft: Draft, { discount, editing }: Summ
     <div class="quote-box">
       <div class="quote-box__status">
         ${availability.ok
-          ? html`<span class="pill pill--success">Available</span>${availability.slotsLeft != null && !availability.over ? html` <span class="small muted">${availability.slotsLeft} pool slots left${editing ? '' : ' before this booking'}</span>` : ''}`
+          ? html`<span class="pill pill--success">Available</span>`
           : html`<span class="pill pill--danger">Not available</span> <span class="small">${availability.reason}</span>`}
       </div>
       <dl class="line-items">
