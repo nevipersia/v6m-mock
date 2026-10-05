@@ -306,6 +306,11 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   to the control with the same `data-focus-key` once a redraw has replaced it.
 - The booking PDF is the guest registration sheet (companions template): details, guest list with
   signature column, charges, total / downpayment / overall amount, "Received by". Multi-page.
+  Text is measured with Helvetica's real widths (`textWidth` / `fitText` in `core/pdf.ts`), so labels
+  never touch their values and long values end in "...". Page 1 shows fewer guest lines when there
+  are many charges, so the totals stay clear of the signatures. Time in / out are the actual
+  check-in and check-out times (blank until then, with the day added when it differs from the
+  booking's). Money paid from check-in on is shown as "Paid at the resort", apart from the downpayment.
 - Every booking needs a 50% downpayment (`depositRequired`, rounded up to the peso)
   before it is confirmed; less stays on hold. `applyPayment` in `core/actions.ts` enforces it.
 - Editing (`updateBooking` in `core/actions.ts`, form `booking-form.ts` with `editId`): hold or
