@@ -57,14 +57,17 @@ function stamp(booking: Booking, timestamp: Timestamp | null): string {
 
 /**
  * The money in two parts: what was paid before arrival (the downpayment, or
- * more), and what was paid at the resort from check-in on, such as the balance
- * settled at check-in or charges paid later in the stay.
+ * more), and what was paid at the resort: from check-in on, such as the
+ * balance settled at check-in, and for a walk-in anything paid at the counter
+ * on the day itself, even before staff pressed check-in.
  */
 function paidSplit(state: State, booking: Booking): { advance: number; atResort: number } {
   const arrived = booking.checkedInAt;
-  const atResort = arrived
-    ? state.payments.filter((payment) => payment.bookingId === booking.id && payment.receivedAt >= arrived).reduce((sum, payment) => sum + payment.amount, 0)
-    : 0;
+  const atTheResort = (receivedAt: Timestamp): boolean =>
+    (!!arrived && receivedAt >= arrived) || (booking.source === 'walk_in' && receivedAt.slice(0, 10) === booking.date);
+  const atResort = state.payments
+    .filter((payment) => payment.bookingId === booking.id && atTheResort(payment.receivedAt))
+    .reduce((sum, payment) => sum + payment.amount, 0);
   return { advance: Math.max(0, booking.paid - atResort), atResort };
 }
 

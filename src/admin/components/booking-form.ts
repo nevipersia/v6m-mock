@@ -1,7 +1,7 @@
 // Booking form drawer, for new bookings and for editing one that has not
 // arrived yet. Live availability check, price quote and discount either way.
 
-import { createBooking, updateBooking, type NewBooking } from '../../core/actions.js';
+import { checkInWalkIn, createBooking, isWalkInToday, updateBooking, type NewBooking } from '../../core/actions.js';
 import { $, $maybe, html, render, type SafeHTML } from '../../core/dom.js';
 import { allProductIds, productGroups } from '../../core/catalog.js';
 import { formatDigits, isEmail, isPHMobile, parseDigits, peso } from '../../core/format.js';
@@ -42,24 +42,31 @@ type Draft = Omit<NewBooking, 'extras'> & {
   mobile: string; reference: string; notes: string; inquiryId: string | null;
   address: string; email: string; scPwd: number; extras: ExtraDraft[]; sentTime: string; senderName: string;
   guestList: Companion[];
+  /** A walk-in for today is checked in from the form, which needs the valid ID ticked. */
+  idVerified: boolean;
 };
+
+/** Walk-ins mostly pay cash at the counter; everyone else mostly sends GCash. */
+const defaultMethod = (source: BookingSource): PaymentMethod => (source === 'walk_in' ? 'cash' : 'gcash');
 
 function initialDraft(state: State, prefill: BookingPrefill): Draft {
   const products = allProductIds(state);
   const product = prefill.product && products.includes(prefill.product) ? prefill.product : 'daytour';
   const unit = findUnit(state, product);
   const adults = unit && unit.capacityMin > 1 ? unit.capacityMin : 2;
+  const source = NEW_SOURCES.find((item) => item === prefill.source) ?? 'walk_in';
   return {
     guestList: fitGuestList([], adults),
     guestName: prefill.guestName ?? '',
     mobile: prefill.mobile ?? '',
-    source: NEW_SOURCES.find((source) => source === prefill.source) ?? 'walk_in',
+    source,
     product,
     date: prefill.date || state.meta.asOf,
     adults,
     kids: 0,
     deposit: 0,
-    method: 'gcash',
+    method: defaultMethod(source),
+    idVerified: false,
     reference: '',
     notes: '',
     inquiryId: prefill.inquiryId ?? null,
@@ -91,6 +98,7 @@ function draftFromBooking(state: State, booking: Booking): Draft {
     kids: booking.kids,
     deposit: 0,
     method: 'gcash',
+    idVerified: false,
     reference: '',
     notes: booking.notes ?? '',
     inquiryId: null,
@@ -120,7 +128,8 @@ function summaryTemplate(state: State, draft: Draft, { discount, editing }: Summ
   const availability = checkAvailability(state, { ...draft, excludeId: editing?.id, overLimits: true });
   const { estimate, off, total } = priced(state, draft, discount);
   const required = depositRequired(state, draft.product, total);
-  const paid = editing ? editing.paid : draft.deposit;
+  const walkIn = !editing && isWalkInToday(state, draft);
+  const paid = editing ? editing.paid : walkIn ? total : draft.deposit;
   const short = paid > 0 && paid < required;
 
   return html`
@@ -140,20 +149,22 @@ function summaryTemplate(state: State, draft: Draft, { discount, editing }: Summ
         <div class="line-items__row line-items__row--total"><dt>${editing ? 'New total' : 'Total'}</dt><dd>${peso(total)}</dd></div>
         ${editing && editing.total !== total ? html`
           <div class="line-items__row"><dt>Was</dt><dd class="muted">${peso(editing.total)}</dd></div>` : ''}
-        <div class="line-items__row line-items__row--downpayment"><dt>${DOWNPAYMENT_PERCENT}% downpayment to confirm</dt><dd>${peso(required)}</dd></div>
+        ${walkIn
+          ? html`<div class="line-items__row line-items__row--downpayment"><dt>Collect now</dt><dd>${peso(total)}</dd></div>`
+          : html`<div class="line-items__row line-items__row--downpayment"><dt>${DOWNPAYMENT_PERCENT}% downpayment to confirm</dt><dd>${peso(required)}</dd></div>`}
         ${editing ? html`<div class="line-items__row"><dt>Already paid</dt><dd>${peso(editing.paid)}</dd></div>` : ''}
-        <div class="line-items__row"><dt>${editing ? 'Balance' : 'Balance after this payment'}</dt><dd>${peso(Math.max(0, total - paid))}</dd></div>
+        ${walkIn ? '' : html`<div class="line-items__row"><dt>${editing ? 'Balance' : 'Balance after this payment'}</dt><dd>${peso(Math.max(0, total - paid))}</dd></div>`}
       </dl>
       ${[availability.over, ...estimate.warnings].filter(Boolean).map((warning) => html`<p class="small is-due">${warning} Saving anyway is fine.</p>`)}
       ${editing && total < editing.paid ? html`<p class="form-error">The guest already paid ${peso(editing.paid)}, so the total can't go below that.</p>` : ''}
       <p class="small ${short ? 'is-due' : 'muted'}">
-        ${paid >= required
+        ${walkIn ? 'A walk-in for today pays in full and is checked in when you press Check in.' : paid >= required
           ? `The downpayment is covered, so the booking ${editing ? 'stays' : 'is saved as'} confirmed.`
           : short
             ? `${peso(required - paid)} short of the downpayment, so the booking ${editing ? 'will be' : 'stays'} on hold.`
             : `No payment yet, so the booking ${editing ? 'stays' : 'is saved'} on hold.`}
       </p>
-      ${editing || draft.deposit === required ? '' : html`
+      ${editing || walkIn || draft.deposit === required ? '' : html`
         <button class="btn btn--quiet btn--sm" type="button" data-action="use-suggested-deposit" data-amount="${required}">
           Use the ${DOWNPAYMENT_PERCENT}% downpayment of ${peso(required)}
         </button>`}
@@ -175,6 +186,8 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
   // nobody picked for the guest to fill in.
   const chosen = { product: prefill.product ?? '', date: prefill.date ?? '' };
   let error = '';
+  // Once staff pick a payment method, changing the source no longer resets it.
+  let methodPicked = false;
   let discount = blankDiscount();
   let startingDiscount = blankDiscount();
   let canDiscount = false;
@@ -265,6 +278,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         }
       }
       const form = draft;
+      const walkIn = !editing && isWalkInToday(state, form);
       canDiscount = ctx.can('discounts.apply');
       const sources = editing ? SOURCES : NEW_SOURCES;
 
@@ -355,12 +369,13 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
 
           ${editing ? '' : html`
             <fieldset class="form-section">
-              <legend class="form-section__title">Downpayment received</legend>
+              <legend class="form-section__title">${walkIn ? 'Payment' : 'Downpayment received'}</legend>
               <div class="form-grid">
-                <label class="field">
-                  <span class="field__label">Amount (₱)</span>
-                  <input class="input input--amount" name="deposit" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${form.deposit ? formatDigits(form.deposit) : ''}">
-                </label>
+                ${walkIn ? '' : html`
+                  <label class="field">
+                    <span class="field__label">Amount (₱)</span>
+                    <input class="input input--amount" name="deposit" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${form.deposit ? formatDigits(form.deposit) : ''}">
+                  </label>`}
                 <label class="field">
                   <span class="field__label">Method</span>
                   <select class="input" name="method" data-input="field">
@@ -368,21 +383,28 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
                   </select>
                 </label>
               </div>
-              <label class="field">
-                <span class="field__label">Reference (optional)</span>
-                <input class="input" name="reference" data-input="field" value="${form.reference}" placeholder="GCash or bank reference number">
-              </label>
-              <div class="form-grid">
+              ${form.method === 'cash' ? '' : html`
                 <label class="field">
-                  <span class="field__label">Time sent</span>
-                  <input class="input" name="sentTime" data-input="field" type="time" value="${form.sentTime}">
+                  <span class="field__label">Reference (optional)</span>
+                  <input class="input" name="reference" data-input="field" value="${form.reference}" placeholder="${form.method === 'gcash' ? 'GCash' : 'Bank'} reference number">
                 </label>
-                <label class="field">
-                  <span class="field__label">${form.method === 'gcash' ? 'GCash sender' : 'Sent by'}</span>
-                  <input class="input" name="senderName" data-input="field" value="${form.senderName}" placeholder="Name on the account" autocomplete="off">
+                <div class="form-grid">
+                  <label class="field">
+                    <span class="field__label">Time sent</span>
+                    <input class="input" name="sentTime" data-input="field" type="time" value="${form.sentTime}">
+                  </label>
+                  <label class="field">
+                    <span class="field__label">${form.method === 'gcash' ? 'GCash sender' : 'Sent by'}</span>
+                    <input class="input" name="senderName" data-input="field" value="${form.senderName}" placeholder="Name on the account" autocomplete="off">
+                  </label>
+                </div>`}
+              ${walkIn ? html`
+                <label class="checkbox">
+                  <input type="checkbox" name="idVerified" data-input="field" ${form.idVerified ? 'checked' : ''}>
+                  Valid ID checked
                 </label>
-              </div>
-              <p class="small muted">A booking is confirmed once ${DOWNPAYMENT_PERCENT}% is paid. Leave the amount blank to hold the slot; the guest can pay later by GCash QR from the booking.</p>
+                <p class="small muted">The guest is here today, so they pay the full amount and are checked in now. For another date, the booking is saved with a downpayment instead.</p>`
+              : html`<p class="small muted">A booking is confirmed once ${DOWNPAYMENT_PERCENT}% is paid. Leave the amount blank to hold the slot; the guest can pay later by GCash QR from the booking.</p>`}
             </fieldset>`}
 
           <p class="form-error" data-slot="error" role="alert">${error}</p>
@@ -391,7 +413,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
             ${editing
               ? html`<button class="btn btn--quiet" type="button" data-action="back-to-booking">Cancel</button>`
               : html`<button class="btn btn--quiet" type="button" data-action="close-drawer">Cancel</button>`}
-            <button class="btn btn--primary" type="submit">${editing ? 'Save changes' : 'Save booking'}</button>
+            <button class="btn btn--primary" type="submit">${editing ? 'Save changes' : walkIn ? 'Check in' : 'Save booking'}</button>
           </div>
         </form>`;
     },
@@ -445,9 +467,16 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         refreshSummary(root, ctx.state);
       },
 
-      field: ({ el, ctx, root }) => {
+      field: ({ el, ctx, root, redraw }) => {
         if (!draft) return;
         const field = asField(el);
+        if (field instanceof HTMLInputElement && field.name === 'idVerified') {
+          draft.idVerified = field.checked;
+          error = '';
+          const slot = $maybe('[data-slot="error"]', root);
+          if (slot) slot.textContent = '';
+          return;
+        }
         if (field instanceof HTMLInputElement && NUMBER_FIELDS.includes(field.name)) {
           const caretAtEnd = field.selectionStart === field.value.length;
           draft[field.name as NumberField] = parseDigits(field.value);
@@ -462,16 +491,22 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
             if (slot) render(slot, guestListBody(draft));
           }
         } else if (field.name === 'source') {
+          // The method follows the source until staff pick one themselves.
+          if (!methodPicked) draft.method = defaultMethod(field.value as BookingSource);
           draft.source = field.value as BookingSource;
         } else if (field.name === 'method') {
           draft.method = field.value as PaymentMethod;
-          const senderLabel = $maybe('[name="senderName"]', root)?.closest('.field')?.querySelector('.field__label');
-          if (senderLabel) senderLabel.textContent = draft.method === 'gcash' ? 'GCash sender' : 'Sent by';
+          methodPicked = true;
         } else if (TEXT_FIELDS.includes(field.name)) {
           draft[field.name as TextField] = field.value;
           if (field.name === 'product' || field.name === 'date') chosen[field.name] = field.value;
         }
         error = '';
+        // Source and date decide between saving and checking in; the method decides which payment fields show.
+        if (!editId && ['source', 'date', 'method'].includes(field.name)) {
+          redraw();
+          return;
+        }
         refreshSummary(root, ctx.state);
       },
     },
@@ -522,6 +557,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         const guests = draft.adults + draft.kids;
         const availability = checkAvailability(state, { ...draft, excludeId: editing?.id, overLimits: true });
         const { estimate, total } = priced(state, draft, activeDiscount());
+        const walkIn = !editing && isWalkInToday(state, draft);
         const chosen = activeDiscount();
         const discountChanged = !sameDiscount(discount, startingDiscount);
         const discountError = chosen && canDiscount && discountChanged
@@ -539,7 +575,8 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         else if (discountError) error = discountError;
         else if (!chosen && discount.note.trim() && canDiscount && discountChanged) error = 'Enter the discount amount, or clear the reason.';
         else if (editing && total < editing.paid) error = `The guest already paid ${peso(editing.paid)}, so the total can't go below that.`;
-        else if (!editing && draft.deposit > total) error = `The payment can't be more than the ${peso(total)} total.`;
+        else if (!editing && !walkIn && draft.deposit > total) error = `The payment can't be more than the ${peso(total)} total.`;
+        else if (walkIn && !draft.idVerified) error = 'Tick Valid ID checked to check the guest in.';
         else error = '';
 
         if (error) {
@@ -577,9 +614,18 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
           return;
         }
 
-        const booking = createBooking({ ...draft, mobile: draft.mobile.trim(), discount: canDiscount ? chosen : null }, ctx.staff.id);
+        // Cash has no reference or sender; drop anything typed before switching to cash.
+        const payment = draft.method === 'cash' ? { reference: '', sentTime: '', senderName: '' } : {};
+        const input = { ...draft, ...payment, mobile: draft.mobile.trim(), discount: canDiscount ? chosen : null };
+        if (walkIn) {
+          const booking = checkInWalkIn(input, ctx.staff.id);
+          ctx.toast(`${booking.guestName} checked in · collected ${peso(booking.paid)}`);
+          ctx.openBooking(booking.id);
+          return;
+        }
+        const booking = createBooking(input, ctx.staff.id);
         ctx.toast(booking.status === 'confirmed'
-          ? `Booking confirmed with a ${peso(booking.paid)} downpayment`
+          ? booking.balance === 0 ? `Booking confirmed, paid in full (${peso(booking.paid)})` : `Booking confirmed with a ${peso(booking.paid)} downpayment`
           : booking.paid
             ? `Booking on hold: ${peso(booking.depositRequired - booking.paid)} more needed to confirm`
             : `Booking on hold until the ${DOWNPAYMENT_PERCENT}% downpayment is paid`);

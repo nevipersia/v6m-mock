@@ -118,6 +118,15 @@ textarea {
   transform: translateY(1px);
 }
 
+/* A button that can't be used yet, e.g. Check out while a balance is due. */
+.btn:disabled,
+.btn:disabled:hover,
+.btn:disabled:active {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .btn svg {
   width: 18px;
   height: 18px;

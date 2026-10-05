@@ -325,7 +325,14 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 - Mock GCash QR payment (`payByQr`, `core/qr-payment.ts`): 13-digit reference, not one repeated
   digit, not already used. The QR is drawn by `core/qr.ts` and is not scannable. Booking-link guests
   pay it after the form; staff can show it from the booking drawer.
-- Check-in needs a valid-ID tick and collects any balance.
+- Check-in needs a valid-ID tick and collects any balance. Check-out is refused while a balance is
+  due (`checkOutProblem` in `core/actions.ts`); the panel disables the button and says what to collect.
+- Walk-ins: a new booking's payment method starts on Cash for a walk-in and GCash otherwise (until
+  staff pick one); reference, time sent and sender only show for GCash or bank transfer. A walk-in
+  for today (`isWalkInToday`) turns Save booking into Check in: the form asks for the valid-ID tick,
+  and `checkInWalkIn` creates the booking, takes the full amount and checks the guest in at once. A
+  walk-in for another date saves with a downpayment as usual. On the registration PDF, a walk-in's
+  payments made on the day of the booking count as paid at the resort.
 - Sign-in takes an email and password; demo passwords live in the data in plain text (mock only).
 - V6M Desk is invite only: the owner creates an account and a code, each code works once, and the
   person sets their own password when redeeming it.

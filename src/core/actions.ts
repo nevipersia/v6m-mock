@@ -473,20 +473,54 @@ export function payByQr(bookingId: string, reference: string, staffId: string | 
   });
 }
 
+type CheckInPayment = Omit<PaymentInput, 'amount' | 'via'>;
+
+function checkInInState(state: State, booking: Booking, payment: CheckInPayment, staffId: string): void {
+  if (booking.balance > 0) applyPayment(state, booking, { ...payment, amount: booking.balance }, staffId);
+  Object.assign(booking, { status: 'checked_in', idVerified: true, checkedInAt: demoNow(state) } satisfies Partial<Booking>);
+  logActivity(state, staffId, 'booking.checked_in', booking.id, 'Valid ID verified');
+}
+
 /** Verifies ID, collects any balance and marks the guest as arrived. */
 export function checkIn(bookingId: string, { method }: { method: PaymentMethod }, staffId: string): Booking {
   return update((state) => {
     const booking = must(findBooking(state, bookingId), `Booking ${bookingId}`);
-    if (booking.balance > 0) applyPayment(state, booking, { amount: booking.balance, method }, staffId);
-    Object.assign(booking, { status: 'checked_in', idVerified: true, checkedInAt: demoNow(state) } satisfies Partial<Booking>);
-    logActivity(state, staffId, 'booking.checked_in', booking.id, 'Valid ID verified');
+    checkInInState(state, booking, { method }, staffId);
     return booking;
   });
 }
 
-export function checkOut(bookingId: string, staffId: string): Booking {
+/** A walk-in for today counts as arriving now: it is booked, paid in full and checked in at once. */
+export const isWalkInToday = (state: State, input: { source: BookingSource; date: ISODate }): boolean =>
+  input.source === 'walk_in' && input.date === state.meta.asOf;
+
+/**
+ * A walk-in for today, booked, paid in full and checked in as one step at the
+ * counter. The payment and the check-in share a time, so the registration
+ * sheet shows the money as paid at the resort.
+ */
+export function checkInWalkIn(input: NewBooking, staffId: string): Booking {
   return update((state) => {
-    const booking = must(findBooking(state, bookingId), `Booking ${bookingId}`);
+    const booking = createBookingInState(state, { ...input, deposit: 0 }, staffId);
+    checkInInState(state, booking, {
+      method: input.method, reference: input.reference ?? null, sentTime: input.sentTime ?? null, senderName: input.senderName ?? null,
+    }, staffId);
+    return booking;
+  });
+}
+
+export type CheckOutResult = { error: string } | { error?: undefined; booking: Booking };
+
+/** A guest leaves only once the bill is paid in full. */
+export const checkOutProblem = (booking: Booking): string =>
+  booking.balance > 0 ? `Collect the ${peso(booking.balance)} balance before checking out.` : '';
+
+export function checkOut(bookingId: string, staffId: string): CheckOutResult {
+  return update((state): CheckOutResult => {
+    const booking = findBooking(state, bookingId);
+    if (!booking) return { error: 'This booking no longer exists.' };
+    const problem = checkOutProblem(booking);
+    if (problem) return { error: problem };
     Object.assign(booking, { status: 'checked_out', checkedOutAt: demoNow(state) } satisfies Partial<Booking>);
     logActivity(state, staffId, 'booking.checked_out', booking.id);
     // An event checked out has happened; it leaves the Events page for Bookings.
@@ -495,7 +529,7 @@ export function checkOut(bookingId: string, staffId: string): Booking {
       event.stage = 'done';
       logActivity(state, staffId, 'event.done', event.id, event.title);
     }
-    return booking;
+    return { booking };
   });
 }
 

@@ -2,7 +2,7 @@
 // take (record payment, check in, check out, cancel).
 
 import {
-  applyDiscount, cancelBooking, checkIn, checkOut, payByQr, recordPayment, removeDiscount, setGuestList,
+  applyDiscount, cancelBooking, checkIn, checkOut, checkOutProblem, payByQr, recordPayment, removeDiscount, setGuestList,
 } from '../../core/actions.js';
 import { $, $maybe, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { blankCompanion, fitGuestList, guestListEditor, readGuestListField } from '../../core/guest-list.js';
@@ -283,7 +283,10 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     }
 
     if (booking.status === 'checked_in' && ctx.can('bookings.write')) {
-      parts.push(html`<button class="btn btn--primary btn--block" type="button" data-action="check-out">Check out guest</button>`);
+      const blocked = checkOutProblem(booking);
+      parts.push(html`
+        <button class="btn btn--primary btn--block" type="button" data-action="check-out" ${blocked ? 'disabled' : ''}>Check out guest</button>
+        ${blocked ? html`<p class="small muted">${blocked}</p>` : ''}`);
     }
 
     const qr = qrSection(ctx, booking);
@@ -559,8 +562,9 @@ export function createBookingDetail(bookingId: string): DrawerContent {
       },
 
       'check-out': ({ ctx }) => {
-        const booking = checkOut(bookingId, ctx.staff.id);
-        ctx.toast(`${booking.guestName} checked out`);
+        const result = checkOut(bookingId, ctx.staff.id);
+        if (result.error !== undefined) ctx.toast(result.error, 'error');
+        else ctx.toast(`${result.booking.guestName} checked out`);
       },
 
       'record-payment': ({ el, ctx, redraw }) => {
