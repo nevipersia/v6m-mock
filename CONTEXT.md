@@ -374,6 +374,18 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   permissions, and `store.normalize()` resets saved permissions to the role's on load.
 - Booking links are single use and expire; using one creates a hold for the staff member who sent it.
 
+- Phones: the last block of `admin.css` ("Phones: the desk in one hand") reshapes what does not
+  fit a phone held upright. Under 640px:
+  - the notifications list drops across the screen under the top bar;
+  - the corner up/down buttons are hidden;
+  - the Bookings list search gets its own line;
+  - the Packages kinds sit in a 2×2 grid;
+  - the Events stages stack;
+  - each Finances ledger entry becomes two lines (what and amount; date, category and method).
+  Under 420px, two-field form rows stack (guest counts excepted). Under 380px, the tab bar sizes
+  each tab to its name so all seven fit 320px. Under 360px, the date pill drops "Demo date ·".
+  Every screen was audited at 375px and 320px with no sideways scroll or cut text.
+
 ## Mock data
 
 `data/mock-data.json` holds one week, **Sep 15–21 2026**, written as if **Sep 17 2026** (`meta.asOf`)

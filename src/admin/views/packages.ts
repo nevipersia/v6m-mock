@@ -106,6 +106,7 @@ function promotions(state: State): SafeHTML {
         <button class="btn btn--secondary btn--sm" type="button" data-action="new-promo-alone">${icon('plus')} New promotion</button>
       </header>
       ${state.promos.length ? html`
+        <div class="table-scroll">
         <table class="data-table fin-table">
           <thead>
             <tr>
@@ -131,7 +132,8 @@ function promotions(state: State): SafeHTML {
                 </tr>`;
             })}
           </tbody>
-        </table>` : html`<div class="fin-empty">${emptyState('No promotions yet', 'Add one, then put packages on it from their Edit.')}</div>`}
+        </table>
+        </div>` : html`<div class="fin-empty">${emptyState('No promotions yet', 'Add one, then put packages on it from their Edit.')}</div>`}
     </section>`;
 }
 

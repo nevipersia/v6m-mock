@@ -648,10 +648,36 @@ body {
   color: var(--ink-muted);
 }
 
+/* Below 360px, "Demo date ·" goes and the pill keeps just the date. */
+@media (max-width: 360px) {
+  .topbar__hide-xs {
+    display: none;
+  }
+}
+
 /* The smallest phones (320px) need every pixel of the top bar. */
 @media (max-width: 380px) {
   .topbar__actions {
     gap: 2px;
+  }
+
+
+  /* Seven tabs share 320px: each as wide as its name, the room left over
+     shared out, so "Dashboard" fits whole and none runs off the edge. */
+  .tabbar .tab {
+    flex: 1 1 auto;
+    padding-inline: 0;
+    font-size: 10px;
+    letter-spacing: -0.01em;
+  }
+
+  .tab__label {
+    white-space: nowrap;
+  }
+
+  .notif__bell {
+    width: 36px;
+    height: 36px;
   }
 
   .topbar__user {
@@ -799,7 +825,8 @@ body.has-drawer .jump {
   .tab {
     position: relative;
     display: flex;
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
     flex-direction: column;
     align-items: center;
     gap: 2px;
@@ -4498,5 +4525,182 @@ dialog.is-entering::backdrop {
 
   .report-modal__spacer {
     display: none;
+  }
+}
+
+/* ---------- Phones: the desk in one hand ----------
+ * Everything above is laid out for a desk; these rules reshape the parts that
+ * do not fit a phone held upright. Kept together so they read as one pass. */
+
+@media (max-width: 640px) {
+  /* The notifications drop across the screen under the top bar, not off its edge. */
+  .notif__panel {
+    position: fixed;
+    top: calc(64px + env(safe-area-inset-top, 0px));
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100dvh - 64px - 96px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+
+  /* A thumb scrolls a phone page; the corner buttons would only cover the list under them. */
+  .jump {
+    display: none;
+  }
+
+  /* Bookings list: the search gets its own line, Month / Week the next. */
+  .calendar-bar__end {
+    flex-wrap: wrap;
+  }
+
+  .calendar-bar__end .list-search {
+    flex: 1 1 100%;
+  }
+
+  .calendar-bar__end .list-search .input {
+    width: 100%;
+  }
+
+  .calendar-bar__end .segmented {
+    flex: 1 1 100%;
+  }
+
+  /* Packages: the four kinds in a two-by-two grid, each name on one line. */
+  .calendar-bar [role="tablist"].segmented {
+    display: grid;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    border-radius: 18px;
+  }
+
+  .calendar-bar [role="tablist"].segmented .segmented__option {
+    border-radius: 14px;
+    white-space: nowrap;
+  }
+
+  /* Events: the stages one under the other, not a board to swipe sideways. */
+  .pipeline {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
+  }
+
+  /* Finances' ledger: each entry on two lines. What and the amount on top;
+     the date, category and method under it. */
+  .fin-ledger .data-table {
+    min-width: 0;
+  }
+
+  .fin-ledger thead {
+    display: none;
+  }
+
+  .fin-ledger tbody tr.data-table__row {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    column-gap: 6px;
+    row-gap: 2px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .fin-ledger tbody tr.data-table__row td {
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .fin-ledger tbody tr.data-table__row.is-today td {
+    background: none;
+    box-shadow: none;
+  }
+
+  .fin-ledger tbody tr.data-table__row.is-today {
+    padding-left: 18px;
+    background: #FFF4E8;
+    box-shadow: inset 4px 0 0 #F7C9A6;
+  }
+
+  /* The ledger's head: its title, then All / Income / Expenses across the width. */
+  .fin-ledger__head {
+    flex-wrap: wrap;
+  }
+
+  .fin-ledger__head .segmented {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    width: 100%;
+  }
+
+  .fin-ledger tbody tr.data-table__row td:nth-child(2) { grid-column: 1 / 4; grid-row: 1; }
+  .fin-ledger tbody tr.data-table__row td:nth-child(5),
+  .fin-ledger tbody tr.data-table__row td:nth-child(6) { grid-column: 4; grid-row: 1; }
+  .fin-ledger tbody tr.data-table__row td:nth-child(1),
+  .fin-ledger tbody tr.data-table__row td:nth-child(3),
+  .fin-ledger tbody tr.data-table__row td:nth-child(4) {
+    grid-row: 2;
+    font-size: 12px;
+    color: var(--ink-muted);
+    white-space: nowrap;
+  }
+
+  .fin-ledger tbody tr.data-table__row td:nth-child(3)::before,
+  .fin-ledger tbody tr.data-table__row td:nth-child(4)::before {
+    content: "·";
+    margin-right: 6px;
+  }
+
+  .fin-ledger tbody tr.data-table__row td:nth-child(4) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .fin-ledger tbody tr.data-table__row td:empty,
+  .fin-ledger tbody tr.data-table__row td.data-table__go {
+    display: none;
+  }
+
+  .fin-ledger .data-table__sub {
+    display: inline;
+    margin-left: 6px;
+  }
+
+  .fin-ledger tfoot tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    padding: 12px 14px;
+  }
+
+  .fin-ledger tfoot th,
+  .fin-ledger tfoot td {
+    padding: 0;
+    border: 0;
+  }
+
+  .fin-ledger tfoot th {
+    flex: 1 1 auto;
+  }
+
+  .fin-ledger tfoot td:empty {
+    display: none;
+  }
+
+  .fin-ledger .fin-more,
+  .fin-ledger .fin-more td {
+    display: block;
+  }
+}
+
+/* Small phones: two fields side by side cut dates and longer choices short,
+   so they stack. Guest counts (three short numbers) stay in their row. */
+@media (max-width: 420px) {
+  .form-grid:not(.form-grid--stay) {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

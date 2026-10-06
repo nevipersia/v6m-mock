@@ -604,3 +604,22 @@ select.input {
   .guest-row [name="companionRemarks"] { grid-area: remarks; }
   .guest-row__remove { grid-area: remove; }
 }
+
+/* The smallest phones: with remarks, gender takes its own line and age sits
+   beside the remarks; without, gender keeps the larger share of its line. */
+@media (max-width: 360px) {
+  .guest-row {
+    grid-template-columns: 22px minmax(0, 0.8fr) minmax(0, 1.2fr) 32px;
+    grid-template-areas:
+      "num name name remove"
+      ". gender gender ."
+      ". age remarks .";
+  }
+
+  .guest-row--short {
+    grid-template-columns: 22px minmax(0, 1.7fr) minmax(0, 1fr) 32px;
+    grid-template-areas:
+      "num name name remove"
+      ". gender age .";
+  }
+}
