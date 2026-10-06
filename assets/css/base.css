@@ -439,6 +439,65 @@ select.input {
   gap: 8px;
 }
 
+/* Adding the GCash receipt screenshot. */
+.receipt-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--cream);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.receipt-pick:hover,
+.receipt-pick:focus-within {
+  border-color: var(--blue);
+}
+
+.receipt-pick--done {
+  border-style: solid;
+  cursor: default;
+}
+
+.receipt-pick__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.receipt-pick__thumb {
+  flex: none;
+  width: 48px;
+  height: 64px;
+  object-fit: cover;
+  object-position: top;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.receipt-pick__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.receipt-pick__change {
+  flex: none;
+  margin-left: auto;
+  cursor: pointer;
+}
+
 .pay-qr .mono,
 .pay-qr input.mono {
   font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
@@ -525,7 +584,8 @@ select.input {
 @media (max-width: 560px) {
   .guest-row,
   .guest-row--short {
-    grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1fr) 32px;
+    /* Gender gets the wider half: "Female" and its arrow need more room than an age. */
+    grid-template-columns: 22px minmax(0, 1.4fr) minmax(0, 1fr) 32px;
     grid-template-areas:
       "num name name remove"
       ". gender age ."
@@ -538,6 +598,8 @@ select.input {
   .guest-row__number { grid-area: num; }
   .guest-row [name="companionName"] { grid-area: name; }
   .guest-row [name="companionGender"] { grid-area: gender; }
+  /* The styled button over the gender dropdown (fields.ts) takes the dropdown's place. */
+  .guest-row [data-field-for="companionGender"] { grid-area: gender; }
   .guest-row [name="companionAge"] { grid-area: age; }
   .guest-row [name="companionRemarks"] { grid-area: remarks; }
   .guest-row__remove { grid-area: remove; }

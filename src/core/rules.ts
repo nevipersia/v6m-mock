@@ -50,6 +50,14 @@ export const findUnit = (state: State, id: string | null | undefined) => state.u
 export const findSession = (state: State, id: string | null | undefined) => state.poolSessions.find((session) => session.id === id);
 export const findBooking = (state: State, id: string | null | undefined) => state.bookings.find((booking) => booking.id === id);
 
+/** A GCash receipt from the booking's guest that staff have not checked yet. */
+export const pendingPaymentCheck = (state: State, bookingId: string) =>
+  state.paymentChecks.find((check) => check.bookingId === bookingId && check.status === 'pending');
+
+/** Every receipt waiting for staff, oldest first. */
+export const pendingPaymentChecks = (state: State) =>
+  state.paymentChecks.filter((check) => check.status === 'pending').sort((a, b) => a.sentAt.localeCompare(b.sentAt));
+
 /** Events still on: an event whose booking was cancelled drops off the Events page. */
 export const liveEvents = (state: State): ResortEvent[] =>
   state.events.filter((event) => findBooking(state, event.bookingId)?.status !== 'cancelled');

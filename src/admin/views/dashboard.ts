@@ -1,9 +1,10 @@
-// Dashboard: today in four cards, what needs attention, and one summary of
-// sales against income and expenses. The full figures live on Finances.
+// Dashboard: today in four cards and one summary of sales against income and
+// expenses. What needs attention is under the bell in the top bar
+// (components/alerts.ts); the full figures live on Finances.
 
 import { flag, html, type SafeHTML } from '../../core/dom.js';
-import { addDays, formatDate, peso, plural } from '../../core/format.js';
-import { closingEvent, downpaymentDue, exclusiveOn, isActive, liveEvents, productLabel } from '../../core/rules.js';
+import { formatDate, peso, plural } from '../../core/format.js';
+import { closingEvent, exclusiveOn, isActive, productLabel } from '../../core/rules.js';
 import { financeReport } from '../../core/finance.js';
 import { SALES_RANGES, salesReport } from '../../core/sales.js';
 import type { Staff } from '../../core/types.js';
@@ -13,12 +14,8 @@ import { icon } from '../components/icons.js';
 import { pageHead } from '../layout.js';
 import { showBookingsOn } from './bookings.js';
 
-const MAX_HOLDS_SHOWN = 3;
-
 /** How many days the summary covers. Kept while the app is open. */
 let summaryDays = 30;
-/** Whether the Needs attention line is opened out. */
-let attentionOpen = false;
 
 function greeting(staff: Staff): string {
   const hour = new Date().getHours();
@@ -47,78 +44,6 @@ function card({ label, value, detail, action, href, opens, tone }: CardOptions):
   return href
     ? html`<a class="${className}" href="${href}" title="${opens}">${inner}</a>`
     : html`<button class="${className}" type="button" data-action="${action ?? ''}" title="${opens}">${inner}</button>`;
-}
-
-function attentionItems(ctx: DeskContext): SafeHTML[] {
-  const { state } = ctx;
-  const today = state.meta.asOf;
-  const items: SafeHTML[] = [];
-
-  const holds = state.bookings.filter((b) => b.status === 'hold' && b.date >= today);
-  holds.slice(0, MAX_HOLDS_SHOWN).forEach((b) => items.push(html`
-    <li>
-      <button class="attention__item" type="button" data-action="open-booking" data-id="${b.id}">
-        ${icon('wallet')}
-        <span><strong>${b.guestName}</strong> ${b.paid ? `still owes ${peso(downpaymentDue(b))} of the downpayment` : 'has not paid the downpayment'} for ${productLabel(state, b.product)} on ${formatDate(b.date)}</span>
-      </button>
-    </li>`));
-
-  if (holds.length > MAX_HOLDS_SHOWN) {
-    items.push(html`
-      <li>
-        <a class="attention__item" href="#/bookings">
-          ${icon('wallet')}
-          <span><strong>${plural(holds.length - MAX_HOLDS_SHOWN, 'more booking')}</strong> on hold, downpayment due</span>
-        </a>
-      </li>`);
-  }
-
-  const upcomingEvent = liveEvents(state).find((event) => event.bookingId && event.date >= today);
-  const eventBooking = upcomingEvent && state.bookings.find((b) => b.id === upcomingEvent.bookingId);
-  if (eventBooking && eventBooking.balance > 0 && isActive(eventBooking)) {
-    items.push(html`
-      <li>
-        <button class="attention__item" type="button" data-action="open-booking" data-id="${eventBooking.id}">
-          ${icon('sparkles')}
-          <span><strong>${upcomingEvent.title}</strong> on ${formatDate(upcomingEvent.date)} still owes ${peso(eventBooking.balance)}</span>
-        </button>
-      </li>`);
-  }
-
-  const nextExclusive = state.bookings.find((b) => isActive(b) && b.productType === 'exclusive' && b.date >= today && b.date <= addDays(today, 14));
-  if (nextExclusive) {
-    items.push(html`
-      <li>
-        <button class="attention__item" type="button" data-action="open-booking" data-id="${nextExclusive.id}">
-          ${icon('sparkles')}
-          <span><strong>Exclusive rental</strong> on ${formatDate(nextExclusive.date)}: ${nextExclusive.guestName}, ${productLabel(state, nextExclusive.product)}. Other bookings are closed then.</span>
-        </button>
-      </li>`);
-  }
-
-  const newInquiries = state.inquiries.filter((inquiry) => inquiry.status === 'new').length;
-  if (newInquiries && ctx.canView('inbox')) {
-    items.push(html`
-      <li>
-        <a class="attention__item" href="#/inbox">
-          ${icon('message')}
-          <span><strong>${plural(newInquiries, 'new inquiry', 'new inquiries')}</strong> waiting for a reply</span>
-        </a>
-      </li>`);
-  }
-
-  const openLinks = state.bookingLinks.filter((link) => link.status === 'sent' && link.expiresAt >= today).length;
-  if (openLinks) {
-    items.push(html`
-      <li>
-        <a class="attention__item" href="#/bookings">
-          ${icon('link')}
-          <span><strong>${plural(openLinks, 'booking link')}</strong> sent and not filled in yet</span>
-        </a>
-      </li>`);
-  }
-
-  return items;
 }
 
 /** One line of the summary: a name on the left, its figure on the right. */
@@ -206,7 +131,6 @@ export function render(ctx: DeskContext): SafeHTML {
   const owing = state.bookings.filter((b) => isActive(b) && b.status !== 'checked_out' && b.date === today && b.balance > 0);
   const balancesDue = owing.reduce((sum, b) => sum + b.balance, 0);
   const closedFor = closingEvent(state, today);
-  const attention = attentionItems(ctx);
 
   return html`
     ${pageHead({
@@ -237,16 +161,6 @@ export function render(ctx: DeskContext): SafeHTML {
       })}
     </div>
 
-    ${attention.length ? html`
-      <details class="attention-line" ${attentionOpen ? 'open' : ''}>
-        <summary data-action="toggle-attention">
-          ${icon('alert')}
-          <span>${plural(attention.length, 'thing needs', 'things need')} attention</span>
-          ${icon('chevronDown')}
-        </summary>
-        <ul class="attention">${attention}</ul>
-      </details>` : ''}
-
     ${summarySection(ctx)}`;
 }
 
@@ -256,11 +170,6 @@ export const actions: HandlerMap = {
   'show-inhouse': ({ ctx }) => ctx.openGuests('inhouse'),
 
   'show-balances': ({ ctx }) => showBookingsOn(ctx.state.meta.asOf),
-
-  // Remembered so a redraw (a booking saved in the drawer) does not fold it away.
-  'toggle-attention': ({ el }) => {
-    attentionOpen = !(el.closest('details') as HTMLDetailsElement).open;
-  },
 
   'summary-range': ({ el, ctx }) => {
     summaryDays = Number(el.dataset.days) || 30;

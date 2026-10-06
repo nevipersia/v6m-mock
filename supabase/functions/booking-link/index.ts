@@ -3,19 +3,23 @@
 //
 //   { action: 'open', code }                                   → { stage, state }
 //   { action: 'submit', code, input }                          → { booking, link } | { error, retry? }
-//   { action: 'pay', code, bookingId, reference, senderName }  → { booking, payment } | { error }
+//   { action: 'pay', code, bookingId, reference, senderName, receipt }
+//                                                              → { booking, check } | { error }
+//
+// 'pay' only sends the guest's GCash receipt for staff to check; the booking
+// stays on hold until someone confirms it in the desk.
 //
 // The booking code is the only key. 'open' returns the catalog plus bookings
 // with every personal field blanked, which is all the page's availability
 // checks and price summary read.
 
-import { bookingLinkStage, payByQr, useBookingLink } from '../_shared/core/actions.js';
+import { bookingLinkStage, submitPaymentCheck, useBookingLink } from '../_shared/core/actions.js';
 import { addDays } from '../_shared/core/format.js';
 import { serve, withState } from '../_shared/server.ts';
 
 const TABLES = [
   'staff', 'pool_sessions', 'exclusive_packages', 'units', 'promos', 'event_packages',
-  'guests', 'bookings', 'payments', 'events', 'booking_links', 'activity_log',
+  'guests', 'bookings', 'payments', 'payment_checks', 'events', 'booking_links', 'activity_log',
 ];
 
 /** Someone else's booking, reduced to what availability checks need. */
@@ -34,7 +38,7 @@ const anonymous = (booking: any) => ({
 
 function publicState(state: any, stage: any) {
   const link = stage.stage === 'problem' ? null : stage.link;
-  const own = stage.stage === 'pay' ? stage.booking.id : null;
+  const own = stage.stage === 'pay' || stage.stage === 'checking' || stage.stage === 'done' ? stage.booking.id : null;
   // Overnight stays that started a few days back can still overlap today.
   const from = addDays(state.meta.asOf, -3);
   return {
@@ -49,6 +53,7 @@ function publicState(state: any, stage: any) {
     activityLog: [],
     bookingLinks: link ? [link] : [],
     payments: state.payments.filter((payment: any) => payment.bookingId === own),
+    paymentChecks: state.paymentChecks.filter((check: any) => check.bookingId === own),
     events: state.events
       .filter((event: any) => event.date >= from)
       .map((event: any) => ({ ...event, title: '', notes: null, contactGuestId: '', coordinatorId: '', addOns: [] })),
@@ -76,7 +81,11 @@ serve((body) => withState(TABLES, (state) => {
       if (stage.stage !== 'pay' || stage.booking.id !== body.bookingId) {
         return { error: 'This payment does not belong to this booking link.' };
       }
-      return payByQr(stage.booking.id, String(body.reference ?? ''), null, String(body.senderName ?? '').slice(0, 120));
+      return submitPaymentCheck(stage.booking.id, {
+        reference: String(body.reference ?? ''),
+        senderName: String(body.senderName ?? '').slice(0, 120),
+        receipt: typeof body.receipt === 'string' ? body.receipt : null,
+      });
     }
 
     default:

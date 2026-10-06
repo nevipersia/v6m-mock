@@ -5,6 +5,7 @@ import { html, type SafeHTML, type TemplateValue } from '../core/dom.js';
 import { formatDate } from '../core/format.js';
 import type { State } from '../core/types.js';
 import { ROLE_LABELS, canView } from './auth.js';
+import { alertBell } from './components/alerts.js';
 import { avatar } from './components/badges.js';
 import { icon } from './components/icons.js';
 import { jumpControl } from './components/jump.js';
@@ -93,6 +94,7 @@ export function renderShell(ctx: DeskContext, route: Route, content: TemplateVal
               <button class="btn btn--quiet btn--sm" type="button" data-action="reset-data">
                 ${icon('refresh')}<span class="topbar__hide-sm">Reset data</span>
               </button>` : ''}
+            ${alertBell(ctx)}
             <div class="topbar__user topbar__phone-only">
               ${avatar(staff.name)}
               <span class="topbar__who">

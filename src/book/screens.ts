@@ -1,6 +1,6 @@
 // Markup for the booking page's screens: the form in steps (what and when,
 // your details, who is coming, check and confirm), the downpayment QR, the
-// thank-you and the "this link can't be used" message. Wording comes from
+// wait while staff check the guest's GCash receipt, the thank-you and the "this link can't be used" message. Wording comes from
 // booking-page.json.
 
 import { productGroups, productInfo, type ProductGroup } from '../core/catalog.js';
@@ -12,7 +12,7 @@ import type { QrPaymentRequest } from '../core/qr-payment.js';
 import {
   DOWNPAYMENT_PERCENT, checkAvailability, depositRequired, findExclusive, findStaff, findUnit, productLabel, quote,
 } from '../core/rules.js';
-import type { Booking, BookingLink, BookingPageSettings, Companion, Payment, State } from '../core/types.js';
+import type { Booking, BookingLink, BookingPageSettings, Companion, Payment, PaymentCheck, State } from '../core/types.js';
 
 export interface Draft {
   guestName: string;
@@ -34,7 +34,7 @@ export type Step = 'booking' | 'details' | 'guests' | 'review';
 const STEP_TITLES: Record<Step, string> = {
   booking: 'What and when',
   details: 'Your details',
-  guests: 'Who is coming',
+  guests: 'Guests and notes',
   review: 'Check and confirm',
 };
 
@@ -315,7 +315,9 @@ export function formScreen(state: State, page: BookingPageSettings, link: Bookin
       </form>`)}`;
 }
 
-export function payScreen(state: State, page: BookingPageSettings, booking: Booking, request: QrPaymentRequest, card: PaymentCardState): SafeHTML {
+export function payScreen(
+  state: State, page: BookingPageSettings, booking: Booking, request: QrPaymentRequest, card: PaymentCardState, rejected?: PaymentCheck,
+): SafeHTML {
   return html`
     ${header(page)}
     ${panel(html`
@@ -323,6 +325,11 @@ export function payScreen(state: State, page: BookingPageSettings, booking: Book
         <h2 class="book__step-title">${page.copy.payTitle}</h2>
         <p class="book__intro">${page.copy.payIntro}</p>
       </div>
+      ${rejected ? html`
+        <p class="book__rejected" role="alert">
+          <strong>The front desk could not confirm your last receipt</strong> (${rejected.reference}): ${rejected.reason}.
+          Check the payment in GCash and send the receipt again.
+        </p>` : ''}
       <dl class="facts">
         <div class="facts__row"><dt>Reference</dt><dd class="mono">${booking.id}</dd></div>
         <div class="facts__row"><dt>Booking</dt><dd>${productLabel(state, booking.product)} · ${formatDate(booking.date, 'long')}</dd></div>
@@ -332,6 +339,29 @@ export function payScreen(state: State, page: BookingPageSettings, booking: Book
       <form class="book__form" data-pay-form novalidate>
         ${paymentCard(request, card, { partial: booking.paid > 0 })}
       </form>
+      <p class="small muted">${page.copy.payHelp}</p>`)}`;
+}
+
+/** After the guest sends their receipt: the booking is held while staff find the payment in GCash. */
+export function checkingScreen(state: State, page: BookingPageSettings, booking: Booking, check: PaymentCheck): SafeHTML {
+  return html`
+    ${header(page)}
+    ${panel(html`
+      <div class="book__step">
+        <h2 class="book__step-title">${page.copy.checkingTitle}</h2>
+        <p class="book__intro">${page.copy.checkingText}</p>
+      </div>
+      <dl class="facts">
+        <div class="facts__row"><dt>Reference</dt><dd class="mono">${booking.id}</dd></div>
+        <div class="facts__row"><dt>Booking</dt><dd>${productLabel(state, booking.product)} · ${formatDate(booking.date, 'long')}</dd></div>
+        <div class="facts__row"><dt>Sent</dt><dd>${peso(check.amount)} by GCash<span class="book__sub mono">${check.reference} · ${check.senderName}</span></dd></div>
+        <div class="facts__row"><dt>Status</dt><dd><span class="pill pill--warning">Waiting for the front desk</span></dd></div>
+      </dl>
+      ${check.receipt ? html`
+        <figure class="book__receipt">
+          <img src="${check.receipt}" alt="The GCash receipt you sent">
+          <figcaption class="small muted">The receipt you sent</figcaption>
+        </figure>` : ''}
       <p class="small muted">${page.copy.payHelp}</p>`)}`;
 }
 

@@ -6,6 +6,7 @@ import { canReset, getState, loadStore, onSaveError, resetStore, subscribe } fro
 import { availabilityFor } from '../core/rules.js';
 import type { Staff, State } from '../core/types.js';
 import { can, canView, currentStaff, hasSession, homePage, restoreSession, signOut } from './auth.js';
+import { alertActions, closeAlerts, isAlertsOpen } from './components/alerts.js';
 import { createBookingDetail } from './components/booking-detail.js';
 import { createBookingForm } from './components/booking-form.js';
 import { createEventForm } from './components/event-form.js';
@@ -216,6 +217,8 @@ const globalActions: HandlerMap = {
   'jump-up': () => jumpBy(-1),
 
   'jump-down': () => jumpBy(1),
+
+  ...alertActions,
 };
 
 type Kind = 'action' | 'input' | 'hover';
@@ -264,6 +267,17 @@ on(app, 'click', 'dialog[data-cancel]', (event, dialog) => {
 });
 
 window.addEventListener('hashchange', draw);
+
+// The notifications list folds away on a click outside it, or on Esc.
+document.addEventListener('click', (event) => {
+  if (isAlertsOpen() && !(event.target as Element).closest?.('[data-alerts]') && closeAlerts()) draw();
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || !isAlertsOpen()) return;
+  closeAlerts();
+  draw();
+  app.querySelector<HTMLElement>('.notif__bell')?.focus();
+});
 
 // Which part is on screen changes as the page moves under it, so the jump
 // buttons are told after the browser has settled rather than on every pixel.

@@ -35,6 +35,7 @@ function normalize(loaded: State): State {
   loaded.bookingLinks ??= [];
   loaded.invites ??= [];
   loaded.expenses ??= [];
+  loaded.paymentChecks ??= [];
   // The ocular visit stage and its date were dropped: an event still at that
   // stage is an inquiry until it is reserved.
   for (const event of loaded.events ?? []) {

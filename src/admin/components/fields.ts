@@ -14,7 +14,7 @@ import type { DayAvailability } from '../../core/rules.js';
 import type { ISODate } from '../../core/types.js';
 import { openDatePicker } from './date-picker.js';
 import { icon } from './icons.js';
-import { placeNear } from './popover.js';
+import { placeNear, verticalPlace } from './popover.js';
 
 let today: ISODate = new Date().toISOString().slice(0, 10);
 
@@ -96,15 +96,31 @@ function showMenu(select: HTMLSelectElement, trigger: HTMLButtonElement): void {
   })}`);
   document.body.append(menu);
 
-  // Under the button, or above it when there is no room below; never off screen.
+  // Under the button, or above it when there is no room below. A long list
+  // shrinks to the roomier side and scrolls; only when neither side has a
+  // usable amount of room does it slide over the button. Never off screen.
   const box = trigger.getBoundingClientRect();
-  menu.style.minWidth = `${Math.max(box.width, 200)}px`;
+  const width = Math.max(box.width, 200);
+  menu.style.minWidth = `${width}px`;
   const height = Math.min(menu.scrollHeight, 320);
-  const below = window.innerHeight - box.bottom - 12;
-  const top = below >= height || below >= box.top ? box.bottom + 6 : box.top - height - 6;
-  menu.style.top = `${Math.max(8, top)}px`;
-  menu.style.left = `${Math.min(box.left, window.innerWidth - Math.max(box.width, 200) - 8)}px`;
-  menu.style.maxHeight = `${height}px`;
+  const below = window.innerHeight - box.bottom - 6 - 8;
+  const above = box.top - 6 - 8;
+  const USABLE = 160;
+  let top: number;
+  let shown = height;
+  if (below >= height) top = box.bottom + 6;
+  else if (above >= height) top = box.top - 6 - height;
+  else if (Math.max(below, above) >= USABLE) {
+    shown = Math.max(below, above);
+    top = below >= above ? box.bottom + 6 : box.top - 6 - shown;
+  } else {
+    const placed = verticalPlace(box, height);
+    top = placed.top;
+    shown = placed.maxHeight ?? height;
+  }
+  menu.style.top = `${Math.max(8, Math.round(top))}px`;
+  menu.style.left = `${Math.max(8, Math.min(box.left, window.innerWidth - width - 8))}px`;
+  menu.style.maxHeight = `${Math.round(shown)}px`;
 
   const items = () => [...menu.querySelectorAll<HTMLButtonElement>('.menu__item:not(:disabled)')];
   const pick = (item: HTMLButtonElement) => {

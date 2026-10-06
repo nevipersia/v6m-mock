@@ -110,9 +110,9 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     finance.ts              Profit and loss: money in against money out
     actions.ts              Every state change (bookings, payments, invites, links…)
     booking-page.ts         Loads and validates booking-page.json
-    qr-payment.ts           Mock GCash QR payment: request, check code, reference checks
+    qr-payment.ts           The resort's GCash account (demo stand-in), reference checks, demo receipt
     qr.ts                   Draws the QR-style code as SVG (not scannable)
-    payment-card.ts         The QR payment card shared by both pages
+    payment-card.ts         The GCash payment card shared by both pages; shrinks receipt photos
     format.ts               Pesos, dates, times, digit grouping, PH mobile check
     pdf.ts                  Minimal PDF writer, no dependencies
     dom.ts                  Safe html`` templates and event delegation
@@ -127,7 +127,7 @@ src/                        TypeScript sources (compiled to assets/js/, which is
     routes.ts, layout.ts    Navigation, shell, page header; the sidebar folds to icons
                             (remembered in localStorage) and carries the signed-in account,
                             which phones show in the top bar instead
-    components/             drawer, booking-detail, booking-form, booking-link, booking-pdf,
+    components/             drawer, booking-detail, booking-form, booking-link, booking-pdf, ledger-pdf,
                             event-form, expense-form, guest-summary, jump, badges, icons, toast
     views/                  login, dashboard, calendar, bookings, finances, packages, inbox, events, users
 assets/
@@ -186,7 +186,7 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   behind a Filters button (`filtersOpen`).
 - The dashboard is deliberately one screen: four cards for today (Arriving today and In house open
   `components/guest-summary.ts` in the drawer; Collected today opens Finances; Balances due opens
-  Bookings' list on today through `showBookingsOn`), Needs attention folded into one line, and a
+  Bookings' list on today through `showBookingsOn`), and a
   summary of sales beside income and expenses over one shared 7/30/90-day window. Every chart and
   list behind those figures lives on `views/finances.ts`.
 - Sales analytics on the Finances page come from `core/sales.ts`: bookings are counted by `createdAt`
@@ -241,13 +241,21 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   the ledger table of every payment and expense (All / Income / Expenses, rows open the booking or
   the expense), then Where the money went (categories with bars) beside Still owed by guests for
   the month. `financeRange(state, from, to)` in `core/finance.ts` serves any stretch of days.
+  The ledger's lines come from `ledgerEntries` in `core/finance.ts`, shared with the report below.
+- Download report (Finances): a pop-up in the middle of the screen (`dialog.report-modal`). Step 1
+  picks a month (the year-and-months grid of the date picker) or a date range (two date fields),
+  and All / Income / Expenses. Step 2 previews the report as a paper copy of the PDF, with Back,
+  Cancel and Download PDF. The PDF (`components/ledger-pdf.ts`) has the registration sheet's
+  header, the totals, every entry across as many pages as needed, and the totals at the end.
 - Dropdowns and dates (`components/fields.ts`, `components/date-picker.ts`): every `select.input`
   and `input.input[type=date]` on the desk gets a button that opens a styled list or the shared date
   pop-up (the same `.picker` look as the Bookings calendar). The real control stays in the form,
   hidden, and receives the value plus input/change events, so views need no changes. A
   MutationObserver picks up new fields, side panels included. Date pickers open next to the button that
   opened them (`components/popover.ts` `placeNear`; the Bookings picker names its button with
-  `data-anchor`), below it or above when there is no room, at a compact 292px. `data-optional` on a date or time input
+  `data-anchor`), below it or above when there is no room, at a compact 292px. When it fits on neither
+  side it slides over its button to stay whole on screen; taller than the window, it is capped and
+  scrolls inside (`verticalPlace`). Dropdown lists shrink to the roomier side and scroll instead. `data-optional` on a date or time input
   adds Clear. Time inputs open an hour / minute / AM-PM picker; text inputs with a `<datalist>` show
   their suggestions in the same list style, filtered as you type. Layout rules that place a field by
   `[name=…]` need a matching `[data-field-for=…]` rule for its button. The guest booking page uses
@@ -322,9 +330,23 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   Stored as `booking.discount`; `booking.total` = `pricing.total` − discount, and `reprice()` moves
   the booking between hold and confirmed as the 50% downpayment changes. The total can't drop below
   what was paid.
-- Mock GCash QR payment (`payByQr`, `core/qr-payment.ts`): 13-digit reference, not one repeated
-  digit, not already used. The QR is drawn by `core/qr.ts` and is not scannable. Booking-link guests
-  pay it after the form; staff can show it from the booking drawer.
+- GCash is a personal account, so nothing tells the site a payment arrived. Booking-link guests
+  scan the resort's QR (`GCASH_ACCOUNT` in `core/qr-payment.ts`, a demo stand-in drawn by
+  `core/qr.ts` and not scannable), type the amount, then send a screenshot of the receipt, the
+  sender's name and the 13-digit reference (`submitPaymentCheck`). That makes a `PaymentCheck`
+  (collection `paymentChecks`, table `payment_checks`), not a payment: the booking stays on hold and
+  the link shows "Receipt sent". Staff find the money in the resort's GCash app and press Confirm
+  (`confirmPaymentCheck`: it becomes a payment, `via: 'qr'`, and the booking is confirmed) or
+  Reject with a reason (`rejectPaymentCheck`; the guest's link asks again and shows why). Receipts
+  are kept as image data URLs, shrunk to 1200px JPEG (`readReceipt`); a Supabase build should move
+  them to Storage. Reference rules: 13 digits, not one repeated digit, not used on a payment or a
+  receipt still waiting. Staff with the guest at the desk can show the same QR from the booking
+  drawer and record the payment once they see it in GCash (`payByQr`).
+- Notifications are the bell in the top bar (`components/alerts.ts`, classes `notif__*`; the toasts
+  already use `.alerts`). Receipts to confirm come first; choosing one goes to the booking's day on
+  Bookings and opens it, with the receipt at the top of the drawer. The rest is what the dashboard's
+  Needs attention line used to list (holds, events owing, an exclusive rental soon, new inquiries,
+  open booking links).
 - Check-in needs a valid-ID tick and collects any balance. Check-out is refused while a balance is
   due (`checkOutProblem` in `core/actions.ts`); the panel disables the button and says what to collect.
 - Walk-ins: a new booking's payment method starts on Cash for a walk-in and GCash otherwise (until
@@ -348,10 +370,18 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 `data/mock-data.json` holds one week, **Sep 15–21 2026**, written as if **Sep 17 2026** (`meta.asOf`)
 were today. On load the demo backend moves every date in it (dates, timestamps and labels) by the
 same number of days so `meta.asOf` is always today in Manila; the dates below are as written in the file.
-It also holds 31 expenses from Jul 24 to Sep 17 — the book starts where the payments do, so the
-dashboard's windows compare like with like: the last 30 days show a profit, the last 7 a small loss
-(payday landed in them) and the 90 days roughly break even.
-It contains about 43 bookings (two exclusive rentals: Sep 23 full resort day tour, Sep 26 cottages-only
+Since Oct 2026 it also holds a trading history added by `scripts/add-demo-history.mjs` (run once
+after `tsc`; it refuses to run twice and is seeded, so it always writes the same data). It drives the
+app's own actions with the clock set to each moment: about 190 finished, fully paid stays from Jun 1
+to Sep 14 (downpayment ahead, balance at check-in, a few walk-ins), two groups in house and more due
+today, about 40 upcoming bookings over the next month, and the resort's running costs from Jun 1
+(wages on the 15th and month end, utilities, chemicals, supplies). Every dashboard and Finances window
+shows a profit, with no losing week (about 78% of income over 30 days). The file now has 270
+bookings, 382 payments, 239 guests and 59 expenses.
+Two GCash receipts wait for staff to confirm (`paymentChecks`, one from yesterday evening and one
+from this morning, with demo receipt pictures), so the bell has payments to show. They were added
+after the history script, which does not write them; re-add them if the history is regenerated.
+The original week contains about 43 bookings (two exclusive rentals: Sep 23 full resort day tour, Sep 26 cottages-only
 overnight), their payments, guests with addresses, two sample guest lists, one booking with videoke and
 corkage charges, 40 inquiries, one event (Cruz 18th debut on Sep 21, reserved, ₱48,000, closes the
 resort), saved replies (including exclusive rental rates), an activity log and the 2 staff accounts. The
@@ -393,6 +423,8 @@ Everything except the rates and the resort's own details is fictional: guests, s
 7. Original logo files and brand fonts?
 8. UI language: English, Tagalog, or both?
 9. Does the front desk work on phones, a counter laptop, or both?
+10. Which GCash account takes the downpayments: the name to show as "Pay to", the number, and the QR
+    image saved from the app's Receive screen (replaces the demo QR in `GCASH_ACCOUNT`)?
 
 ## Possible next steps
 

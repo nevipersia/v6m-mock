@@ -258,6 +258,31 @@ export interface Payment {
   senderName?: string | null;
 }
 
+export type PaymentCheckStatus = 'pending' | 'confirmed' | 'rejected';
+
+/**
+ * A GCash payment a guest says they sent from the booking link, waiting for
+ * staff to find it in the resort's GCash app. Only a confirmed check becomes
+ * a payment; until then the booking stays on hold.
+ */
+export interface PaymentCheck {
+  id: string;
+  bookingId: string;
+  amount: number;
+  reference: string;
+  senderName: string;
+  /** The guest's screenshot of their GCash receipt, as an image data URL. */
+  receipt: string | null;
+  sentAt: Timestamp;
+  status: PaymentCheckStatus;
+  reviewedBy: string | null;
+  reviewedAt: Timestamp | null;
+  /** Why it was turned down, shown to the guest. */
+  reason: string | null;
+  /** The payment it became once confirmed. */
+  paymentId: string | null;
+}
+
 export interface ResortEvent {
   id: string;
   title: string;
@@ -353,6 +378,7 @@ export interface State {
   guests: Guest[];
   bookings: Booking[];
   payments: Payment[];
+  paymentChecks: PaymentCheck[];
   expenses: Expense[];
   events: ResortEvent[];
   inquiries: Inquiry[];
@@ -379,6 +405,9 @@ export interface BookingPageCopy {
   payTitle: string;
   payIntro: string;
   payHelp: string;
+  /** The screen after a guest sends their GCash receipt, while staff check it. */
+  checkingTitle: string;
+  checkingText: string;
   thanksScript: string;
   thanksText: string;
   doneNote: string;

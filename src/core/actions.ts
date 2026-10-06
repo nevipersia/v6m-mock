@@ -6,12 +6,12 @@ import { addDays, formatDate, isEmail, isPHMobile, peso, plural } from './format
 import {
   DOWNPAYMENT_RATE, METHOD_LABELS, STAGE_LABELS, bookingWindow, checkAvailability, depositRequired, discountAmount,
   discountProblem, downpaymentDue, findBooking, findExclusive, findGuest, findPackage, findStaff, findUnit, hasGuestLimit, isActive,
-  isEditable, findPromo, live, permissionsFor, productLabel, quote, sessionFor, type DiscountInput,
+  isEditable, findPromo, live, pendingPaymentCheck, permissionsFor, productLabel, quote, sessionFor, type DiscountInput,
 } from './rules.js';
 import { formatReference, referenceProblem } from './qr-payment.js';
 import type {
   Booking, BookingLink, BookingSource, Companion, EventPackage, EventStage, Expense, ExpenseCategory, ExtraCharge, Guest,
-  ISODate, Inquiry, Invite, Payment, PaymentMethod, PriceLine, Promo, ResortEvent, Role, Staff, StaffStatus, State,
+  ISODate, Inquiry, Invite, Payment, PaymentCheck, PaymentMethod, PriceLine, Promo, ResortEvent, Role, Staff, StaffStatus, State,
   Timestamp,
 } from './types.js';
 
@@ -133,7 +133,7 @@ function applyPayment(state: State, booking: Booking, { amount, method, referenc
   booking.balance = booking.total - booking.paid;
   const confirmed = booking.status === 'hold' && downpaymentDue(booking) === 0;
   if (confirmed) booking.status = 'confirmed';
-  const how = via === 'qr' ? 'GCash QR, verified' : METHOD_LABELS[method];
+  const how = via === 'qr' ? 'GCash QR' : METHOD_LABELS[method];
   logActivity(state, staffId, 'payment.recorded', booking.id, `${peso(amount)} ${how} (${type})`);
   if (confirmed) logActivity(state, staffId, 'booking.confirmed', booking.id, 'Downpayment met');
   syncEventStage(state, booking, staffId);
@@ -454,10 +454,10 @@ export function recordPayment(bookingId: string, payment: PaymentInput, staffId:
 export type QrPaymentResult = { error: string } | { error?: undefined; booking: Booking; payment: Payment };
 
 /**
- * Mock GCash QR payment: the guest scans the booking's payment QR, pays the
- * downpayment still due, and types the reference number. Verification is
- * simulated (see referenceProblem); nothing is charged.
- * @param staffId the desk account that showed the QR, or null when the guest paid from a booking link
+ * A GCash QR payment staff saw arrive while the guest was at the desk: the
+ * guest scanned the resort's QR, and staff found the reference in the resort's
+ * GCash app before recording it.
+ * @param staffId the desk account recording it
  */
 export function payByQr(bookingId: string, reference: string, staffId: string | null, senderName?: string | null): QrPaymentResult {
   return update((state): QrPaymentResult => {
@@ -470,6 +470,106 @@ export function payByQr(bookingId: string, reference: string, staffId: string | 
     if (senderName !== undefined && !senderName?.trim()) return { error: 'Enter the name on the GCash account that sent the payment.' };
     const payment = applyPayment(state, booking, { amount, method: 'gcash', reference: formatReference(reference), via: 'qr', senderName }, staffId);
     return { booking, payment };
+  });
+}
+
+/** The longest receipt image kept (a data URL); the page shrinks photos well under this. */
+const MAX_RECEIPT_LENGTH = 2_000_000;
+
+export interface ReceiptInput {
+  reference: string;
+  senderName: string;
+  /** Screenshot of the GCash receipt, as an image data URL. */
+  receipt: string | null;
+}
+
+export type PaymentCheckResult = { error: string } | { error?: undefined; booking: Booking; check: PaymentCheck };
+
+/** What is wrong with a receipt before it can be sent for checking, or ''. */
+export function receiptProblem(state: State, input: ReceiptInput): string {
+  if (!input.receipt) return 'Add a screenshot of your GCash receipt.';
+  if (!/^data:image\/(png|jpeg|webp|gif|svg\+xml)[;,]/.test(input.receipt) || input.receipt.length > MAX_RECEIPT_LENGTH) {
+    return 'That file could not be used. Add a screenshot (PNG or JPG) of the receipt.';
+  }
+  if (!input.senderName.trim()) return 'Enter the name on the GCash account that sent the payment.';
+  return referenceProblem(state, input.reference) ?? '';
+}
+
+/**
+ * A guest says they paid the downpayment to the resort's GCash and sends their
+ * receipt. Nothing is paid yet: the booking stays on hold until staff find the
+ * money in GCash and confirm it (confirmPaymentCheck).
+ */
+export function submitPaymentCheck(bookingId: string, input: ReceiptInput): PaymentCheckResult {
+  return update((state): PaymentCheckResult => {
+    const booking = findBooking(state, bookingId);
+    if (!booking || !isActive(booking)) return { error: 'This booking is no longer open.' };
+    const amount = downpaymentDue(booking);
+    if (amount === 0) return { error: 'The downpayment for this booking is already paid.' };
+    if (pendingPaymentCheck(state, bookingId)) return { error: 'Your receipt is already with the front desk.' };
+    const problem = receiptProblem(state, input);
+    if (problem) return { error: problem };
+    const check: PaymentCheck = {
+      id: nextId(state.paymentChecks, 'PC'),
+      bookingId,
+      amount,
+      reference: formatReference(input.reference),
+      senderName: input.senderName.trim().slice(0, 120),
+      receipt: input.receipt,
+      sentAt: demoNow(state),
+      status: 'pending',
+      reviewedBy: null,
+      reviewedAt: null,
+      reason: null,
+      paymentId: null,
+    };
+    state.paymentChecks.push(check);
+    logActivity(state, null, 'payment.check_sent', booking.id, `${peso(amount)} GCash receipt · ${check.reference}`);
+    return { booking, check };
+  });
+}
+
+export type ConfirmCheckResult = { error: string } | { error?: undefined; booking: Booking; payment: Payment };
+
+/** Staff found the guest's payment in GCash: it becomes a payment, and the booking is confirmed once the downpayment is met. */
+export function confirmPaymentCheck(checkId: string, staffId: string): ConfirmCheckResult {
+  return update((state): ConfirmCheckResult => {
+    const check = state.paymentChecks.find((item) => item.id === checkId);
+    if (!check || check.status !== 'pending') return { error: 'This receipt was already checked.' };
+    const booking = findBooking(state, check.bookingId);
+    if (!booking || !isActive(booking)) return { error: 'This booking was cancelled. Refund the guest in GCash, then reject the receipt.' };
+    const amount = Math.min(check.amount, booking.balance);
+    if (amount <= 0) return { error: 'This booking is already paid in full.' };
+    const payment = applyPayment(state, booking, {
+      amount, method: 'gcash', reference: check.reference, via: 'qr', senderName: check.senderName,
+    }, staffId);
+    payment.sentAt = check.sentAt;
+    Object.assign(check, { status: 'confirmed', reviewedBy: staffId, reviewedAt: demoNow(state), paymentId: payment.id } satisfies Partial<PaymentCheck>);
+    logActivity(state, staffId, 'payment.check_confirmed', booking.id, `${peso(amount)} found in GCash · ${check.reference}`);
+    return { booking, payment };
+  });
+}
+
+/** Why staff turn a receipt down; the guest sees it when they open their link again. */
+export const REJECT_REASONS = [
+  'Not found in our GCash',
+  'Amount does not match',
+  'Receipt is unclear',
+  'Reference number does not match the receipt',
+];
+
+/** Staff could not find the payment, or it does not match. The guest can send another receipt from their link. */
+export function rejectPaymentCheck(checkId: string, reason: string, staffId: string): PaymentCheckResult {
+  return update((state): PaymentCheckResult => {
+    const check = state.paymentChecks.find((item) => item.id === checkId);
+    if (!check || check.status !== 'pending') return { error: 'This receipt was already checked.' };
+    const booking = findBooking(state, check.bookingId);
+    if (!booking) return { error: 'This booking no longer exists.' };
+    Object.assign(check, {
+      status: 'rejected', reviewedBy: staffId, reviewedAt: demoNow(state), reason: reason.trim() || REJECT_REASONS[0],
+    } satisfies Partial<PaymentCheck>);
+    logActivity(state, staffId, 'payment.check_rejected', booking.id, `${check.reference} · ${check.reason}`);
+    return { booking, check };
   });
 }
 
@@ -1008,25 +1108,37 @@ export const findBookingLink = (state: State, code: string | null | undefined): 
 export function bookingLinkProblem(state: State, link: BookingLink | null): string | null {
   if (!link) return 'This booking link is not valid. Ask the resort for a new one.';
   if (link.status === 'used') return 'This booking link was already used.';
-  if (link.status === 'cancelled') return 'This booking link was cancelled. Ask the resort for a new one.';
-  if (link.expiresAt < state.meta.asOf) return 'This booking link has expired. Ask the resort for a new one.';
+  if (link.status === 'cancelled') return 'This booking link is not valid. It was cancelled; ask the resort for a new one.';
+  if (link.expiresAt < state.meta.asOf) return 'This booking link is not valid. It has expired; ask the resort for a new one.';
   return null;
 }
 
 export type BookingLinkStage =
   | { stage: 'form'; link: BookingLink }
-  | { stage: 'pay'; link: BookingLink; booking: Booking }
+  | { stage: 'pay'; link: BookingLink; booking: Booking; rejected?: PaymentCheck }
+  | { stage: 'checking'; link: BookingLink; booking: Booking; check: PaymentCheck }
+  | { stage: 'done'; link: BookingLink; booking: Booking }
   | { stage: 'problem'; message: string };
 
 /**
  * Where a guest opening a link should land: the form, the downpayment step
- * (the link was used but the booking still owes its 50%), or a problem.
+ * (the link was used but the booking still owes its 50%), the wait while staff
+ * check their receipt, the thank-you once the downpayment is in, or a problem.
  */
 export function bookingLinkStage(state: State, code: string | null | undefined): BookingLinkStage {
   const link = findBookingLink(state, code);
   if (link?.status === 'used') {
     const booking = findBooking(state, link.bookingId);
-    if (booking && booking.status === 'hold' && downpaymentDue(booking) > 0) return { stage: 'pay', link, booking };
+    if (booking && booking.status === 'hold' && downpaymentDue(booking) > 0) {
+      const check = pendingPaymentCheck(state, booking.id);
+      if (check) return { stage: 'checking', link, booking, check };
+      // The last receipt staff turned down, so the guest knows why they are asked again.
+      const last = state.paymentChecks.filter((item) => item.bookingId === booking.id).pop();
+      return { stage: 'pay', link, booking, ...(last?.status === 'rejected' ? { rejected: last } : {}) };
+    }
+    // Paid and confirmed (or already stayed): opening the link again shows the thank-you.
+    if (booking && booking.status !== 'cancelled' && booking.status !== 'no_show') return { stage: 'done', link, booking };
+    return { stage: 'problem', message: 'This booking link is not valid. The booking was cancelled; ask the resort for a new one.' };
   }
   const problem = bookingLinkProblem(state, link);
   if (problem || !link) return { stage: 'problem', message: problem ?? 'This booking link is not valid.' };

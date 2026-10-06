@@ -421,9 +421,6 @@ dialog.picker.is-anchored.is-entering {
   animation: picker-drop 0.18s cubic-bezier(0.2, 0.75, 0.25, 1);
 }
 
-/* Layouts place fields by name; the button over the guest list's gender dropdown goes where it went. */
-.guest-row [data-field-for="companionGender"] { grid-area: gender; }
-
 /* ---------- Date pickers that show each day's availability ----------
  * The booking date opens with a label under every day ("Open", "Booked"),
  * for the booking chosen in the same form. Wider, with taller days to fit it. */

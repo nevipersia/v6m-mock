@@ -5,7 +5,8 @@
 
 import { addDays } from './format.js';
 import { buckets, dayOf, daysBetween, rankSlices, sumOf, within, type Bucket, type Slice } from './period.js';
-import type { Expense, ExpenseCategory, ISODate, State } from './types.js';
+import { findBooking } from './rules.js';
+import type { Expense, ExpenseCategory, ISODate, PaymentMethod, PaymentType, State, Timestamp } from './types.js';
 
 /** One bar of the profit and loss trend. */
 export interface FinancePoint extends Bucket {
@@ -118,6 +119,70 @@ export function financeRange(state: State, from: ISODate, to: ISODate): FinanceR
       spend: totalOf(spentBetween(state, bucket.from, bucket.to)),
     })),
   };
+}
+
+// ---------- The ledger ----------
+
+const TYPE_LABELS: Record<PaymentType, string> = { deposit: 'Downpayment', balance: 'Balance', full: 'Paid in full' };
+
+/** One line of the ledger: a payment that came in, or an expense that went out. */
+export interface LedgerEntry {
+  date: ISODate;
+  /** For ordering two entries on one day. */
+  at: Timestamp;
+  what: string;
+  /** The booking reference for a payment, the vendor for an expense. */
+  sub: string;
+  category: string;
+  method: PaymentMethod;
+  amountIn: number;
+  amountOut: number;
+  kind: 'payment' | 'expense';
+  /** The booking a payment belongs to, or the expense itself. */
+  id: string;
+}
+
+/** Which side of the ledger to show. */
+export type LedgerView = 'all' | 'in' | 'out';
+
+/** Every payment and expense between two days, newest first, narrowed to one side if asked. */
+export function ledgerEntries(state: State, from: ISODate, to: ISODate, view: LedgerView = 'all'): LedgerEntry[] {
+  const income: LedgerEntry[] = view === 'out' ? [] : state.payments
+    .filter((payment) => within(dayOf(payment.receivedAt), from, to))
+    .map((payment) => ({
+      date: dayOf(payment.receivedAt),
+      at: payment.receivedAt,
+      what: findBooking(state, payment.bookingId)?.guestName ?? 'Removed booking',
+      sub: payment.bookingId,
+      category: `Booking · ${TYPE_LABELS[payment.type]}`,
+      method: payment.method,
+      amountIn: payment.amount,
+      amountOut: 0,
+      kind: 'payment',
+      id: payment.bookingId,
+    }));
+  const spending: LedgerEntry[] = view === 'in' ? [] : state.expenses
+    .filter((expense) => within(expense.date, from, to))
+    .map((expense) => ({
+      date: expense.date,
+      at: expense.createdAt,
+      what: expense.item,
+      sub: expense.vendor ?? '',
+      category: CATEGORY_LABELS[expense.category],
+      method: expense.method,
+      amountIn: 0,
+      amountOut: expense.amount,
+      kind: 'expense',
+      id: expense.id,
+    }));
+  return [...income, ...spending].sort((a, b) => (b.date === a.date ? b.at.localeCompare(a.at) : b.date.localeCompare(a.date)));
+}
+
+/** The money in, the money out and what is left, over some ledger entries. */
+export function ledgerTotals(entries: LedgerEntry[]): { income: number; spend: number; profit: number } {
+  const income = sumOf(entries.map((entry) => entry.amountIn));
+  const spend = sumOf(entries.map((entry) => entry.amountOut));
+  return { income, spend, profit: income - spend };
 }
 
 /** The last `days` days up to the demo date. */

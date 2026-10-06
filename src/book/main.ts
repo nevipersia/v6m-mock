@@ -1,23 +1,23 @@
 // Single-use booking page. A staff member sends the link; the guest fills it
 // in once, step by step, checks it all on the last step, pays the 50%
-// downpayment by GCash QR, and the booking appears on the V6M Desk calendar
-// (on hold until the downpayment is verified).
+// downpayment to the resort's GCash and sends back the receipt. The booking
+// appears on the V6M Desk calendar on hold until staff find the payment.
 
-import { guestBookingProblem, guestChoiceProblem, guestDetailsProblem } from '../core/actions.js';
+import { demoNow, guestBookingProblem, guestChoiceProblem, guestDetailsProblem } from '../core/actions.js';
 import { setDayAvailability, setFieldsToday, startFields } from '../admin/components/fields.js';
 import { isMock } from '../core/config.js';
 import { $, $maybe, on, render } from '../core/dom.js';
 import { DEFAULT_BOOKING_PAGE, loadBookingPage, readableInk } from '../core/booking-page.js';
 import { parseDigits } from '../core/format.js';
 import { blankCompanion, fitGuestList, namesAsked, readGuestListField, updateGuestCount } from '../core/guest-list.js';
-import { VERIFY_DELAY_MS, type PaymentCardState } from '../core/payment-card.js';
-import { qrPaymentRequest, sampleReference } from '../core/qr-payment.js';
-import { availabilityFor, findBooking, findUnit } from '../core/rules.js';
+import { blankPaymentCard, readReceipt } from '../core/payment-card.js';
+import { qrPaymentRequest, sampleReceipt, sampleReference } from '../core/qr-payment.js';
+import { availabilityFor, findBooking, findUnit, pendingPaymentCheck } from '../core/rules.js';
 import { requireState } from '../core/store.js';
-import type { Booking, BookingLink, BookingPageSettings, State } from '../core/types.js';
-import { openLink, payDownpayment, submitBooking, type OpenResult } from './api.js';
+import type { Booking, BookingLink, BookingPageSettings, PaymentCheck, State } from '../core/types.js';
+import { openLink, sendReceipt, submitBooking, type OpenResult } from './api.js';
 import {
-  bookableIds, doneScreen, formScreen, guestListBody, payScreen, problemScreen, productCard, stepsFor, summary,
+  bookableIds, checkingScreen, doneScreen, formScreen, guestListBody, payScreen, problemScreen, productCard, stepsFor, summary,
   type Draft, type Step,
 } from './screens.js';
 
@@ -30,7 +30,9 @@ const draft: Draft = {
 };
 let step: Step = 'booking';
 let error = '';
-const card: PaymentCardState = { reference: '', senderName: '', error: '', checking: false };
+const card = blankPaymentCard();
+/** The receipt staff last turned down, if that is why the guest is paying again. */
+let rejected: PaymentCheck | undefined;
 
 type Screen = { name: 'form'; link: BookingLink } | { name: 'pay'; bookingId: string } | { name: 'other' };
 let screen: Screen = { name: 'other' };
@@ -70,17 +72,34 @@ function showError(message: string): void {
   if (slot) slot.textContent = message;
 }
 
-function showPay(page: BookingPageSettings, booking: Booking): void {
+function showPay(page: BookingPageSettings, booking: Booking, { scroll = true } = {}): void {
   const request = qrPaymentRequest(booking);
   if (!request) {
     render(app, doneScreen(requireState(), page, booking));
     screen = { name: 'other' };
     return;
   }
+  const check = pendingPaymentCheck(requireState(), booking.id);
+  if (check) {
+    showChecking(page, booking, check);
+    return;
+  }
   screen = { name: 'pay', bookingId: booking.id };
   if (!card.senderName) card.senderName = booking.guestName;
-  render(app, payScreen(requireState(), page, booking, request, card));
+  render(app, payScreen(requireState(), page, booking, request, card, rejected));
+  if (scroll) window.scrollTo({ top: 0 });
+}
+
+function showChecking(page: BookingPageSettings, booking: Booking, check: PaymentCheck): void {
+  screen = { name: 'other' };
+  render(app, checkingScreen(requireState(), page, booking, check));
   window.scrollTo({ top: 0 });
+}
+
+function showPayError(message: string): void {
+  card.error = message;
+  const slot = $maybe('[data-slot="pay-error"]', app);
+  if (slot) slot.textContent = message;
 }
 
 const redrawGuestList = () => {
@@ -182,7 +201,21 @@ function bind(page: BookingPageSettings): void {
     }
   });
 
-  on<HTMLFormElement>(app, 'submit', 'form[data-pay-form]', (event) => {
+  on<HTMLInputElement>(app, 'change', '[data-receipt]', async (_event, input) => {
+    const file = input.files?.[0];
+    if (!file || screen.name !== 'pay') return;
+    const booking = findBooking(requireState(), screen.bookingId);
+    if (!booking) return;
+    try {
+      card.receipt = await readReceipt(file);
+      card.error = '';
+    } catch (readError) {
+      card.error = (readError as Error).message;
+    }
+    showPay(page, booking, { scroll: false });
+  });
+
+  on<HTMLFormElement>(app, 'submit', 'form[data-pay-form]', async (event) => {
     event.preventDefault();
     if (screen.name !== 'pay' || card.checking) return;
     const { bookingId } = screen;
@@ -191,34 +224,35 @@ function bind(page: BookingPageSettings): void {
 
     card.checking = true;
     card.error = '';
-    showPay(page, booking);
-    // Mock verification: pretend to check the reference with GCash.
-    setTimeout(async () => {
-      let result;
-      try {
-        result = await payDownpayment(code, bookingId, card.reference, card.senderName);
-      } catch (payError) {
-        result = { error: (payError as Error).message };
-      }
-      card.checking = false;
-      if (result.error !== undefined) {
-        card.error = result.error;
-        const current = findBooking(requireState(), bookingId);
-        if (current) showPay(page, current);
-        return;
-      }
-      screen = { name: 'other' };
-      render(app, doneScreen(requireState(), page, result.booking, result.payment));
-      window.scrollTo({ top: 0 });
-    }, VERIFY_DELAY_MS);
+    showPay(page, booking, { scroll: false });
+    let result;
+    try {
+      result = await sendReceipt(code, bookingId, { reference: card.reference, senderName: card.senderName, receipt: card.receipt });
+    } catch (sendError) {
+      result = { error: (sendError as Error).message };
+    }
+    card.checking = false;
+    if (result.error !== undefined) {
+      const current = findBooking(requireState(), bookingId);
+      if (current) showPay(page, current, { scroll: false });
+      showPayError(result.error);
+      return;
+    }
+    rejected = undefined;
+    showChecking(page, result.booking, result.check);
   });
 
   on(app, 'click', '[data-action="simulate-payment"]', () => {
     if (screen.name !== 'pay') return;
-    card.reference = sampleReference(requireState(), `${screen.bookingId}|${Date.now()}`);
+    const state = requireState();
+    const booking = findBooking(state, screen.bookingId);
+    const request = booking && qrPaymentRequest(booking);
+    if (!booking || !request) return;
+    card.reference = sampleReference(state, `${booking.id}|${Date.now()}`);
+    if (!card.senderName.trim()) card.senderName = booking.guestName;
+    card.receipt = sampleReceipt({ amount: request.amount, reference: card.reference, senderName: card.senderName, sentAt: demoNow(state) });
     card.error = '';
-    const input = $maybe<HTMLInputElement>('[name="reference"]', app);
-    if (input) input.value = card.reference;
+    showPay(page, booking, { scroll: false });
   });
 }
 
@@ -245,7 +279,18 @@ async function start(): Promise<void> {
     render(app, problemScreen(page, stage.message));
     return;
   }
+  if (stage.stage === 'checking') {
+    showChecking(page, stage.booking, stage.check);
+    return;
+  }
+  if (stage.stage === 'done') {
+    // The downpayment that confirmed it, for its GCash reference.
+    const paid = state.payments.filter((payment) => payment.bookingId === stage.booking.id && payment.reference).pop();
+    render(app, doneScreen(state, page, stage.booking, paid));
+    return;
+  }
   if (stage.stage === 'pay') {
+    rejected = stage.rejected;
     showPay(page, stage.booking);
     return;
   }

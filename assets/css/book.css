@@ -196,6 +196,33 @@
   font-size: 22px;
 }
 
+/* The last receipt the front desk could not confirm. */
+.book__rejected {
+  padding: 12px 14px;
+  background: var(--terra-soft);
+  color: var(--terra-ink);
+  border-radius: var(--radius);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* The receipt the guest sent, while the front desk checks it. */
+.book__receipt {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  margin: 0;
+}
+
+.book__receipt img {
+  width: 100%;
+  max-width: 240px;
+  height: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
 .book__sub {
   display: block;
   font-size: 12px;

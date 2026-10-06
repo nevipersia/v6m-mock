@@ -183,6 +183,24 @@ create index payments_booking_idx on public.payments (booking_id);
 -- A GCash reference can only pay once.
 create unique index payments_qr_reference_key on public.payments (reference) where via = 'qr' and reference is not null;
 
+-- GCash payments a guest sent from a booking link, with their receipt, until
+-- staff find them in the resort's GCash app. A confirmed one becomes a payment.
+create table public.payment_checks (
+  id text primary key,
+  booking_id text not null references public.bookings (id) on delete cascade,
+  amount numeric(12, 2) not null,
+  reference text not null,
+  sender_name text not null,
+  receipt text,
+  sent_at timestamptz not null default now(),
+  status text not null default 'pending' check (status in ('pending', 'confirmed', 'rejected')),
+  reviewed_by text,
+  reviewed_at timestamptz,
+  reason text,
+  payment_id text
+);
+create index payment_checks_booking_idx on public.payment_checks (booking_id);
+
 -- What the resort spent. Dated on the day the money went out, so the dashboard
 -- can set it against the payments received over the same window.
 create table public.expenses (
@@ -291,7 +309,7 @@ declare
 begin
   -- Day-to-day records: any active staff member reads and writes them. The
   -- desk checks the finer permissions (payments.write, bookings.cancel…).
-  foreach t in array array['guests', 'bookings', 'payments', 'expenses', 'events', 'inquiries', 'booking_links', 'activity_log'] loop
+  foreach t in array array['guests', 'bookings', 'payments', 'payment_checks', 'expenses', 'events', 'inquiries', 'booking_links', 'activity_log'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('create policy "staff read" on public.%I for select to authenticated using (public.is_staff())', t);
     execute format('create policy "staff add" on public.%I for insert to authenticated with check (public.is_staff())', t);
@@ -333,7 +351,7 @@ revoke all on all tables in schema public from anon;
 -- ---------- Realtime: other desks see changes as they happen ----------
 
 alter publication supabase_realtime add table
-  public.staff, public.invites, public.guests, public.bookings, public.payments,
+  public.staff, public.invites, public.guests, public.bookings, public.payments, public.payment_checks,
   public.expenses, public.events, public.inquiries, public.booking_links, public.activity_log,
   public.pool_sessions, public.exclusive_packages, public.units, public.promos, public.event_packages;
 

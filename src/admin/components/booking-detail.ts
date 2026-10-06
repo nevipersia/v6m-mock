@@ -1,18 +1,20 @@
 // Booking detail drawer: summary, price, payments, and the actions staff can
-// take (record payment, check in, check out, cancel).
+// take (check a guest's GCash receipt, record payment, check in, check out, cancel).
 
 import {
-  applyDiscount, cancelBooking, checkIn, checkOut, checkOutProblem, payByQr, recordPayment, removeDiscount, setGuestList,
+  REJECT_REASONS, applyDiscount, cancelBooking, checkIn, checkOut, checkOutProblem, confirmPaymentCheck, payByQr, recordPayment,
+  rejectPaymentCheck, removeDiscount, setGuestList,
 } from '../../core/actions.js';
 import { $, $maybe, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { blankCompanion, fitGuestList, guestListEditor, readGuestListField } from '../../core/guest-list.js';
-import { VERIFY_DELAY_MS, paymentCard, type PaymentCardState } from '../../core/payment-card.js';
+import { blankPaymentCard, paymentCard, type PaymentCardState } from '../../core/payment-card.js';
 import { qrPaymentRequest, sampleReference } from '../../core/qr-payment.js';
 import { formatDate, formatDateTime, peso, plural, timeOf } from '../../core/format.js';
 import {
-  DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, discountAmount, discountLabel, downpaymentDue, findBooking, isEditable, findGuest, findPackage, findStaff, isActive, productLabel,
+  DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, discountAmount, discountLabel, downpaymentDue, findBooking, isEditable, findGuest, findPackage, findStaff, isActive, pendingPaymentCheck,
+  productLabel,
 } from '../../core/rules.js';
-import type { Booking, Companion, PaymentMethod, State } from '../../core/types.js';
+import type { Booking, Companion, PaymentCheck, PaymentMethod, State } from '../../core/types.js';
 import type { DeskContext, DrawerContent } from '../types.js';
 import { kindDot, paymentPill, stagePill, statusPill } from './badges.js';
 import { downloadBookingPdf } from './booking-pdf.js';
@@ -25,6 +27,9 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'booking.checked_out': 'Checked out',
   'booking.cancelled': 'Cancelled',
   'payment.recorded': 'Payment recorded',
+  'payment.check_sent': 'GCash receipt sent',
+  'payment.check_confirmed': 'Receipt confirmed',
+  'payment.check_rejected': 'Receipt rejected',
   'booking.confirmed': 'Confirmed',
   'booking.discounted': 'Discount given',
   'booking.discount_removed': 'Discount removed',
@@ -113,24 +118,36 @@ function priceSection(state: State, booking: Booking): SafeHTML {
     </section>`;
 }
 
-function paymentsSection(state: State, booking: Booking): SafeHTML | '' {
+function paymentsSection(state: State, booking: Booking, receiptShown: string | null): SafeHTML | '' {
   const payments = state.payments.filter((payment) => payment.bookingId === booking.id);
+  const checkFor = (paymentId: string) => state.paymentChecks.find((check) => check.paymentId === paymentId);
   if (!payments.length) return '';
   return html`
     <section class="detail-section">
       <h3 class="detail-section__title">Payments</h3>
       <ul class="plain-list">
-        ${payments.map((payment) => html`
+        ${payments.map((payment) => {
+          const check = checkFor(payment.id);
+          return html`
           <li class="plain-list__row">
             <span>
               <strong>${peso(payment.amount)}</strong> ${METHOD_LABELS[payment.method]} · ${payment.type === 'deposit' ? 'downpayment' : payment.type}
-              ${payment.via === 'qr' ? html`<span class="pill pill--success">QR verified</span>` : ''}
+              ${check ? html`<span class="pill pill--success">Receipt checked</span>` : payment.via === 'qr' ? html`<span class="pill pill--success">GCash QR</span>` : ''}
               <span class="small muted">${formatDateTime(payment.receivedAt)}${payment.receivedBy ? ` · ${findStaff(state, payment.receivedBy)?.name}` : ''}</span>
               ${payment.senderName || payment.sentAt ? html`
                 <span class="small muted">${payment.method === 'gcash' ? 'GCash sender' : 'Sent by'}: ${payment.senderName ?? '—'}${payment.sentAt ? ` · sent ${timeOf(payment.sentAt)}` : ''}</span>` : ''}
             </span>
-            ${payment.reference ? html`<span class="small muted mono">${payment.reference}</span>` : ''}
-          </li>`)}
+            <span class="plain-list__end">
+              ${payment.reference ? html`<span class="small muted mono">${payment.reference}</span>` : ''}
+              ${check?.receipt ? html`
+                <button class="btn btn--quiet btn--sm" type="button" data-action="toggle-receipt" data-id="${check.id}" aria-expanded="${receiptShown === check.id ? 'true' : 'false'}">
+                  ${receiptShown === check.id ? 'Hide receipt' : 'Receipt'}
+                </button>` : ''}
+            </span>
+            ${check?.receipt && receiptShown === check.id ? html`
+              <div class="plain-list__full"><img class="receipt-view receipt-view--inline" src="${check.receipt}" alt="GCash receipt from ${check.senderName}"></div>` : ''}
+          </li>`;
+        })}
       </ul>
     </section>`;
 }
@@ -163,9 +180,17 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     discountError: string;
     card: PaymentCardState;
     errors: { checkIn?: string; payment?: string };
+    /** The receipt being checked is shown large. */
+    receiptLarge: boolean;
+    rejecting: boolean;
+    rejectReason: string;
+    checkError: string;
+    /** A past receipt opened from the payments list. */
+    receiptShown: string | null;
   } = {
     checkInOpen: false, confirmCancel: false, guestListOpen: false, guestList: [], qrOpen: false, discountOpen: false, discount: blankDiscount(), discountError: '',
-    card: { reference: '', senderName: '', error: '', checking: false }, errors: {},
+    card: blankPaymentCard(), errors: {},
+    receiptLarge: false, rejecting: false, rejectReason: REJECT_REASONS[0] ?? '', checkError: '', receiptShown: null,
   };
 
   const discountKindChanged = (before: DiscountDraft['kind']) => before !== ui.discount.kind;
@@ -236,6 +261,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
   function qrSection(ctx: DeskContext, booking: Booking): SafeHTML | '' {
     const request = qrPaymentRequest(booking);
     if (!request || booking.status !== 'hold' || !ctx.can('payments.write') || ui.checkInOpen) return '';
+    if (pendingPaymentCheck(ctx.state, booking.id)) return '';
     if (!ui.qrOpen) {
       return html`
         <button class="btn btn--secondary btn--block" type="button" data-action="open-qr">
@@ -248,8 +274,52 @@ export function createBookingDetail(bookingId: string): DrawerContent {
           <h4 class="action-card__title">Show this to ${booking.guestName}</h4>
           <button class="btn btn--quiet btn--sm" type="button" data-action="close-qr">Hide</button>
         </div>
-        ${paymentCard(request, ui.card, { partial: booking.paid > 0 })}
+        ${paymentCard(request, ui.card, { partial: booking.paid > 0, desk: true })}
       </form>`;
+  }
+
+  /** The guest's GCash receipt, for staff to find in the resort's GCash and confirm or turn down. */
+  function checkSection(ctx: DeskContext, check: PaymentCheck): SafeHTML {
+    const canDecide = ctx.can('payments.write');
+    return html`
+      <section class="detail-section pay-check" id="payment-check" aria-labelledby="payment-check-title">
+        <div class="pay-check__head">
+          <h3 class="pay-check__title" id="payment-check-title">${icon('wallet')} GCash payment to confirm</h3>
+          <span class="pill pill--warning">Waiting</span>
+        </div>
+        <div class="pay-check__body ${ui.receiptLarge ? 'is-large' : ''}">
+          ${check.receipt ? html`
+            <button class="pay-check__receipt" type="button" data-action="toggle-receipt-size" title="${ui.receiptLarge ? 'Make it smaller' : 'See it larger'}">
+              <img class="receipt-view" src="${check.receipt}" alt="GCash receipt from ${check.senderName}">
+              <span class="pay-check__zoom small">${ui.receiptLarge ? 'Smaller' : 'Larger'}</span>
+            </button>` : html`<p class="small muted">No receipt picture was sent.</p>`}
+          <dl class="pay-check__facts">
+            <div><dt>Amount</dt><dd><strong>${peso(check.amount)}</strong></dd></div>
+            <div><dt>Reference</dt><dd class="mono">${check.reference}</dd></div>
+            <div><dt>GCash sender</dt><dd>${check.senderName}</dd></div>
+            <div><dt>Sent</dt><dd>${formatDateTime(check.sentAt)}</dd></div>
+          </dl>
+        </div>
+        <p class="small muted">Open the resort’s GCash app and find this reference number and amount before confirming.</p>
+        ${canDecide ? ui.rejecting ? html`
+          <div class="action-card">
+            <label class="field">
+              <span class="field__label">Why can't it be confirmed? The guest sees this.</span>
+              <select class="input" name="rejectReason" data-input="rejectReason">
+                ${REJECT_REASONS.map((reason) => html`<option ${reason === ui.rejectReason ? 'selected' : ''}>${reason}</option>`)}
+              </select>
+            </label>
+            <div class="button-row">
+              <button class="btn btn--quiet" type="button" data-action="keep-check">Back</button>
+              <button class="btn btn--danger" type="button" data-action="reject-check" data-id="${check.id}">Reject receipt</button>
+            </div>
+          </div>` : html`
+          <div class="button-row">
+            <button class="btn btn--primary" type="button" data-action="confirm-check" data-id="${check.id}">${icon('check')} Found it · confirm payment</button>
+            <button class="btn btn--quiet btn--danger-text" type="button" data-action="ask-reject">Not found</button>
+          </div>` : html`<p class="small muted">Someone with payment access confirms it.</p>`}
+        <p class="form-error" role="alert">${ui.checkError}</p>
+      </section>`;
   }
 
   function actionsSection(ctx: DeskContext, booking: Booking): SafeHTML | '' {
@@ -364,6 +434,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     render(ctx) {
       const booking = findBooking(ctx.state, bookingId);
       if (!booking) return html`<p class="muted">This booking no longer exists.</p>`;
+      const pending = pendingPaymentCheck(ctx.state, booking.id);
       return html`
         <div class="detail">
           <div class="detail__status">
@@ -371,10 +442,11 @@ export function createBookingDetail(bookingId: string): DrawerContent {
             <span class="small muted mono">${booking.id}</span>
           </div>
 
+          ${pending ? checkSection(ctx, pending) : ''}
           ${facts(ctx.state, booking)}
           ${priceSection(ctx.state, booking)}
           ${guestListSection(ctx, booking)}
-          ${paymentsSection(ctx.state, booking)}
+          ${paymentsSection(ctx.state, booking, ui.receiptShown)}
           ${activitySection(ctx.state, booking)}
           ${actionsSection(ctx, booking)}
         </div>`;
@@ -415,6 +487,10 @@ export function createBookingDetail(bookingId: string): DrawerContent {
       reference: ({ el }) => {
         ui.card.reference = (el as HTMLInputElement).value;
         ui.card.error = '';
+      },
+
+      rejectReason: ({ el }) => {
+        ui.rejectReason = (el as HTMLSelectElement).value;
       },
     },
 
@@ -487,7 +563,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
 
       'open-qr': ({ redraw }) => {
         ui.qrOpen = true;
-        ui.card = { reference: '', senderName: '', error: '', checking: false };
+        ui.card = blankPaymentCard();
         redraw();
       },
 
@@ -509,22 +585,60 @@ export function createBookingDetail(bookingId: string): DrawerContent {
       },
 
       'verify-qr': ({ ctx, redraw }) => {
-        if (ui.card.checking) return;
-        ui.card.checking = true;
-        ui.card.error = '';
+        const result = payByQr(bookingId, ui.card.reference, ctx.staff.id, ui.card.senderName);
+        if (result.error !== undefined) {
+          ui.card.error = result.error;
+          redraw();
+          return;
+        }
+        ui.qrOpen = false;
+        ctx.toast(`${peso(result.payment.amount)} GCash payment recorded${result.booking.status === 'confirmed' ? ' · booking confirmed' : ''}`);
+      },
+
+      'toggle-receipt-size': ({ redraw }) => {
+        ui.receiptLarge = !ui.receiptLarge;
         redraw();
-        // Mock verification: pretend to check the reference with GCash.
-        setTimeout(() => {
-          ui.card.checking = false;
-          const result = payByQr(bookingId, ui.card.reference, ctx.staff.id, ui.card.senderName);
-          if (result.error !== undefined) {
-            ui.card.error = result.error;
-            redraw();
-            return;
-          }
-          ui.qrOpen = false;
-          ctx.toast(`${peso(result.payment.amount)} verified by GCash QR${result.booking.status === 'confirmed' ? ' · booking confirmed' : ''}`);
-        }, VERIFY_DELAY_MS);
+      },
+
+      'toggle-receipt': ({ el, redraw }) => {
+        ui.receiptShown = ui.receiptShown === el.dataset.id ? null : el.dataset.id ?? null;
+        redraw();
+      },
+
+      'ask-reject': ({ redraw }) => {
+        ui.rejecting = true;
+        ui.checkError = '';
+        redraw();
+      },
+
+      'keep-check': ({ redraw }) => {
+        ui.rejecting = false;
+        redraw();
+      },
+
+      'confirm-check': ({ el, ctx, redraw }) => {
+        const result = confirmPaymentCheck(el.dataset.id ?? '', ctx.staff.id);
+        if (result.error !== undefined) {
+          ui.checkError = result.error;
+          redraw();
+          return;
+        }
+        ui.checkError = '';
+        ui.receiptLarge = false;
+        ctx.toast(`${peso(result.payment.amount)} GCash payment confirmed${result.booking.status === 'confirmed' ? ' · booking confirmed' : ''}`);
+      },
+
+      'reject-check': ({ el, ctx, redraw }) => {
+        const result = rejectPaymentCheck(el.dataset.id ?? '', ui.rejectReason, ctx.staff.id);
+        if (result.error !== undefined) {
+          ui.checkError = result.error;
+          redraw();
+          return;
+        }
+        ui.rejecting = false;
+        ui.checkError = '';
+        ui.receiptLarge = false;
+        ctx.toast(`Receipt rejected · ${result.booking.guestName} can send another from their link`, 'warning');
       },
 
       'download-pdf': ({ ctx }) => {

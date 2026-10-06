@@ -475,6 +475,150 @@ body {
   display: none;
 }
 
+/* Notifications: the bell, its count, and the list that drops from it. */
+.notif {
+  position: relative;
+}
+
+.notif__bell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: var(--navy);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.notif__bell:hover,
+.notif__bell[aria-expanded="true"] {
+  background: rgba(31, 45, 92, 0.08);
+}
+
+.notif__bell .icon {
+  width: 22px;
+  height: 22px;
+}
+
+.notif__count {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  background: var(--terra);
+  color: #fff;
+  border: 2px solid var(--cream);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.notif__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(400px, calc(100vw - 32px));
+  max-height: min(560px, calc(100vh - 96px));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 40px rgba(31, 45, 92, 0.18);
+  overflow: hidden;
+  animation: rise 0.2s var(--ease-out);
+}
+
+.notif__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.notif__list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.notif__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.notif__item:hover,
+.notif__item:focus-visible {
+  background: var(--cream);
+}
+
+.notif__item > .icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--orange-strong);
+}
+
+.notif__item .pill {
+  flex: none;
+  margin-left: auto;
+}
+
+.notif__item--payment {
+  background: var(--orange-soft);
+}
+
+.notif__item--payment:hover,
+.notif__item--payment:focus-visible {
+  background: #fbdcc0;
+}
+
+.notif__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.notif__meta {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.notif__empty {
+  padding: 24px 16px;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
 .topbar__who {
   display: flex;
   flex-direction: column;
@@ -794,49 +938,6 @@ body.has-drawer .jump {
   color: var(--terra-ink);
 }
 
-/* Needs attention, folded to one line until it is opened. */
-.attention-line {
-  margin-bottom: 20px;
-  background: var(--cream);
-  border-radius: var(--radius);
-}
-
-.attention-line > summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  font-weight: 600;
-  list-style: none;
-  cursor: pointer;
-}
-
-.attention-line > summary::-webkit-details-marker {
-  display: none;
-}
-
-.attention-line > summary .icon:first-child {
-  color: var(--orange-strong);
-}
-
-.attention-line > summary .icon:last-child {
-  margin-left: auto;
-  color: var(--ink-muted);
-  transition: transform 0.15s;
-}
-
-.attention-line[open] > summary .icon:last-child {
-  transform: rotate(180deg);
-}
-
-.attention-line .attention {
-  padding: 0 8px 8px;
-}
-
-.attention-line .attention__item {
-  background: var(--surface);
-}
-
 /* Sales beside income and expenses. */
 .summary {
   margin-bottom: 24px;
@@ -1064,38 +1165,6 @@ body.has-drawer .jump {
     margin-left: 20px;
     margin-right: auto;
   }
-}
-
-.attention {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.attention__item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 12px;
-  background: var(--cream);
-  border: 0;
-  border-radius: var(--radius);
-  font-size: 14px;
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.attention__item .icon {
-  margin-top: 1px;
-  color: var(--orange-strong);
-}
-
-.attention__item:hover {
-  background: var(--orange-soft);
 }
 
 /* ---------- Calendar ---------- */
@@ -2064,6 +2133,136 @@ body.has-drawer {
 
 .plain-list__row .small {
   display: block;
+}
+
+.plain-list__row {
+  flex-wrap: wrap;
+}
+
+.plain-list__end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* A guest's GCash receipt waiting in the booking drawer for staff to confirm. */
+.pay-check {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  background: var(--orange-soft);
+  border: 1px solid #f3c59a;
+  border-radius: var(--radius);
+}
+
+.pay-check__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pay-check__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--amber-ink);
+}
+
+.pay-check__body {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.pay-check__body.is-large {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.pay-check__receipt {
+  position: relative;
+  display: block;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: zoom-in;
+}
+
+.is-large .pay-check__receipt {
+  justify-self: center;
+  max-width: 360px;
+  cursor: zoom-out;
+}
+
+.pay-check__zoom {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 1px 8px;
+  background: rgba(31, 45, 92, 0.78);
+  color: #fff;
+  border-radius: var(--radius-pill);
+}
+
+.receipt-view {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+}
+
+.pay-check__body:not(.is-large) .receipt-view {
+  max-height: 200px;
+  object-fit: cover;
+  object-position: top;
+}
+
+.plain-list__full {
+  flex-basis: 100%;
+}
+
+.receipt-view--inline {
+  max-width: 280px;
+  margin-top: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.pay-check__facts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.pay-check__facts div {
+  display: grid;
+  gap: 0;
+}
+
+.pay-check__facts dt {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.pay-check__facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pay-check .button-row {
+  align-items: center;
+}
+
+.pay-check .form-error {
+  margin: 0;
 }
 
 .timeline li {
@@ -3227,20 +3426,6 @@ dialog.is-entering::backdrop {
   from { opacity: 0; transform: translateY(10px) scale(0.96); }
 }
 
-.attention-line[open] .attention {
-  animation: rise 0.28s var(--ease-out);
-}
-
-.attention-line > summary,
-.attention-line > summary .icon {
-  transition: background-color 0.15s ease, transform 0.2s var(--ease-out);
-}
-
-.attention-line > summary:hover {
-  background: var(--cream-deep);
-  border-radius: var(--radius);
-}
-
 /* Hover and press: things that open something lift a little toward the pointer. */
 .btn {
   transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
@@ -3256,7 +3441,7 @@ dialog.is-entering::backdrop {
 .segmented__option,
 .data-table td,
 .row__main,
-.attention__item,
+.notif__item,
 .calendar__head-day,
 .period__label {
   transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease, color 0.15s ease, transform 0.2s var(--ease-out);
@@ -3288,7 +3473,7 @@ dialog.is-entering::backdrop {
   transition: transform 0.2s var(--ease-out);
 }
 
-.attention__item:hover {
+.notif__item:hover {
   transform: translateX(3px);
 }
 
@@ -3844,8 +4029,9 @@ dialog.is-entering::backdrop {
 
 /* ---------- Form fixes: new buttons in old layouts ---------- */
 
-/* Layouts place fields by name; the buttons over dropdowns go where their field went. */
-.guest-row [data-field-for="companionGender"] { grid-area: gender; }
+/* Layouts place fields by name; the buttons over dropdowns go where their field went.
+ * (The guest list's gender button only has a named place in the side panel's narrow layout,
+ * which places it there itself; elsewhere the rows are plain columns.) */
 .extra-row [data-field-for="extraKind"] { grid-area: kind; }
 
 /* Stay: booking and date on their own lines, then adults, kids and SC / PWD in a row. */
@@ -3928,4 +4114,244 @@ dialog.is-entering::backdrop {
 
 .menu.is-anchored {
   position: fixed;
+}
+
+/* ---------- Ledger report pop-up ----------
+ * Finances' Download report: a pop-up in the middle of the screen, the same
+ * card as the date picker, with a fixed head and foot and a scrolling middle:
+ * choose the period, then a paper-like preview of the PDF. */
+
+.report-modal {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  background: var(--surface);
+  border: 0;
+  border-radius: 18px;
+  box-shadow: var(--shadow-float);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+.report-modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.report-modal::backdrop {
+  background: rgba(31, 45, 92, 0.45);
+}
+
+.report-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.report-modal__step {
+  margin-bottom: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.report-modal__main {
+  display: grid;
+  /* Each part keeps its full height and the middle scrolls; without this the
+     preview (which clips its own overflow) is squeezed to fit and its rows are cut off. */
+  grid-auto-rows: max-content;
+  gap: 16px;
+  min-height: 0;
+  padding: 16px 18px;
+  overflow-y: auto;
+}
+
+.report-modal__section {
+  display: grid;
+  gap: 8px;
+}
+
+.report-modal__section .segmented {
+  justify-self: start;
+}
+
+.report-modal__months {
+  max-width: 420px;
+}
+
+.report-modal__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.report-modal__line .link-button {
+  color: var(--orange-strong);
+  font-size: 13px;
+}
+
+.report-modal__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px 18px;
+  border-top: 1px solid var(--line);
+}
+
+.report-modal__spacer {
+  flex: 1;
+}
+
+/* The preview: the PDF's page in miniature. */
+.report-paper {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(31, 45, 92, 0.08);
+  overflow: hidden;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+}
+
+.report-paper__band {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: var(--navy);
+  color: #fff;
+}
+
+.report-paper__band > div {
+  display: grid;
+  gap: 2px;
+}
+
+.report-paper__brand {
+  font-size: 18px;
+}
+
+.report-paper__address,
+.report-paper__kind span {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+.report-paper__kind {
+  text-align: right;
+}
+
+.report-paper__page {
+  display: grid;
+  gap: 12px;
+  padding: 14px 18px 16px;
+}
+
+.report-paper__title {
+  color: var(--orange-strong);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.report-paper__totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.report-paper__box {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  background: #FAF5EB;
+}
+
+.report-paper__box span {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+
+.report-paper__box strong {
+  font-size: 15px;
+}
+
+.report-paper__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.report-paper__table th {
+  padding: 5px 6px;
+  background: #F0EBDE;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.report-paper__table td {
+  padding: 6px;
+  border-bottom: 1px solid #E8E2D4;
+  vertical-align: top;
+}
+
+.report-paper__table td:first-child {
+  white-space: nowrap;
+}
+
+.report-paper__table .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-paper__table tfoot th,
+.report-paper__table tfoot td {
+  padding-top: 8px;
+  background: none;
+  border-bottom: 0;
+  border-top: 1px solid var(--ink-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: none;
+  color: var(--ink);
+}
+
+.report-paper__sub {
+  display: block;
+  font-size: 10px;
+  color: var(--ink-muted);
+}
+
+.report-paper__empty {
+  padding: 12px 0;
+  color: var(--ink-muted);
+}
+
+.report-paper__foot {
+  font-size: 10px;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 560px) {
+  .report-paper__totals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-modal__foot .btn {
+    flex: 1 1 auto;
+  }
+
+  .report-modal__spacer {
+    display: none;
+  }
 }

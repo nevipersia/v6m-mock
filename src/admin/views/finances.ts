@@ -3,23 +3,29 @@
 // the money went, as a ranked table with bars; and what guests still owe for
 // the month. Cash in, cash out — a booking still owed for shows under Owed,
 // never as income. Only accounts that track expenses can open it.
+//
+// Download report opens a pop-up in the middle of the screen: pick a month or
+// a date range (and which side of the ledger), see a preview of the report,
+// then download it as a PDF or cancel.
 
 import { flag, html, type SafeHTML } from '../../core/dom.js';
-import { formatDate, parseDate, peso, pesoShort, plural, toISODate } from '../../core/format.js';
-import { CATEGORY_LABELS, financeRange, type FinancePoint } from '../../core/finance.js';
-import { dayOf, rankSlices, sumOf, within, type Bucket, type Slice } from '../../core/period.js';
-import { METHOD_LABELS, findBooking, isActive } from '../../core/rules.js';
-import type { ExpenseCategory, ISODate, PaymentMethod, PaymentType, State } from '../../core/types.js';
+import { demoNow } from '../../core/actions.js';
+import { formatDate, formatDateTime, parseDate, peso, pesoShort, plural, toISODate } from '../../core/format.js';
+import { CATEGORY_LABELS, financeRange, ledgerEntries, ledgerTotals, type FinancePoint, type LedgerEntry, type LedgerView } from '../../core/finance.js';
+import { rankSlices, sumOf, within, type Bucket, type Slice } from '../../core/period.js';
+import { METHOD_LABELS, isActive } from '../../core/rules.js';
+import type { ExpenseCategory, ISODate, State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { paymentPill } from '../components/badges.js';
 import { openDatePicker } from '../components/date-picker.js';
 import { icon } from '../components/icons.js';
+import { VIEW_WORDS, downloadLedgerPdf, type LedgerReport } from '../components/ledger-pdf.js';
 import { emptyState, pageHead } from '../layout.js';
 
 /** The month on screen, by its 1st; null follows the demo date. */
 let month: ISODate | null = null;
 /** Which side of the ledger is showing. */
-let view: 'all' | 'in' | 'out' = 'all';
+let view: LedgerView = 'all';
 /** A week of the chart the reader pinned, by its first day: the tables narrow to it. */
 let pinned: string | null = null;
 /** How many rows a table shows before Show all; the totals always count every row. */
@@ -51,8 +57,6 @@ const lastOf = (first: ISODate): ISODate => {
   return toISODate(new Date(date.getFullYear(), date.getMonth() + 1, 0));
 };
 const monthLabel = (first: ISODate): string => parseDate(first).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-const TYPE_LABELS: Record<PaymentType, string> = { deposit: 'Downpayment', balance: 'Balance', full: 'Paid in full' };
 
 // ---------- The chart ----------
 
@@ -110,57 +114,10 @@ function trendChart(points: FinancePoint[], weekly: boolean): SafeHTML {
 
 // ---------- The ledger ----------
 
-interface LedgerRow {
-  date: ISODate;
-  /** For ordering two entries on one day. */
-  at: string;
-  what: string;
-  sub: string;
-  category: string;
-  method: PaymentMethod;
-  amountIn: number;
-  amountOut: number;
-  /** What a click opens. */
-  action: 'open-booking' | 'edit-expense';
-  id: string;
-}
+/** What clicking a ledger line opens. */
+const openAction = (row: LedgerEntry): string => (row.kind === 'payment' ? 'open-booking' : 'edit-expense');
 
-function ledgerRows(state: State, from: ISODate, to: ISODate): LedgerRow[] {
-  const income: LedgerRow[] = state.payments
-    .filter((payment) => within(dayOf(payment.receivedAt), from, to))
-    .map((payment) => {
-      const booking = findBooking(state, payment.bookingId);
-      return {
-        date: dayOf(payment.receivedAt),
-        at: payment.receivedAt,
-        what: booking?.guestName ?? 'Removed booking',
-        sub: payment.bookingId,
-        category: `Booking · ${TYPE_LABELS[payment.type]}`,
-        method: payment.method,
-        amountIn: payment.amount,
-        amountOut: 0,
-        action: 'open-booking',
-        id: payment.bookingId,
-      };
-    });
-  const spending: LedgerRow[] = state.expenses
-    .filter((expense) => within(expense.date, from, to))
-    .map((expense) => ({
-      date: expense.date,
-      at: expense.createdAt,
-      what: expense.item,
-      sub: expense.vendor ?? '',
-      category: CATEGORY_LABELS[expense.category],
-      method: expense.method,
-      amountIn: 0,
-      amountOut: expense.amount,
-      action: 'edit-expense',
-      id: expense.id,
-    }));
-  return [...income, ...spending].sort((a, b) => (b.date === a.date ? b.at.localeCompare(a.at) : b.date.localeCompare(a.date)));
-}
-
-function ledger(state: State, rows: LedgerRow[], label: string): SafeHTML {
+function ledger(state: State, rows: LedgerEntry[], label: string): SafeHTML {
   const shown = rows.filter((row) => (view === 'in' ? row.amountIn : view === 'out' ? row.amountOut : true));
   const totalIn = sumOf(shown.map((row) => row.amountIn));
   const totalOut = sumOf(shown.map((row) => row.amountOut));
@@ -196,11 +153,11 @@ function ledger(state: State, rows: LedgerRow[], label: string): SafeHTML {
             </thead>
             <tbody>
               ${(expanded.ledger ? shown : shown.slice(0, LEDGER_SHOWN)).map((row) => html`
-                <tr class="data-table__row ${row.date === state.meta.asOf ? 'is-today' : ''}" data-action="${row.action}" data-id="${row.id}">
+                <tr class="data-table__row ${row.date === state.meta.asOf ? 'is-today' : ''}" data-action="${openAction(row)}" data-id="${row.id}">
                   <td>${row.date === state.meta.asOf ? html`<span class="data-table__today">Today</span>` : formatDate(row.date, 'monthDay')}</td>
                   <td>
-                    <button class="link-button" type="button" data-action="${row.action}" data-id="${row.id}">${row.what}</button>
-                    ${row.sub ? html`<span class="data-table__sub ${row.action === 'open-booking' ? 'mono' : ''}">${row.sub}</span>` : ''}
+                    <button class="link-button" type="button" data-action="${openAction(row)}" data-id="${row.id}">${row.what}</button>
+                    ${row.sub ? html`<span class="data-table__sub ${row.kind === 'payment' ? 'mono' : ''}">${row.sub}</span>` : ''}
                   </td>
                   <td class="muted">${row.category}</td>
                   <td class="muted">${METHOD_LABELS[row.method]}</td>
@@ -281,19 +238,226 @@ function owedTable(state: State, from: ISODate, to: ISODate, label: string): Saf
     </section>`;
 }
 
+// ---------- Download report ----------
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+interface ReportDraft {
+  step: 'pick' | 'preview';
+  mode: 'month' | 'range';
+  /** The year the month grid is showing. */
+  year: number;
+  /** The month picked, by its 1st. */
+  month: ISODate;
+  from: ISODate | '';
+  to: ISODate | '';
+  view: LedgerView;
+  error: string;
+}
+
+/** The pop-up while it is open; null when closed. */
+let report: ReportDraft | null = null;
+
+const VIEW_OPTIONS: { id: LedgerView; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'in', label: 'Income' },
+  { id: 'out', label: 'Expenses' },
+];
+
+/** "Oct 1 – Oct 6, 2026", or with both years when they differ. */
+function rangeLabel(from: ISODate, to: ISODate): string {
+  if (from === to) return formatDate(from, 'full');
+  const sameYear = from.slice(0, 4) === to.slice(0, 4);
+  return sameYear
+    ? `${formatDate(from, 'monthDay')} – ${formatDate(to, 'monthDay')}, ${from.slice(0, 4)}`
+    : `${formatDate(from, 'full')} – ${formatDate(to, 'full')}`;
+}
+
+/** The days the report covers and how it is named, or a reason it can't be made yet. */
+function reportPeriod(draft: ReportDraft): { from: ISODate; to: ISODate; label: string } | { problem: string } {
+  if (draft.mode === 'month') return { from: draft.month, to: lastOf(draft.month), label: monthLabel(draft.month) };
+  if (!draft.from || !draft.to) return { problem: 'Pick both the first and the last day.' };
+  if (draft.from > draft.to) return { problem: 'The first day has to come before the last day.' };
+  return { from: draft.from, to: draft.to, label: rangeLabel(draft.from, draft.to) };
+}
+
+function buildReport(ctx: DeskContext, draft: ReportDraft): LedgerReport | null {
+  const period = reportPeriod(draft);
+  if ('problem' in period) return null;
+  return {
+    label: period.label,
+    view: draft.view,
+    entries: ledgerEntries(ctx.state, period.from, period.to, draft.view),
+    generatedBy: ctx.staff.name,
+    generatedAt: formatDateTime(demoNow(ctx.state)),
+  };
+}
+
+const segmented = (label: string, action: string, key: string, options: { id: string; label: string }[], current: string): SafeHTML => html`
+  <div class="segmented" role="group" aria-label="${label}">
+    ${options.map((option) => html`
+      <button class="segmented__option ${current === option.id ? 'is-active' : ''}" type="button" data-action="${action}"
+        data-value="${option.id}" data-focus-key="${key}-${option.id}" aria-pressed="${flag(current === option.id)}">${option.label}</button>`)}
+  </div>`;
+
+function pickStep(ctx: DeskContext, draft: ReportDraft): SafeHTML {
+  const picked = parseDate(draft.month);
+  const found = buildReport(ctx, draft);
+  return html`
+    <div class="report-modal__section">
+      <span class="field__label">Period</span>
+      ${segmented('Report on', 'report-mode', 'mode', [{ id: 'month', label: 'Month' }, { id: 'range', label: 'Date range' }], draft.mode)}
+    </div>
+
+    ${draft.mode === 'month' ? html`
+      <div class="report-modal__section report-modal__months">
+        <div class="picker__year">
+          <button class="picker__icon" type="button" data-action="report-year" data-step="-1" data-focus-key="year-back" aria-label="Previous year">${icon('chevronLeft')}</button>
+          <span class="picker__year-label" aria-live="polite">${draft.year}</span>
+          <button class="picker__icon" type="button" data-action="report-year" data-step="1" data-focus-key="year-on" aria-label="Next year">${icon('chevronRight')}</button>
+        </div>
+        <div class="picker__months" role="group" aria-label="Months of ${draft.year}">
+          ${MONTHS.map((name, index) => {
+            const isPicked = picked.getFullYear() === draft.year && picked.getMonth() === index;
+            return html`
+              <button class="picker__month ${isPicked ? 'is-picked' : ''}" type="button" data-action="report-month" data-month="${index}"
+                data-focus-key="month-${index}" aria-pressed="${flag(isPicked)}"
+                aria-label="${new Date(draft.year, index, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}">${name}</button>`;
+          })}
+        </div>
+      </div>` : html`
+      <div class="form-grid report-modal__section">
+        <label class="field">
+          <span class="field__label">First day</span>
+          <input class="input" name="reportFrom" data-input="report" type="date" value="${draft.from}" max="${draft.to || ctx.state.meta.asOf}">
+        </label>
+        <label class="field">
+          <span class="field__label">Last day</span>
+          <input class="input" name="reportTo" data-input="report" type="date" value="${draft.to}" min="${draft.from}">
+        </label>
+      </div>`}
+
+    <div class="report-modal__section">
+      <span class="field__label">Show</span>
+      ${segmented('Show in the report', 'report-view', 'view', VIEW_OPTIONS, draft.view)}
+    </div>
+
+    <p class="small muted">
+      ${found ? `${found.label} · ${plural(found.entries.length, 'entry', 'entries')}` : 'Pick the days to report on.'}
+    </p>`;
+}
+
+/** The report as it will print: a paper-like copy of the PDF's page. */
+function previewStep(found: LedgerReport): SafeHTML {
+  const { income, spend, profit } = ledgerTotals(found.entries);
+  const boxes: [string, number, string][] = found.view === 'in'
+    ? [['Income', income, 'in']]
+    : found.view === 'out'
+      ? [['Expenses', spend, 'out']]
+      : [['Income', income, 'in'], ['Expenses', spend, 'out'], [profit < 0 ? 'Loss' : 'Profit', Math.abs(profit), profit < 0 ? 'owed' : '']];
+  return html`
+    <p class="small muted report-modal__line">
+      ${found.label} · ${VIEW_WORDS[found.view]} · ${plural(found.entries.length, 'entry', 'entries')}
+      <button class="link-button" type="button" data-action="report-back" data-focus-key="change">Change</button>
+    </p>
+    <div class="report-paper" role="document" aria-label="Preview of the ledger report">
+      <div class="report-paper__band">
+        <div>
+          <strong class="report-paper__brand">V6M RESORT</strong>
+          <span class="report-paper__address">Purok 3, Brgy. Munting Pulo, Lipa City</span>
+        </div>
+        <div class="report-paper__kind">
+          <strong>LEDGER REPORT</strong>
+          <span>${VIEW_WORDS[found.view]}</span>
+        </div>
+      </div>
+      <div class="report-paper__page">
+        <p class="report-paper__title">${found.label.toUpperCase()}</p>
+        <div class="report-paper__totals">
+          ${boxes.map(([label, amount, tone]) => html`
+            <div class="report-paper__box">
+              <span>${label.toUpperCase()}</span>
+              <strong class="${tone ? `fin-${tone}` : ''}">${peso(amount)}</strong>
+            </div>`)}
+        </div>
+        ${found.entries.length ? html`
+          <div class="table-scroll">
+            <table class="report-paper__table">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th><th scope="col">What</th><th scope="col">Category</th><th scope="col">Method</th>
+                  ${found.view === 'out' ? '' : html`<th scope="col" class="num">In</th>`}
+                  ${found.view === 'in' ? '' : html`<th scope="col" class="num">Out</th>`}
+                </tr>
+              </thead>
+              <tbody>
+                ${found.entries.map((entry) => html`
+                  <tr>
+                    <td class="muted">${formatDate(entry.date, 'monthDay')}</td>
+                    <td>${entry.what}${entry.sub ? html`<span class="report-paper__sub">${entry.sub}</span>` : ''}</td>
+                    <td class="muted">${entry.category}</td>
+                    <td class="muted">${METHOD_LABELS[entry.method]}</td>
+                    ${found.view === 'out' ? '' : html`<td class="num fin-in">${entry.amountIn ? peso(entry.amountIn) : ''}</td>`}
+                    ${found.view === 'in' ? '' : html`<td class="num fin-out">${entry.amountOut ? peso(entry.amountOut) : ''}</td>`}
+                  </tr>`)}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row" colspan="4">Total for ${found.label}</th>
+                  ${found.view === 'out' ? '' : html`<td class="num fin-in">${peso(income)}</td>`}
+                  ${found.view === 'in' ? '' : html`<td class="num fin-out">${peso(spend)}</td>`}
+                </tr>
+              </tfoot>
+            </table>
+          </div>` : html`<p class="report-paper__empty">Nothing recorded for ${found.label}.</p>`}
+        <p class="report-paper__foot">Generated ${found.generatedAt} by ${found.generatedBy} · V6M Desk · mock document</p>
+      </div>
+    </div>`;
+}
+
+function reportModal(ctx: DeskContext, draft: ReportDraft): SafeHTML {
+  const found = draft.step === 'preview' ? buildReport(ctx, draft) : null;
+  const previewing = !!found;
+  return html`
+    <dialog class="report-modal" data-modal data-cancel="report-cancel" aria-labelledby="report-title">
+      <header class="report-modal__head">
+        <div>
+          <p class="report-modal__step">Step ${previewing ? 2 : 1} of 2 · ${previewing ? 'Preview' : 'Choose the period'}</p>
+          <h2 class="picker__title" id="report-title">Ledger report</h2>
+        </div>
+        <button class="picker__icon" type="button" data-action="report-cancel" data-focus-key="report-close" aria-label="Close">${icon('x')}</button>
+      </header>
+
+      <div class="report-modal__main">
+        ${found ? previewStep(found) : pickStep(ctx, draft)}
+        <p class="form-error" role="alert">${draft.error}</p>
+      </div>
+
+      <footer class="report-modal__foot">
+        ${previewing ? html`
+          <button class="btn btn--secondary" type="button" data-action="report-back" data-focus-key="back">${icon('chevronLeft')} Back</button>` : ''}
+        <span class="report-modal__spacer"></span>
+        <button class="btn btn--quiet" type="button" data-action="report-cancel" data-focus-key="cancel">Cancel</button>
+        ${previewing
+          ? html`<button class="btn btn--primary" type="button" data-action="report-download" data-focus-key="download">${icon('download')} Download PDF</button>`
+          : html`<button class="btn btn--primary" type="button" data-action="report-preview" data-focus-key="preview">Preview</button>`}
+      </footer>
+    </dialog>`;
+}
+
 // ---------- The page ----------
 
 export function render(ctx: DeskContext): SafeHTML {
   const { state } = ctx;
   const first = month ?? firstOf(state.meta.asOf);
   const last = lastOf(first);
-  const report = financeRange(state, first, last);
-  const week = report.points.find((point) => point.from === pinned) as Bucket | undefined;
+  const trend = financeRange(state, first, last);
+  const week = trend.points.find((point) => point.from === pinned) as Bucket | undefined;
   // A pinned week narrows the totals and the tables; the chart keeps the month.
   const from = week?.from ?? first;
   const to = week?.to ?? last;
   const label = week ? `${formatDate(week.from, 'monthDay')} – ${formatDate(week.to, 'monthDay')}` : monthLabel(first);
-  const rows = ledgerRows(state, from, to);
+  const rows = ledgerEntries(state, from, to);
   const income = sumOf(rows.map((row) => row.amountIn));
   const spend = sumOf(rows.map((row) => row.amountOut));
   const profit = income - spend;
@@ -306,6 +470,7 @@ export function render(ctx: DeskContext): SafeHTML {
     ${pageHead({
       title: 'Finances',
       actions: html`
+        <button class="btn btn--secondary" type="button" data-action="report-open" aria-haspopup="dialog">${icon('download')} Download report</button>
         <button class="btn btn--primary" type="button" data-action="add-expense">${icon('plus')} Record an expense</button>`,
     })}
 
@@ -344,10 +509,10 @@ export function render(ctx: DeskContext): SafeHTML {
 
       <section class="panel fin-chart" data-part="In and out">
         <header class="panel__head">
-          <h2 class="panel__title">In and out, ${report.weekly ? 'week by week' : 'day by day'}</h2>
+          <h2 class="panel__title">In and out, ${trend.weekly ? 'week by week' : 'day by day'}</h2>
           ${trendLegend(MONEY_SERIES)}
         </header>
-        ${trendChart(report.points, report.weekly)}
+        ${trendChart(trend.points, trend.weekly)}
       </section>
 
       ${ledger(state, rows, label)}
@@ -356,8 +521,22 @@ export function render(ctx: DeskContext): SafeHTML {
         ${whereItWent(categories, label)}
         ${owedTable(state, from, to, label)}
       </div>
-    </div>`;
+    </div>
+
+    ${report ? reportModal(ctx, report) : ''}`;
 }
+
+export const inputs: HandlerMap = {
+  // The range's two date fields.
+  report: ({ el, ctx }) => {
+    if (!report) return;
+    const field = el as HTMLInputElement;
+    if (field.name === 'reportFrom') report.from = field.value;
+    if (field.name === 'reportTo') report.to = field.value;
+    report.error = '';
+    ctx.redraw();
+  },
+};
 
 export const hovers: HandlerMap = {
   // Arriving shows that pair's figures; leaving puts the resting line back.
@@ -423,6 +602,79 @@ export const actions: HandlerMap = {
     expanded.ledger = false;
     expanded.owed = false;
     ctx.redraw();
+  },
+
+  'report-open': ({ ctx }) => {
+    // Starts from what the page shows: its month, its side of the ledger.
+    const first = month ?? firstOf(ctx.state.meta.asOf);
+    const today = ctx.state.meta.asOf;
+    const last = lastOf(first);
+    report = {
+      step: 'pick', mode: 'month', year: parseDate(first).getFullYear(), month: first,
+      from: first, to: last < today ? last : today, view, error: '',
+    };
+    ctx.redraw();
+  },
+
+  'report-cancel': ({ ctx }) => {
+    report = null;
+    ctx.redraw();
+  },
+
+  'report-mode': ({ el, ctx }) => {
+    if (!report) return;
+    report.mode = el.dataset.value === 'range' ? 'range' : 'month';
+    report.error = '';
+    ctx.redraw();
+  },
+
+  'report-year': ({ el, ctx }) => {
+    if (!report) return;
+    report.year += Number(el.dataset.step) || 0;
+    ctx.redraw();
+  },
+
+  'report-month': ({ el, ctx }) => {
+    if (!report) return;
+    report.month = toISODate(new Date(report.year, Number(el.dataset.month) || 0, 1));
+    ctx.redraw();
+  },
+
+  'report-view': ({ el, ctx }) => {
+    if (!report) return;
+    const next = el.dataset.value;
+    report.view = next === 'in' || next === 'out' ? next : 'all';
+    ctx.redraw();
+  },
+
+  'report-preview': ({ ctx }) => {
+    if (!report) return;
+    const period = reportPeriod(report);
+    if ('problem' in period) {
+      report.error = period.problem;
+    } else {
+      report.step = 'preview';
+      report.error = '';
+    }
+    ctx.redraw();
+  },
+
+  'report-back': ({ ctx }) => {
+    if (!report) return;
+    report.step = 'pick';
+    ctx.redraw();
+  },
+
+  'report-download': ({ ctx }) => {
+    if (!report) return;
+    const found = buildReport(ctx, report);
+    const period = reportPeriod(report);
+    if (!found || 'problem' in period) return;
+    const name = report.mode === 'month' ? period.from.slice(0, 7) : `${period.from}-to-${period.to}`;
+    downloadLedgerPdf(found, `v6m-ledger-${name}${report.view === 'all' ? '' : report.view === 'in' ? '-income' : '-expenses'}.pdf`);
+    report = null;
+    ctx.redraw();
+    ctx.toast(`Ledger report for ${found.label} downloaded`, 'info');
   },
 
   'add-expense': ({ ctx }) => ctx.newExpense(),

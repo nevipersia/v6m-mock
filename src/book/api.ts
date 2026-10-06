@@ -8,14 +8,14 @@
 // checks read). See supabase/functions/booking-link.
 
 import {
-  bookingLinkStage, payByQr, useBookingLink,
-  type BookingLinkResult, type BookingLinkStage, type GuestBooking, type QrPaymentResult,
+  bookingLinkStage, submitPaymentCheck, useBookingLink,
+  type BookingLinkResult, type BookingLinkStage, type GuestBooking, type PaymentCheckResult, type ReceiptInput,
 } from '../core/actions.js';
 import { createStaticBackend } from '../core/backend.js';
 import { isMock } from '../core/config.js';
 import { loadStore, update, useBackend } from '../core/store.js';
 import { supabaseClient } from '../core/supabase-client.js';
-import type { Booking, Payment, State } from '../core/types.js';
+import type { Booking, PaymentCheck, State } from '../core/types.js';
 
 export interface OpenResult {
   state: State;
@@ -34,10 +34,10 @@ async function call<T>(body: Record<string, unknown>): Promise<T> {
 }
 
 /** Keeps the page's copy of the data in step with what the server saved. */
-function remember(booking: Booking, payment?: Payment): void {
+function remember(booking: Booking, check?: PaymentCheck): void {
   update((state) => {
     state.bookings = [...state.bookings.filter((item) => item.id !== booking.id), booking];
-    if (payment) state.payments.push(payment);
+    if (check) state.paymentChecks.push(check);
   });
 }
 
@@ -59,9 +59,10 @@ export async function submitBooking(code: string, input: GuestBooking): Promise<
   return result;
 }
 
-export async function payDownpayment(code: string, bookingId: string, reference: string, senderName: string): Promise<QrPaymentResult> {
-  if (isMock) return payByQr(bookingId, reference, null, senderName);
-  const result = await call<QrPaymentResult>({ action: 'pay', code, bookingId, reference, senderName });
-  if (result.error === undefined) remember(result.booking, result.payment);
+/** Sends the guest's GCash receipt for the front desk to check. */
+export async function sendReceipt(code: string, bookingId: string, receipt: ReceiptInput): Promise<PaymentCheckResult> {
+  if (isMock) return submitPaymentCheck(bookingId, receipt);
+  const result = await call<PaymentCheckResult>({ action: 'pay', code, bookingId, ...receipt });
+  if (result.error === undefined) remember(result.booking, result.check);
   return result;
 }
