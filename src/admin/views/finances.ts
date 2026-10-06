@@ -14,7 +14,7 @@ import { formatDate, formatDateTime, parseDate, peso, pesoShort, plural, toISODa
 import { CATEGORY_LABELS, financeRange, ledgerEntries, ledgerTotals, type FinancePoint, type LedgerEntry, type LedgerView } from '../../core/finance.js';
 import { rankSlices, sumOf, within, type Bucket, type Slice } from '../../core/period.js';
 import { METHOD_LABELS, isActive } from '../../core/rules.js';
-import type { ExpenseCategory, ISODate, State } from '../../core/types.js';
+import type { Booking, ExpenseCategory, ISODate, State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { paymentPill } from '../components/badges.js';
 import { openDatePicker } from '../components/date-picker.js';
@@ -28,25 +28,32 @@ let month: ISODate | null = null;
 let view: LedgerView = 'all';
 /** A week of the chart the reader pinned, by its first day: the tables narrow to it. */
 let pinned: string | null = null;
-/** How many rows a table shows before Show all; the totals always count every row. */
+/** How many rows a table shows on the page; the totals always count every row. */
 const LEDGER_SHOWN = 10;
-const OWED_SHOWN = 8;
-/** The tables opened out with Show all. Folded again on a new month or week. */
-const expanded = { ledger: false, owed: false };
+const OWED_SHOWN = 5;
 
-/** The last row of a capped table: how many more there are, and the way to see them. */
-function showAll(table: keyof typeof expanded, total: number, cap: number, columns: number): SafeHTML | '' {
+type FullTable = 'ledger' | 'owed';
+/** The table opened in full in a pop-up by Show all, if any. */
+let full: FullTable | null = null;
+
+/** The last row of a capped table: how many more there are, and the button that shows them all. */
+function showAll(table: FullTable, total: number, cap: number, columns: number): SafeHTML | '' {
   if (total <= cap) return '';
-  const open = expanded[table];
   return html`
     <tr class="fin-more">
       <td colspan="${columns}">
-        <button class="btn btn--quiet btn--sm" type="button" data-action="show-all" data-table="${table}" aria-expanded="${flag(open)}">
-          ${open ? html`${icon('chevronUp')} Show fewer` : html`${icon('chevronDown')} Show all ${total} · ${total - cap} more`}
+        <button class="btn btn--quiet btn--sm" type="button" data-action="show-all" data-table="${table}" aria-haspopup="dialog">
+          Show all ${total} · ${total - cap} more
         </button>
       </td>
     </tr>`;
 }
+
+/**
+ * A row's way in. In the pop-up it goes through full-open, which closes the
+ * pop-up first: the booking or expense panel would otherwise open behind it.
+ */
+const rowAction = (action: string, inPopup: boolean): string => (inPopup ? 'full-open' : action);
 
 /** Which way the last step went, for the slide. */
 let motion: 'back' | 'on' | 'swap' = 'swap';
@@ -117,10 +124,59 @@ function trendChart(points: FinancePoint[], weekly: boolean): SafeHTML {
 /** What clicking a ledger line opens. */
 const openAction = (row: LedgerEntry): string => (row.kind === 'payment' ? 'open-booking' : 'edit-expense');
 
-function ledger(state: State, rows: LedgerEntry[], label: string): SafeHTML {
-  const shown = rows.filter((row) => (view === 'in' ? row.amountIn : view === 'out' ? row.amountOut : true));
+/** The ledger's rows as the reader filtered them (All, Income or Expenses). */
+const ledgerShown = (rows: LedgerEntry[]): LedgerEntry[] =>
+  rows.filter((row) => (view === 'in' ? row.amountIn : view === 'out' ? row.amountOut : true));
+
+function ledgerTable(state: State, shown: LedgerEntry[], label: string, inPopup: boolean): SafeHTML {
   const totalIn = sumOf(shown.map((row) => row.amountIn));
   const totalOut = sumOf(shown.map((row) => row.amountOut));
+  const rows = inPopup ? shown : shown.slice(0, LEDGER_SHOWN);
+  return html`
+    <table class="data-table fin-table">
+      <thead>
+        <tr>
+          <th scope="col">Date</th>
+          <th scope="col">What</th>
+          <th scope="col">Category</th>
+          <th scope="col">Method</th>
+          <th scope="col" class="num">In</th>
+          <th scope="col" class="num">Out</th>
+          <th scope="col" class="data-table__go"><span class="sr-only">Open</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((row) => {
+          const action = rowAction(openAction(row), inPopup);
+          return html`
+          <tr class="data-table__row ${row.date === state.meta.asOf ? 'is-today' : ''}" data-action="${action}" data-open="${openAction(row)}" data-id="${row.id}">
+            <td>${row.date === state.meta.asOf ? html`<span class="data-table__today">Today</span>` : formatDate(row.date, 'monthDay')}</td>
+            <td>
+              <button class="link-button" type="button" data-action="${action}" data-open="${openAction(row)}" data-id="${row.id}">${row.what}</button>
+              ${row.sub ? html`<span class="data-table__sub ${row.kind === 'payment' ? 'mono' : ''}">${row.sub}</span>` : ''}
+            </td>
+            <td class="muted">${row.category}</td>
+            <td class="muted">${METHOD_LABELS[row.method]}</td>
+            <td class="num fin-in">${row.amountIn ? peso(row.amountIn) : ''}</td>
+            <td class="num fin-out">${row.amountOut ? peso(row.amountOut) : ''}</td>
+            <td class="data-table__go" aria-hidden="true">${icon('chevronRight')}</td>
+          </tr>`;
+        })}
+        ${inPopup ? '' : showAll('ledger', shown.length, LEDGER_SHOWN, 7)}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row" colspan="4">Total for ${label}</th>
+          <td class="num fin-in">${view === 'out' ? '' : peso(totalIn)}</td>
+          <td class="num fin-out">${view === 'in' ? '' : peso(totalOut)}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
+function ledger(state: State, rows: LedgerEntry[], label: string): SafeHTML {
+  const shown = ledgerShown(rows);
   const views: { id: typeof view; label: string }[] = [
     { id: 'all', label: 'All' },
     { id: 'in', label: 'Income' },
@@ -137,46 +193,9 @@ function ledger(state: State, rows: LedgerEntry[], label: string): SafeHTML {
               data-action="ledger-view" data-view="${option.id}" aria-pressed="${flag(view === option.id)}">${option.label}</button>`)}
         </div>
       </header>
-      ${shown.length ? html`
-        <div class="table-scroll">
-          <table class="data-table fin-table">
-            <thead>
-              <tr>
-                <th scope="col">Date</th>
-                <th scope="col">What</th>
-                <th scope="col">Category</th>
-                <th scope="col">Method</th>
-                <th scope="col" class="num">In</th>
-                <th scope="col" class="num">Out</th>
-                <th scope="col" class="data-table__go"><span class="sr-only">Open</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              ${(expanded.ledger ? shown : shown.slice(0, LEDGER_SHOWN)).map((row) => html`
-                <tr class="data-table__row ${row.date === state.meta.asOf ? 'is-today' : ''}" data-action="${openAction(row)}" data-id="${row.id}">
-                  <td>${row.date === state.meta.asOf ? html`<span class="data-table__today">Today</span>` : formatDate(row.date, 'monthDay')}</td>
-                  <td>
-                    <button class="link-button" type="button" data-action="${openAction(row)}" data-id="${row.id}">${row.what}</button>
-                    ${row.sub ? html`<span class="data-table__sub ${row.kind === 'payment' ? 'mono' : ''}">${row.sub}</span>` : ''}
-                  </td>
-                  <td class="muted">${row.category}</td>
-                  <td class="muted">${METHOD_LABELS[row.method]}</td>
-                  <td class="num fin-in">${row.amountIn ? peso(row.amountIn) : ''}</td>
-                  <td class="num fin-out">${row.amountOut ? peso(row.amountOut) : ''}</td>
-                  <td class="data-table__go" aria-hidden="true">${icon('chevronRight')}</td>
-                </tr>`)}
-              ${showAll('ledger', shown.length, LEDGER_SHOWN, 7)}
-            </tbody>
-            <tfoot>
-              <tr>
-                <th scope="row" colspan="4">Total for ${label}</th>
-                <td class="num fin-in">${view === 'out' ? '' : peso(totalIn)}</td>
-                <td class="num fin-out">${view === 'in' ? '' : peso(totalOut)}</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>` : html`<div class="fin-empty">${emptyState('Nothing recorded', `No ${view === 'in' ? 'income' : view === 'out' ? 'expenses' : 'money in or out'} for ${label}.`)}</div>`}
+      ${shown.length
+        ? html`<div class="table-scroll">${ledgerTable(state, shown, label, false)}</div>`
+        : html`<div class="fin-empty">${emptyState('Nothing recorded', `No ${view === 'in' ? 'income' : view === 'out' ? 'expenses' : 'money in or out'} for ${label}.`)}</div>`}
     </section>`;
 }
 
@@ -204,38 +223,74 @@ function whereItWent(slices: Slice[], label: string): SafeHTML {
     </section>`;
 }
 
-function owedTable(state: State, from: ISODate, to: ISODate, label: string): SafeHTML {
-  const owing = state.bookings
-    .filter((b) => within(b.date, from, to) && isActive(b) && b.balance > 0)
-    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+const owedBookings = (state: State, from: ISODate, to: ISODate) => state.bookings
+  .filter((b) => within(b.date, from, to) && isActive(b) && b.balance > 0)
+  .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+
+function owedRows(state: State, owing: Booking[], inPopup: boolean): SafeHTML {
   const total = sumOf(owing.map((b) => b.balance));
+  const rows = inPopup ? owing : owing.slice(0, OWED_SHOWN);
+  const action = rowAction('open-booking', inPopup);
+  return html`
+    <table class="data-table fin-table fin-table--compact">
+      <thead>
+        <tr><th scope="col">Guest</th><th scope="col">Date</th><th scope="col" class="num">Owed</th></tr>
+      </thead>
+      <tbody>
+        ${rows.map((b) => html`
+          <tr class="data-table__row ${b.date === state.meta.asOf ? 'is-today' : ''}" data-action="${action}" data-open="open-booking" data-id="${b.id}">
+            <td>
+              <button class="link-button" type="button" data-action="${action}" data-open="open-booking" data-id="${b.id}">${b.guestName}</button>
+              <span class="data-table__sub">${paymentPill(b)}</span>
+            </td>
+            <td>${b.date === state.meta.asOf ? html`<span class="data-table__today">Today</span>` : formatDate(b.date, 'monthDay')}</td>
+            <td class="num fin-owed">${peso(b.balance)}</td>
+          </tr>`)}
+        ${inPopup ? '' : showAll('owed', owing.length, OWED_SHOWN, 3)}
+      </tbody>
+      <tfoot>
+        <tr><th scope="row" colspan="2">Total owed</th><td class="num fin-owed">${peso(total)}</td></tr>
+      </tfoot>
+    </table>`;
+}
+
+function owedTable(state: State, from: ISODate, to: ISODate, label: string): SafeHTML {
+  const owing = owedBookings(state, from, to);
   return html`
     <section class="panel panel--flush fin-side" data-part="Still owed by guests">
       <header class="fin-ledger__head">
         <h2 class="panel__title">Still owed by guests <span class="panel__count">${owing.length}</span></h2>
       </header>
-      ${owing.length ? html`
-        <table class="data-table fin-table fin-table--compact">
-          <thead>
-            <tr><th scope="col">Guest</th><th scope="col">Date</th><th scope="col" class="num">Owed</th></tr>
-          </thead>
-          <tbody>
-            ${(expanded.owed ? owing : owing.slice(0, OWED_SHOWN)).map((b) => html`
-              <tr class="data-table__row ${b.date === state.meta.asOf ? 'is-today' : ''}" data-action="open-booking" data-id="${b.id}">
-                <td>
-                  <button class="link-button" type="button" data-action="open-booking" data-id="${b.id}">${b.guestName}</button>
-                  <span class="data-table__sub">${paymentPill(b)}</span>
-                </td>
-                <td>${b.date === state.meta.asOf ? html`<span class="data-table__today">Today</span>` : formatDate(b.date, 'monthDay')}</td>
-                <td class="num fin-owed">${peso(b.balance)}</td>
-              </tr>`)}
-            ${showAll('owed', owing.length, OWED_SHOWN, 3)}
-          </tbody>
-          <tfoot>
-            <tr><th scope="row" colspan="2">Total owed</th><td class="num fin-owed">${peso(total)}</td></tr>
-          </tfoot>
-        </table>` : html`<div class="fin-empty">${emptyState('Nothing owed', `Every booking in ${label} is paid.`)}</div>`}
+      ${owing.length
+        ? owedRows(state, owing, false)
+        : html`<div class="fin-empty">${emptyState('Nothing owed', `Every booking in ${label} is paid.`)}</div>`}
     </section>`;
+}
+
+/** Show all: the whole table in a pop-up in the middle, like the report's. */
+function fullModal(state: State, table: FullTable, rows: LedgerEntry[], from: ISODate, to: ISODate, label: string): SafeHTML {
+  const ledgerRows = ledgerShown(rows);
+  const owing = owedBookings(state, from, to);
+  const VIEW_NAMES = { all: '', in: ' · income', out: ' · expenses' } as const;
+  const title = table === 'ledger' ? 'Ledger' : 'Still owed by guests';
+  const count = table === 'ledger' ? ledgerRows.length : owing.length;
+  return html`
+    <dialog class="report-modal table-modal" data-modal data-cancel="full-close" aria-labelledby="full-title">
+      <header class="report-modal__head">
+        <div>
+          <p class="report-modal__step">${label}${table === 'ledger' ? VIEW_NAMES[view] : ''} · ${plural(count, table === 'ledger' ? 'entry' : 'booking', table === 'ledger' ? 'entries' : 'bookings')}</p>
+          <h2 class="picker__title" id="full-title">${title}</h2>
+        </div>
+        <button class="picker__icon" type="button" data-action="full-close" data-focus-key="full-x" aria-label="Close">${icon('x')}</button>
+      </header>
+      <div class="table-modal__main">
+        ${table === 'ledger' ? ledgerTable(state, ledgerRows, label, true) : owedRows(state, owing, true)}
+      </div>
+      <footer class="report-modal__foot">
+        <span class="report-modal__spacer"></span>
+        <button class="btn btn--secondary" type="button" data-action="full-close" data-focus-key="full-close">Close</button>
+      </footer>
+    </dialog>`;
 }
 
 // ---------- Download report ----------
@@ -523,7 +578,8 @@ export function render(ctx: DeskContext): SafeHTML {
       </div>
     </div>
 
-    ${report ? reportModal(ctx, report) : ''}`;
+    ${report ? reportModal(ctx, report) : ''}
+    ${full ? fullModal(state, full, rows, from, to, label) : ''}`;
 }
 
 export const inputs: HandlerMap = {
@@ -556,8 +612,6 @@ export const actions: HandlerMap = {
     month = toISODate(new Date(date.getFullYear(), date.getMonth() + step, 1));
     pinned = null;
     motion = step < 0 ? 'back' : 'on';
-    expanded.ledger = false;
-    expanded.owed = false;
     ctx.redraw();
   },
 
@@ -572,8 +626,6 @@ export const actions: HandlerMap = {
         month = firstOf(value);
         pinned = null;
         motion = 'swap';
-        expanded.ledger = false;
-        expanded.owed = false;
         ctx.redraw();
       },
     });
@@ -582,25 +634,36 @@ export const actions: HandlerMap = {
   // Clicking a week narrows everything to it; clicking it again lets go.
   'pin-week': ({ el, ctx }) => {
     pinned = pinned === el.dataset.point ? null : el.dataset.point ?? null;
-    expanded.ledger = false;
-    expanded.owed = false;
     motion = 'swap';
     ctx.redraw();
   },
 
   'show-all': ({ el, ctx }) => {
-    const table = el.dataset.table === 'owed' ? 'owed' : 'ledger';
-    expanded[table] = !expanded[table];
+    full = el.dataset.table === 'owed' ? 'owed' : 'ledger';
     ctx.redraw();
-    // Folding a long table back up should not leave the reader far below it.
-    if (!expanded[table]) document.querySelector(`[data-part="${table === 'owed' ? 'Still owed by guests' : 'Ledger'}"]`)?.scrollIntoView({ block: 'nearest' });
+  },
+
+  'full-close': ({ ctx }) => {
+    full = null;
+    ctx.redraw();
+  },
+
+  // A row in the pop-up: close it, then open the booking or expense.
+  'full-open': ({ el, ctx }) => {
+    full = null;
+    ctx.redraw();
+    const id = el.dataset.id ?? '';
+    if (el.dataset.open === 'edit-expense') {
+      const expense = ctx.state.expenses.find((item) => item.id === id);
+      if (expense) ctx.newExpense(expense);
+    } else {
+      ctx.openBooking(id);
+    }
   },
 
   'ledger-view': ({ el, ctx }) => {
     const next = el.dataset.view;
     view = next === 'in' || next === 'out' ? next : 'all';
-    expanded.ledger = false;
-    expanded.owed = false;
     ctx.redraw();
   },
 

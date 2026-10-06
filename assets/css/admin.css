@@ -1483,8 +1483,24 @@ button.cal-pool:hover {
  * Phones: an eight-column table is a long sideways scroll, so bookings become
  * a day-by-day list of short rows.
  */
+/* The list's columns keep their widths whatever rows are showing, so Show all
+   adds rows below without the columns jumping to fit the new ones. */
+.bookings-table .data-table {
+  table-layout: fixed;
+}
+
+.bookings-table th:nth-child(1) { width: 20%; }
+.bookings-table th:nth-child(2) { width: 18%; }
+.bookings-table th:nth-child(3) { width: 13%; }
+.bookings-table th:nth-child(4) { width: 14%; }
+.bookings-table th:nth-child(5) { width: 10%; }
+.bookings-table th:nth-child(6) { width: 10%; }
+.bookings-table th:nth-child(7) { width: 15%; }
+.bookings-table th:nth-child(8) { width: 44px; }
+
 @media (max-width: 640px) {
-  .bookings-table {
+  .bookings-table,
+  .list-fold {
     display: none;
   }
 
@@ -3541,6 +3557,75 @@ dialog.is-entering::backdrop {
   border-radius: var(--radius-pill);
 }
 
+/*
+ * With the whole list open, a small round button stays at the bottom of the
+ * window (sticky within the list, so it settles under the table at the end).
+ * Pointing at it opens it out to say what it does; Esc does the same.
+ */
+.list-fold {
+  position: sticky;
+  bottom: 20px;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  height: 0;
+  margin-top: 64px;
+  pointer-events: none;
+}
+
+.list-fold__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  height: 44px;
+  min-width: 44px;
+  margin-top: -54px;
+  padding: 0 13px;
+  background: var(--navy);
+  color: #fff;
+  border: 0;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 8px 20px rgba(31, 45, 92, 0.25);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  animation: rise 0.24s var(--ease-out);
+}
+
+.list-fold__button .icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.list-fold__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  /* Unhurried: the label slides out, then fades in once there is room for it. */
+  transition: max-width 0.7s var(--ease-out), opacity 0.45s ease 0.2s, margin 0.7s var(--ease-out);
+}
+
+.list-fold__button:hover .list-fold__label,
+.list-fold__button:focus-visible .list-fold__label {
+  max-width: 160px;
+  margin-left: 8px;
+  opacity: 1;
+}
+
+.list-fold__label kbd {
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 5px;
+  font: inherit;
+  font-size: 11px;
+}
+
 /* ---------- Finances: the month's books ---------- */
 
 .fin-body {
@@ -4230,6 +4315,43 @@ dialog.is-entering::backdrop {
 
 .report-modal__spacer {
   flex: 1;
+}
+
+/* Finances' Show all: the whole table in the same pop-up, its head kept in view. */
+.table-modal {
+  width: min(880px, calc(100vw - 32px));
+}
+
+/* The owed table has three columns: a narrower card. */
+.table-modal:has(.fin-table--compact) {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.table-modal__main {
+  min-height: 0;
+  overflow: auto;
+}
+
+.table-modal__main .data-table {
+  min-width: 0;
+}
+
+.table-modal__main thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+/* The totals stay in view at the bottom while the rows scroll. */
+.table-modal__main tfoot th,
+.table-modal__main tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 var(--line);
 }
 
 /* The preview: the PDF's page in miniature. */

@@ -19,6 +19,26 @@ const LIST_SHOWN = 15;
 /** Opened out with Show all; folds again whenever the days on screen change. */
 let listExpanded = false;
 let listKey = '';
+/** The desk's redraw, kept from the last render for the Esc key. */
+let redrawList: (() => void) | null = null;
+
+/** Folds the whole list back to its first rows and returns to the top of the page. */
+function foldList(): void {
+  listExpanded = false;
+  redrawList?.();
+  window.scrollTo({ top: 0 });
+}
+
+// Esc folds an opened list, unless Esc is busy closing something else first
+// (a pop-up, the booking panel, the notifications) or someone is typing.
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || mode !== 'list' || !listExpanded || !document.querySelector('.list-fold')) return;
+  const { target } = event;
+  if (target instanceof Element && target.closest('input, textarea, select, dialog')) return;
+  if (document.querySelector('dialog[open], .notif__panel')) return;
+  if (document.body.classList.contains('has-drawer')) return;
+  foldList();
+});
 
 function matches(booking: Booking): boolean {
   const words = query.trim().toLowerCase();
@@ -85,8 +105,14 @@ function mobileList(state: State, results: Booking[]): SafeHTML {
 }
 
 type Mode = 'calendar' | 'list';
-/** Which side of the page is showing. Kept while the app is open. */
+/** Which side of the page is showing. List lasts only while staff stay on Bookings. */
 let mode: Mode = 'calendar';
+
+// Coming to Bookings from another page always starts on the calendar.
+window.addEventListener('hashchange', (event) => {
+  const onBookings = (url: string) => new URL(url).hash.replace(/^#\/?/, '').split('/')[0] === 'bookings';
+  if (onBookings(event.newURL) && !onBookings(event.oldURL)) mode = 'calendar';
+});
 
 function modeSwitch(): SafeHTML {
   const options: { id: Mode; label: string }[] = [{ id: 'calendar', label: 'Calendar' }, { id: 'list', label: 'List' }];
@@ -98,11 +124,11 @@ function modeSwitch(): SafeHTML {
     </div>`;
 }
 
-/** Opens the list on one day, for links from elsewhere such as the dashboard's cards. */
+/** Opens the calendar on one day, for links from elsewhere such as the dashboard's cards. */
 export function showBookingsOn(day: string): void {
   calendar.showDay(day);
   query = '';
-  mode = 'list';
+  mode = 'calendar';
   location.hash = '#/bookings';
 }
 
@@ -121,6 +147,8 @@ export function render(ctx: DeskContext): SafeHTML {
     listExpanded = false;
   }
   const rows = listExpanded || query.trim() ? results : results.slice(0, LIST_SHOWN);
+  const capped = results.length > LIST_SHOWN && !query.trim();
+  redrawList = ctx.redraw;
   const search = html`
     <label class="list-search">
       ${icon('search')}
@@ -173,11 +201,11 @@ export function render(ctx: DeskContext): SafeHTML {
                   <td>${statusPill(b)}</td>
                   <td class="data-table__go" aria-hidden="true">${icon('chevronRight')}</td>
                 </tr>`)}
-              ${results.length > LIST_SHOWN && !query.trim() ? html`
+              ${capped && !listExpanded ? html`
                 <tr class="fin-more">
                   <td colspan="8">
-                    <button class="btn btn--quiet btn--sm" type="button" data-action="list-show-all" aria-expanded="${flag(listExpanded)}">
-                      ${listExpanded ? html`${icon('chevronUp')} Show fewer` : html`${icon('chevronDown')} Show all ${results.length} · ${results.length - LIST_SHOWN} more`}
+                    <button class="btn btn--quiet btn--sm" type="button" data-action="list-show-all" aria-expanded="false">
+                      ${icon('chevronDown')} Show all ${results.length} · ${results.length - LIST_SHOWN} more
                     </button>
                   </td>
                 </tr>` : ''}
@@ -187,6 +215,13 @@ export function render(ctx: DeskContext): SafeHTML {
           ? emptyState('No bookings match', `Nobody called "${query.trim()}" in ${calendar.shownLabel(state)}.`)
           : emptyState('Nothing booked', `${calendar.shownLabel(state)} has no bookings.`)}
     </div>
+    ${capped && listExpanded ? html`
+      <div class="list-fold">
+        <button class="list-fold__button" type="button" data-action="list-show-all" aria-expanded="true"
+          aria-label="Show fewer (Esc). All ${results.length} bookings are showing." title="Show fewer (Esc)">
+          ${icon('chevronUp')}<span class="list-fold__label">Show fewer <kbd>Esc</kbd></span>
+        </button>
+      </div>` : ''}
     </div>
 
     ${calendar.pickerIfOpen(state)}`;
@@ -203,9 +238,13 @@ export const actions: HandlerMap = {
   ...calendar.actions,
 
   'list-show-all': ({ ctx }) => {
-    listExpanded = !listExpanded;
+    if (listExpanded) {
+      // Folding back: return to the top rather than leave the reader below the list.
+      foldList();
+      return;
+    }
+    listExpanded = true;
     ctx.redraw();
-    if (!listExpanded) document.querySelector('[data-part="The list"]')?.scrollIntoView({ block: 'nearest' });
   },
 
   'set-mode': ({ el, ctx }) => {

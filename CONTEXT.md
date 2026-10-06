@@ -186,7 +186,7 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   behind a Filters button (`filtersOpen`).
 - The dashboard is deliberately one screen: four cards for today (Arriving today and In house open
   `components/guest-summary.ts` in the drawer; Collected today opens Finances; Balances due opens
-  Bookings' list on today through `showBookingsOn`), and a
+  Bookings' calendar on today through `showBookingsOn`), and a
   summary of sales beside income and expenses over one shared 7/30/90-day window. Every chart and
   list behind those figures lives on `views/finances.ts`.
 - Sales analytics on the Finances page come from `core/sales.ts`: bookings are counted by `createdAt`
@@ -229,7 +229,9 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   moves the calendar behind straight away) and that month's days. The list shares all of this: it
   shows the bookings in the calendar's month, week or open day under the same bar (`navBar`,
   `shownDays`), with a guest-name search in place of the old type / status / date filters, and no
-  totals. `showBookingsOn(day)` opens it on one day, as the dashboard's Balances due card does.
+  totals. Bookings always opens on the calendar: List lasts only while staff stay on the page
+  (a hashchange from another page resets it). `showBookingsOn(day)` opens the calendar on one day,
+  as the dashboard's Balances due card and the bell do.
 - Motion (`components/motion.ts` + the Motion section at the end of `admin.css`): every render
   rebuilds the markup, so nothing animates by class alone. After each render `markEntering` adds
   `.page--enter` when the page is new, `.is-entering` to any `[data-enter="slot|key"]` whose key
