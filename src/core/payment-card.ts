@@ -78,7 +78,7 @@ export function paymentCard(request: QrPaymentRequest, card: PaymentCardState, {
         <li>Type exactly <strong>${peso(request.amount)}</strong> and send it.</li>
         <li>${desk
           ? 'Find the payment in the resort’s GCash app, then type its reference number below.'
-          : html`Add a screenshot of your receipt and its 13-digit reference number below.`}</li>
+          : html`Take a screenshot of the receipt GCash shows and add it below.`}</li>
       </ol>
 
       ${desk ? '' : receiptField(card)}
@@ -87,11 +87,12 @@ export function paymentCard(request: QrPaymentRequest, card: PaymentCardState, {
         <input class="input" name="senderName" data-input="senderName" value="${card.senderName}" autocomplete="name"
           placeholder="Who sent the payment" ${off}>
       </label>
-      <label class="field">
-        <span class="field__label">GCash reference number</span>
-        <input class="input mono" name="reference" data-input="reference" value="${card.reference}" inputmode="numeric"
-          autocomplete="off" placeholder="1234 567 890123" ${off}>
-      </label>
+      ${desk ? html`
+        <label class="field">
+          <span class="field__label">GCash reference number</span>
+          <input class="input mono" name="reference" data-input="reference" value="${card.reference}" inputmode="numeric"
+            autocomplete="off" placeholder="1234 567 890123" ${off}>
+        </label>` : ''}
       <p class="form-error" data-slot="pay-error" role="alert">${card.error}</p>
 
       <div class="button-row">
@@ -106,7 +107,7 @@ export function paymentCard(request: QrPaymentRequest, card: PaymentCardState, {
       ${desk
         ? html`<p class="small muted">Only record it once you can see the money in the resort’s GCash.</p>`
         : html`<p class="small muted">The front desk checks your receipt against the resort’s GCash, then confirms your booking.</p>`}
-      ${isMock ? html`<p class="small muted">Demo QR: phones cannot scan it and nothing is charged. “Simulate” fills in a test ${desk ? 'reference' : 'receipt and reference'}.</p>` : ''}
+      ${isMock ? html`<p class="small muted">Demo QR: phones cannot scan it and nothing is charged. “Simulate” fills in a test ${desk ? 'reference' : 'receipt'}.</p>` : ''}
     </div>`;
 }
 

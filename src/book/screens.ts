@@ -5,7 +5,7 @@
 
 import { productGroups, productInfo, type ProductGroup } from '../core/catalog.js';
 import { html, type SafeHTML, type TemplateValue } from '../core/dom.js';
-import { formatDate, formatTime, peso, plural } from '../core/format.js';
+import { formatDate, formatDateTime, formatTime, peso, plural } from '../core/format.js';
 import { guestListEditor, namesAsked } from '../core/guest-list.js';
 import { paymentCard, type PaymentCardState } from '../core/payment-card.js';
 import type { QrPaymentRequest } from '../core/qr-payment.js';
@@ -327,7 +327,7 @@ export function payScreen(
       </div>
       ${rejected ? html`
         <p class="book__rejected" role="alert">
-          <strong>The front desk could not confirm your last receipt</strong> (${rejected.reference}): ${rejected.reason}.
+          <strong>The front desk could not confirm your last receipt</strong> (${peso(rejected.amount)}, sent ${formatDateTime(rejected.sentAt)}): ${rejected.reason}.
           Check the payment in GCash and send the receipt again.
         </p>` : ''}
       <dl class="facts">
@@ -354,15 +354,14 @@ export function checkingScreen(state: State, page: BookingPageSettings, booking:
       <dl class="facts">
         <div class="facts__row"><dt>Reference</dt><dd class="mono">${booking.id}</dd></div>
         <div class="facts__row"><dt>Booking</dt><dd>${productLabel(state, booking.product)} · ${formatDate(booking.date, 'long')}</dd></div>
-        <div class="facts__row"><dt>Sent</dt><dd>${peso(check.amount)} by GCash<span class="book__sub mono">${check.reference} · ${check.senderName}</span></dd></div>
+        <div class="facts__row"><dt>Sent</dt><dd>${peso(check.amount)} by GCash<span class="book__sub">from ${check.senderName} · ${formatDateTime(check.sentAt)}</span></dd></div>
         <div class="facts__row"><dt>Status</dt><dd><span class="pill pill--warning">Waiting for the front desk</span></dd></div>
       </dl>
       ${check.receipt ? html`
         <figure class="book__receipt">
           <img src="${check.receipt}" alt="The GCash receipt you sent">
           <figcaption class="small muted">The receipt you sent</figcaption>
-        </figure>` : ''}
-      <p class="small muted">${page.copy.payHelp}</p>`)}`;
+        </figure>` : ''}`)}`;
 }
 
 export function doneScreen(state: State, page: BookingPageSettings, booking: Booking, payment?: Payment): SafeHTML {
@@ -378,7 +377,7 @@ export function doneScreen(state: State, page: BookingPageSettings, booking: Boo
         <div class="facts__row"><dt>Date</dt><dd>${formatDate(booking.date, 'long')}</dd></div>
         <div class="facts__row"><dt>Guests</dt><dd>${plural(booking.adults + booking.kids, 'guest')}${booking.guestList?.length ? ` · ${booking.guestList.length} on the list` : ''}</dd></div>
         <div class="facts__row"><dt>Total</dt><dd>${peso(booking.total)}</dd></div>
-        <div class="facts__row"><dt>Downpayment paid</dt><dd>${peso(booking.paid)}${payment?.reference ? html`<span class="book__sub mono">GCash ${payment.reference}${payment.senderName ? ` · ${payment.senderName}` : ''}</span>` : ''}</dd></div>
+        <div class="facts__row"><dt>Downpayment paid</dt><dd>${peso(booking.paid)}${payment?.method === 'gcash' ? html`<span class="book__sub mono">GCash${payment.reference ? ` ${payment.reference}` : ''}${payment.senderName ? ` · ${payment.senderName}` : ''}</span>` : ''}</dd></div>
         <div class="facts__row"><dt>Balance at check-in</dt><dd>${peso(booking.balance)}</dd></div>
         ${pkg ? html`<div class="facts__row"><dt>Time</dt><dd>${formatTime(pkg.start)}–${formatTime(pkg.end)}</dd></div>`
           : unit ? html`<div class="facts__row"><dt>Check in</dt><dd>${formatTime(unit.checkIn)}</dd></div>` : ''}

@@ -184,13 +184,15 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     receiptLarge: boolean;
     rejecting: boolean;
     rejectReason: string;
+    /** The reference number staff read off the receipt. */
+    checkReference: string;
     checkError: string;
     /** A past receipt opened from the payments list. */
     receiptShown: string | null;
   } = {
     checkInOpen: false, confirmCancel: false, guestListOpen: false, guestList: [], qrOpen: false, discountOpen: false, discount: blankDiscount(), discountError: '',
     card: blankPaymentCard(), errors: {},
-    receiptLarge: false, rejecting: false, rejectReason: REJECT_REASONS[0] ?? '', checkError: '', receiptShown: null,
+    receiptLarge: false, rejecting: false, rejectReason: REJECT_REASONS[0] ?? '', checkReference: '', checkError: '', receiptShown: null,
   };
 
   const discountKindChanged = (before: DiscountDraft['kind']) => before !== ui.discount.kind;
@@ -295,12 +297,11 @@ export function createBookingDetail(bookingId: string): DrawerContent {
             </button>` : html`<p class="small muted">No receipt picture was sent.</p>`}
           <dl class="pay-check__facts">
             <div><dt>Amount</dt><dd><strong>${peso(check.amount)}</strong></dd></div>
-            <div><dt>Reference</dt><dd class="mono">${check.reference}</dd></div>
             <div><dt>GCash sender</dt><dd>${check.senderName}</dd></div>
             <div><dt>Sent</dt><dd>${formatDateTime(check.sentAt)}</dd></div>
           </dl>
         </div>
-        <p class="small muted">Open the resort’s GCash app and find this reference number and amount before confirming.</p>
+        <p class="small muted">Find this payment in the resort’s GCash app before confirming it.</p>
         ${canDecide ? ui.rejecting ? html`
           <div class="action-card">
             <label class="field">
@@ -314,6 +315,11 @@ export function createBookingDetail(bookingId: string): DrawerContent {
               <button class="btn btn--danger" type="button" data-action="reject-check" data-id="${check.id}">Reject receipt</button>
             </div>
           </div>` : html`
+          <label class="field">
+            <span class="field__label">GCash reference number <span class="muted">(optional)</span></span>
+            <input class="input mono" name="checkReference" data-input="checkReference" value="${ui.checkReference}"
+              inputmode="numeric" autocomplete="off" placeholder="1234 567 890123">
+          </label>
           <div class="button-row">
             <button class="btn btn--primary" type="button" data-action="confirm-check" data-id="${check.id}">${icon('check')} Found it · confirm payment</button>
             <button class="btn btn--quiet btn--danger-text" type="button" data-action="ask-reject">Not found</button>
@@ -489,6 +495,11 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         ui.card.error = '';
       },
 
+      checkReference: ({ el }) => {
+        ui.checkReference = (el as HTMLInputElement).value;
+        ui.checkError = '';
+      },
+
       rejectReason: ({ el }) => {
         ui.rejectReason = (el as HTMLSelectElement).value;
       },
@@ -617,13 +628,14 @@ export function createBookingDetail(bookingId: string): DrawerContent {
       },
 
       'confirm-check': ({ el, ctx, redraw }) => {
-        const result = confirmPaymentCheck(el.dataset.id ?? '', ctx.staff.id);
+        const result = confirmPaymentCheck(el.dataset.id ?? '', ui.checkReference, ctx.staff.id);
         if (result.error !== undefined) {
           ui.checkError = result.error;
           redraw();
           return;
         }
         ui.checkError = '';
+        ui.checkReference = '';
         ui.receiptLarge = false;
         ctx.toast(`${peso(result.payment.amount)} GCash payment confirmed${result.booking.status === 'confirmed' ? ' · booking confirmed' : ''}`);
       },

@@ -53,7 +53,7 @@ export function formatReference(reference: string): string {
 /**
  * Why a reference cannot be right, or null when it could be: it must be 13
  * digits, not all one repeated digit (a common typo test), and not already
- * used on another payment or on a receipt still waiting to be checked.
+ * used on another payment.
  * Whether the money really arrived is for staff to see in GCash.
  */
 export function referenceProblem(state: State, reference: string): string | null {
@@ -62,7 +62,7 @@ export function referenceProblem(state: State, reference: string): string | null
   if (digits.length !== REFERENCE_DIGITS) return `A GCash reference has ${REFERENCE_DIGITS} digits. This one has ${digits.length}.`;
   if (/^(\d)\1+$/.test(digits)) return 'That does not look like a GCash reference. Check the receipt and try again.';
   const used = state.payments.some((payment) => payment.reference && referenceDigits(payment.reference) === digits)
-    || state.paymentChecks.some((check) => check.status !== 'rejected' && referenceDigits(check.reference) === digits);
+    || state.paymentChecks.some((check) => check.status !== 'rejected' && check.reference && referenceDigits(check.reference) === digits);
   if (used) return 'That reference was already used for another payment.';
   return null;
 }

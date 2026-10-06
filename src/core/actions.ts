@@ -477,7 +477,6 @@ export function payByQr(bookingId: string, reference: string, staffId: string | 
 const MAX_RECEIPT_LENGTH = 2_000_000;
 
 export interface ReceiptInput {
-  reference: string;
   senderName: string;
   /** Screenshot of the GCash receipt, as an image data URL. */
   receipt: string | null;
@@ -486,13 +485,13 @@ export interface ReceiptInput {
 export type PaymentCheckResult = { error: string } | { error?: undefined; booking: Booking; check: PaymentCheck };
 
 /** What is wrong with a receipt before it can be sent for checking, or ''. */
-export function receiptProblem(state: State, input: ReceiptInput): string {
+export function receiptProblem(input: ReceiptInput): string {
   if (!input.receipt) return 'Add a screenshot of your GCash receipt.';
   if (!/^data:image\/(png|jpeg|webp|gif|svg\+xml)[;,]/.test(input.receipt) || input.receipt.length > MAX_RECEIPT_LENGTH) {
     return 'That file could not be used. Add a screenshot (PNG or JPG) of the receipt.';
   }
   if (!input.senderName.trim()) return 'Enter the name on the GCash account that sent the payment.';
-  return referenceProblem(state, input.reference) ?? '';
+  return '';
 }
 
 /**
@@ -507,13 +506,13 @@ export function submitPaymentCheck(bookingId: string, input: ReceiptInput): Paym
     const amount = downpaymentDue(booking);
     if (amount === 0) return { error: 'The downpayment for this booking is already paid.' };
     if (pendingPaymentCheck(state, bookingId)) return { error: 'Your receipt is already with the front desk.' };
-    const problem = receiptProblem(state, input);
+    const problem = receiptProblem(input);
     if (problem) return { error: problem };
     const check: PaymentCheck = {
       id: nextId(state.paymentChecks, 'PC'),
       bookingId,
       amount,
-      reference: formatReference(input.reference),
+      reference: null,
       senderName: input.senderName.trim().slice(0, 120),
       receipt: input.receipt,
       sentAt: demoNow(state),
@@ -524,18 +523,30 @@ export function submitPaymentCheck(bookingId: string, input: ReceiptInput): Paym
       paymentId: null,
     };
     state.paymentChecks.push(check);
-    logActivity(state, null, 'payment.check_sent', booking.id, `${peso(amount)} GCash receipt · ${check.reference}`);
+    logActivity(state, null, 'payment.check_sent', booking.id, `${peso(amount)} GCash receipt from ${check.senderName}`);
     return { booking, check };
   });
 }
 
 export type ConfirmCheckResult = { error: string } | { error?: undefined; booking: Booking; payment: Payment };
 
-/** Staff found the guest's payment in GCash: it becomes a payment, and the booking is confirmed once the downpayment is met. */
-export function confirmPaymentCheck(checkId: string, staffId: string): ConfirmCheckResult {
+/**
+ * Staff found the guest's payment in GCash: it becomes a payment, and the
+ * booking is confirmed once the downpayment is met. Staff may type its
+ * reference number from the receipt; when they do, it is checked, so the same
+ * payment cannot be counted twice. Left blank, the payment has none.
+ */
+export function confirmPaymentCheck(checkId: string, reference: string, staffId: string): ConfirmCheckResult {
   return update((state): ConfirmCheckResult => {
     const check = state.paymentChecks.find((item) => item.id === checkId);
     if (!check || check.status !== 'pending') return { error: 'This receipt was already checked.' };
+    // Older saves kept the guest's typed number on the receipt; it must not count against itself.
+    check.reference = null;
+    if (reference.trim()) {
+      const problem = referenceProblem(state, reference);
+      if (problem) return { error: problem };
+      check.reference = formatReference(reference);
+    }
     const booking = findBooking(state, check.bookingId);
     if (!booking || !isActive(booking)) return { error: 'This booking was cancelled. Refund the guest in GCash, then reject the receipt.' };
     const amount = Math.min(check.amount, booking.balance);
@@ -555,7 +566,7 @@ export const REJECT_REASONS = [
   'Not found in our GCash',
   'Amount does not match',
   'Receipt is unclear',
-  'Reference number does not match the receipt',
+  'Name on the receipt does not match',
 ];
 
 /** Staff could not find the payment, or it does not match. The guest can send another receipt from their link. */
@@ -568,7 +579,7 @@ export function rejectPaymentCheck(checkId: string, reason: string, staffId: str
     Object.assign(check, {
       status: 'rejected', reviewedBy: staffId, reviewedAt: demoNow(state), reason: reason.trim() || REJECT_REASONS[0],
     } satisfies Partial<PaymentCheck>);
-    logActivity(state, staffId, 'payment.check_rejected', booking.id, `${check.reference} · ${check.reason}`);
+    logActivity(state, staffId, 'payment.check_rejected', booking.id, `${peso(check.amount)} from ${check.senderName} · ${check.reason}`);
     return { booking, check };
   });
 }

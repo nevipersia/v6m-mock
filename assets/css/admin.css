@@ -529,7 +529,7 @@ body {
   right: 0;
   z-index: 30;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   width: min(400px, calc(100vw - 32px));
   max-height: min(560px, calc(100vh - 96px));
   background: var(--surface);
@@ -540,13 +540,28 @@ body {
   animation: rise 0.2s var(--ease-out);
 }
 
+/* Both sections scroll together under the bell. */
+.notif__scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .notif__head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px 10px;
+  min-height: 48px;
+  padding: 8px 10px 8px 16px;
+  background: var(--surface);
   border-bottom: 1px solid var(--line);
+}
+
+.notif__head--section {
+  border-top: 1px solid var(--line);
 }
 
 .notif__list {
@@ -555,8 +570,6 @@ body {
   margin: 0;
   padding: 8px;
   list-style: none;
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .notif__item {
@@ -614,7 +627,8 @@ body {
 }
 
 .notif__empty {
-  padding: 24px 16px;
+  margin: 0;
+  padding: 18px 16px;
   color: var(--ink-muted);
   text-align: center;
 }
@@ -2398,6 +2412,15 @@ body.has-drawer .alerts {
 }
 
 .alert--info { --tone: var(--blue); --tone-soft: var(--blue-soft); }
+
+/* A pop-up that goes somewhere when clicked (a new GCash receipt). */
+.alert--link {
+  cursor: pointer;
+}
+
+.alert--link:hover {
+  background: var(--cream);
+}
 .alert--warning { --tone: var(--orange); --tone-soft: var(--orange-soft); }
 .alert--error { --tone: var(--terra); --tone-soft: var(--terra-soft); }
 

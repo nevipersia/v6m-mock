@@ -332,21 +332,28 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   what was paid.
 - GCash is a personal account, so nothing tells the site a payment arrived. Booking-link guests
   scan the resort's QR (`GCASH_ACCOUNT` in `core/qr-payment.ts`, a demo stand-in drawn by
-  `core/qr.ts` and not scannable), type the amount, then send a screenshot of the receipt, the
-  sender's name and the 13-digit reference (`submitPaymentCheck`). That makes a `PaymentCheck`
+  `core/qr.ts` and not scannable), type the amount, then send a screenshot of the receipt and the
+  sender's name (`submitPaymentCheck`); they don't type the reference. That makes a `PaymentCheck`
   (collection `paymentChecks`, table `payment_checks`), not a payment: the booking stays on hold and
-  the link shows "Receipt sent". Staff find the money in the resort's GCash app and press Confirm
-  (`confirmPaymentCheck`: it becomes a payment, `via: 'qr'`, and the booking is confirmed) or
+  the link shows "Receipt sent". Staff find the money in the resort's GCash app, may type its reference
+  number from the receipt (optional), and press Confirm (`confirmPaymentCheck`: it becomes a payment, `via: 'qr'`, and the booking is confirmed) or
   Reject with a reason (`rejectPaymentCheck`; the guest's link asks again and shows why). Receipts
   are kept as image data URLs, shrunk to 1200px JPEG (`readReceipt`); a Supabase build should move
-  them to Storage. Reference rules: 13 digits, not one repeated digit, not used on a payment or a
-  receipt still waiting. Staff with the guest at the desk can show the same QR from the booking
+  them to Storage. Reference rules (checked when staff type one): 13 digits, not one repeated digit, not
+  already used on a payment. Staff with the guest at the desk can show the same QR from the booking
   drawer and record the payment once they see it in GCash (`payByQr`).
 - Notifications are the bell in the top bar (`components/alerts.ts`, classes `notif__*`; the toasts
-  already use `.alerts`). Receipts to confirm come first; choosing one goes to the booking's day on
+  already use `.alerts`). It has two parts. **New** (`newsFor`) is what guests did in the last 7 days:
+  receipts sent, bookings made from a link, inbox messages. **Clear** empties it for that account in
+  that browser (localStorage `v6m.notifsCleared`, moved along with the demo's dates). **Needs
+  attention** (`alertsFor`) is never cleared; it empties as the work gets done. The badge counts both. Receipts to confirm come first; choosing one goes to the booking's day on
   Bookings and opens it, with the receipt at the top of the drawer. The rest is what the dashboard's
   Needs attention line used to list (holds, events owing, an exclusive rental soon, new inquiries,
   open booking links).
+  A receipt that arrives while the Desk is open also pops up in the corner for 15 seconds with a
+  short chime (`announcePayments`, `components/chime.ts`); clicking the pop-up opens the booking
+  the same way. Receipts already waiting when someone signs in are only in the bell. The tab title
+  starts with the number waiting, e.g. "(2) Dashboard · V6M Desk".
 - Check-in needs a valid-ID tick and collects any balance. Check-out is refused while a balance is
   due (`checkOutProblem` in `core/actions.ts`); the panel disables the button and says what to collect.
 - Walk-ins: a new booking's payment method starts on Cash for a walk-in and GCash otherwise (until

@@ -269,7 +269,11 @@ export interface PaymentCheck {
   id: string;
   bookingId: string;
   amount: number;
-  reference: string;
+  /**
+   * The GCash reference number. The guest only sends the receipt; staff type
+   * the number from it (or from GCash) when they confirm, so it is null until then.
+   */
+  reference: string | null;
   senderName: string;
   /** The guest's screenshot of their GCash receipt, as an image data URL. */
   receipt: string | null;

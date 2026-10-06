@@ -3,10 +3,10 @@
 import { isMock } from '../core/config.js';
 import { $, html, on, render } from '../core/dom.js';
 import { canReset, getState, loadStore, onSaveError, resetStore, subscribe } from '../core/store.js';
-import { availabilityFor } from '../core/rules.js';
+import { availabilityFor, pendingPaymentChecks } from '../core/rules.js';
 import type { Staff, State } from '../core/types.js';
 import { can, canView, currentStaff, hasSession, homePage, restoreSession, signOut } from './auth.js';
-import { alertActions, closeAlerts, isAlertsOpen } from './components/alerts.js';
+import { alertActions, announcePayments, closeAlerts, goToBooking, isAlertsOpen, resetPaymentWatch } from './components/alerts.js';
 import { createBookingDetail } from './components/booking-detail.js';
 import { createBookingForm } from './components/booking-form.js';
 import { createEventForm } from './components/event-form.js';
@@ -131,6 +131,7 @@ function showModals(key: string | null): void {
 function drawLogin(state: State | null): void {
   activeRoute = null;
   context = null;
+  resetPaymentWatch();
   closeDrawer();
   document.title = 'Sign in · V6M Desk';
   const focus = rememberFocus();
@@ -168,12 +169,17 @@ function draw(): void {
   context = buildContext(state, staff);
   setFieldsToday(state.meta.asOf);
   activeRoute = route;
-  document.title = `${route.label} · V6M Desk`;
+  // Receipts waiting to be checked show in the tab's title, so they are seen from another tab too.
+  const waiting = pendingPaymentChecks(state).length;
+  document.title = `${waiting ? `(${waiting}) ` : ''}${route.label} · V6M Desk`;
   render(app, renderShell(context, route, route.view.render(context)));
   restoreFocus(focus);
   markEntering(app, route.id, modalWasOpen);
   showModals(modalFocus);
   syncDrawer(context);
+  announcePayments(state, (bookingId) => {
+    if (context) goToBooking(context, bookingId);
+  });
   // A new page has its own parts, and may not be long enough to need the buttons.
   refreshJump();
 }

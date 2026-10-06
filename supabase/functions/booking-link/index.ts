@@ -3,7 +3,7 @@
 //
 //   { action: 'open', code }                                   → { stage, state }
 //   { action: 'submit', code, input }                          → { booking, link } | { error, retry? }
-//   { action: 'pay', code, bookingId, reference, senderName, receipt }
+//   { action: 'pay', code, bookingId, senderName, receipt }
 //                                                              → { booking, check } | { error }
 //
 // 'pay' only sends the guest's GCash receipt for staff to check; the booking
@@ -82,7 +82,6 @@ serve((body) => withState(TABLES, (state) => {
         return { error: 'This payment does not belong to this booking link.' };
       }
       return submitPaymentCheck(stage.booking.id, {
-        reference: String(body.reference ?? ''),
         senderName: String(body.senderName ?? '').slice(0, 120),
         receipt: typeof body.receipt === 'string' ? body.receipt : null,
       });

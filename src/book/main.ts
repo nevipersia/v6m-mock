@@ -227,7 +227,7 @@ function bind(page: BookingPageSettings): void {
     showPay(page, booking, { scroll: false });
     let result;
     try {
-      result = await sendReceipt(code, bookingId, { reference: card.reference, senderName: card.senderName, receipt: card.receipt });
+      result = await sendReceipt(code, bookingId, { senderName: card.senderName, receipt: card.receipt });
     } catch (sendError) {
       result = { error: (sendError as Error).message };
     }
@@ -248,9 +248,9 @@ function bind(page: BookingPageSettings): void {
     const booking = findBooking(state, screen.bookingId);
     const request = booking && qrPaymentRequest(booking);
     if (!booking || !request) return;
-    card.reference = sampleReference(state, `${booking.id}|${Date.now()}`);
     if (!card.senderName.trim()) card.senderName = booking.guestName;
-    card.receipt = sampleReceipt({ amount: request.amount, reference: card.reference, senderName: card.senderName, sentAt: demoNow(state) });
+    const reference = sampleReference(state, `${booking.id}|${Date.now()}`);
+    card.receipt = sampleReceipt({ amount: request.amount, reference, senderName: card.senderName, sentAt: demoNow(state) });
     card.error = '';
     showPay(page, booking, { scroll: false });
   });
@@ -284,8 +284,8 @@ async function start(): Promise<void> {
     return;
   }
   if (stage.stage === 'done') {
-    // The downpayment that confirmed it, for its GCash reference.
-    const paid = state.payments.filter((payment) => payment.bookingId === stage.booking.id && payment.reference).pop();
+    // The latest payment, for its GCash reference and sender.
+    const paid = state.payments.filter((payment) => payment.bookingId === stage.booking.id).pop();
     render(app, doneScreen(state, page, stage.booking, paid));
     return;
   }
