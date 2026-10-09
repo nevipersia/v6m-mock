@@ -8,7 +8,8 @@ export type Timestamp = string;
 export type BookingStatus = 'hold' | 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show';
 export type BookingSource = 'messenger' | 'instagram' | 'phone' | 'website' | 'walk_in' | 'booking_link';
 export type PaymentMethod = 'cash' | 'gcash' | 'bank_transfer';
-export type PaymentType = 'deposit' | 'balance' | 'full';
+/** 'refund' is money given back (a negative amount), e.g. a long stay left early. */
+export type PaymentType = 'deposit' | 'balance' | 'full' | 'refund';
 export type EventStage = 'inquiry' | 'reserved' | 'paid' | 'done';
 export type UnitKind = 'room' | 'cottage';
 export type ProductType = 'entrance' | UnitKind | 'exclusive' | 'event';

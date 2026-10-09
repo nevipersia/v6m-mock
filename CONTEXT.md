@@ -411,6 +411,10 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   free and add the cost to the balance. A confirmed booking stays confirmed even when the new 50%
   downpayment is more than was paid (`reprice` `keepConfirmed`; `stillToConfirm` hides the shortfall
   labels for confirmed bookings).
+- Leaving a long room stay early (`earlyCheckOut`, used by `checkOut`): only the nights stayed are
+  charged (at least one), the booking's nights and check-out time shrink so the room opens up again,
+  and the check-out card shows the new total. If the guest paid more than that, the difference is
+  given back and kept as a payment of type `refund` with a negative amount (money out in the ledger).
 - Guests pay on the way out: check-in (`checkIn`) no longer collects the balance, and a walk-in for
   today checks in straight from the form with nothing owed up front (an optional "Paid now" amount is recorded). `checkOut(id, staff, payment)` collects
   any balance as the guest leaves; the panel asks for the method first.

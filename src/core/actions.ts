@@ -643,14 +643,69 @@ export type CheckOutResult = { error: string } | { error?: undefined; booking: B
 export const checkOutProblem = (booking: Booking): string =>
   booking.balance > 0 ? `Collect the ${peso(booking.balance)} balance before checking out.` : '';
 
+/** A room stay that ends before its last night: what it comes to for the nights used. */
+export interface EarlyCheckOut {
+  /** Nights actually stayed (at least one), and the nights booked. */
+  nights: number;
+  booked: number;
+  total: number;
+  /** What is still owed after the new total; below zero, the guest paid too much. */
+  balance: number;
+}
+
 /**
- * The guest leaves. Whatever is still owed is collected now by `payment`
- * (walk-ins mostly pay this way); without it, a balance blocks check-out.
+ * Leaving a long room stay before its last night: only the nights stayed are
+ * charged, and the rest of the room's nights open up again. Null when the
+ * guest is leaving on time (or it isn't a multi-night room stay).
+ */
+export function earlyCheckOut(state: State, booking: Booking): EarlyCheckOut | null {
+  if (booking.nights <= 1 || !canStayLonger(state, booking.product)) return null;
+  const today = state.meta.asOf;
+  const used = Math.max(1, Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${booking.date}T00:00:00Z`)) / 86_400_000));
+  if (used >= booking.nights) return null;
+  const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, { ...booking, nights: used, extras: booking.extras ?? [] });
+  const off = booking.discount ? discountAmount(pricing.total, booking.discount.kind, booking.discount.value) : 0;
+  const total = pricing.total - off;
+  return { nights: used, booked: booking.nights, total, balance: total - booking.paid };
+}
+
+/**
+ * The guest leaves. A long room stay left early is first cut to the nights
+ * stayed (`earlyCheckOut`). Whatever is still owed is collected now by
+ * `payment` (walk-ins mostly pay this way); without it, a balance blocks
+ * check-out. If they paid more than the shorter stay costs, the result says
+ * how much to give back.
  */
 export function checkOut(bookingId: string, staffId: string, payment?: CheckInPayment): CheckOutResult {
   return update((state): CheckOutResult => {
     const booking = findBooking(state, bookingId);
     if (!booking) return { error: 'This booking no longer exists.' };
+    const early = earlyCheckOut(state, booking);
+    // Refuse before changing anything: a balance still owed needs a payment.
+    if ((early ? early.balance : booking.balance) > 0 && !payment) {
+      return { error: `Collect the ${peso(early ? early.balance : booking.balance)} balance before checking out.` };
+    }
+    if (early) {
+      const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, { ...booking, nights: early.nights, extras: booking.extras ?? [] });
+      booking.nights = early.nights;
+      booking.pricing = pricing;
+      booking.endsAt = bookingWindow(state, booking.product, booking.date, early.nights).endsAt;
+      if (booking.discount) booking.discount = { ...booking.discount, amount: discountAmount(pricing.total, booking.discount.kind, booking.discount.value) };
+      reprice(state, booking, staffId, { keepConfirmed: true });
+      logActivity(state, staffId, 'booking.shortened', booking.id,
+        `Left after ${plural(early.nights, 'night')} of ${early.booked} · total now ${peso(booking.total)}`);
+    }
+    // Paid more than the shorter stay costs: what is handed back is a refund.
+    if (booking.balance < 0) {
+      const back = -booking.balance;
+      state.payments.push({
+        id: nextId(state.payments, 'PY'), bookingId: booking.id, amount: -back, method: payment?.method ?? 'cash', type: 'refund',
+        reference: null, proofAttached: false, receivedAt: demoNow(state), receivedBy: staffId, via: 'desk', sentAt: null, senderName: null,
+      });
+      booking.paid -= back;
+      booking.balance = booking.total - booking.paid;
+      logActivity(state, staffId, 'payment.refunded', booking.id, `${peso(back)} ${METHOD_LABELS[payment?.method ?? 'cash']}`);
+    }
     if (booking.balance > 0 && payment) applyPayment(state, booking, { ...payment, amount: booking.balance }, staffId);
     const problem = checkOutProblem(booking);
     if (problem) return { error: problem };
@@ -707,9 +762,14 @@ export function extendStay(bookingId: string, extra: number, staffId: string): E
   });
 }
 
+/**
+ * Cancels a booking that hasn't started. A guest already checked in (or gone)
+ * is left as they are; the caller sees the status didn't change.
+ */
 export function cancelBooking(bookingId: string, reason: string, staffId: string): Booking {
   return update((state) => {
     const booking = must(findBooking(state, bookingId), `Booking ${bookingId}`);
+    if (booking.status !== 'hold' && booking.status !== 'confirmed') return booking;
     Object.assign(booking, { status: 'cancelled', cancelledAt: demoNow(state), cancelReason: reason } satisfies Partial<Booking>);
     // A cancelled event no longer closes the resort that day.
     const event = state.events.find((item) => item.bookingId === booking.id);

@@ -102,6 +102,13 @@ function closeMenu(focusTrigger = false): void {
   if (focusTrigger && trigger.isConnected) trigger.focus();
 }
 
+/**
+ * Where a field's list or picker goes: inside the open pop-up when the field
+ * is in one (a pop-up sits above the rest of the page, so a list added to the
+ * page would open behind it), else at the end of the page.
+ */
+const layerFor = (field: Element): HTMLElement => field.closest<HTMLElement>('dialog[open]') ?? document.body;
+
 const selectedText = (select: HTMLSelectElement): string =>
   select.selectedOptions[0]?.textContent?.trim() || 'Choose…';
 
@@ -120,7 +127,7 @@ function showMenu(select: HTMLSelectElement, trigger: HTMLButtonElement): void {
     }
     return menuItem(child as HTMLOptionElement, select);
   })}`);
-  document.body.append(menu);
+  layerFor(trigger).append(menu);
 
   // Under the button, or above it when there is no room below. A long list
   // shrinks to the roomier side and scrolls; only when neither side has a
@@ -260,6 +267,14 @@ const dateText = (value: string, nights = 1): string => {
 /** What the date button says: a date, or a stay's check-in to check-out. */
 const fieldDateText = (input: HTMLInputElement): string => dateText(input.value, stayFor(input)?.nights ?? 1);
 
+/** The field that took a redrawn one's place: same name, in the same form or pop-up. */
+function sameField(old: HTMLInputElement): HTMLInputElement | null {
+  const formKey = old.form?.dataset.submit;
+  const scope = formKey ? `form[data-submit="${formKey}"] ` : '';
+  const found = [...document.querySelectorAll<HTMLInputElement>(`${scope}input[name="${old.name}"]`)];
+  return found.length === 1 ? found[0] ?? null : null;
+}
+
 function enhanceDate(input: HTMLInputElement): void {
   input.dataset.enhanced = '';
   const trigger = document.createElement('button');
@@ -293,8 +308,13 @@ function enhanceDate(input: HTMLInputElement): void {
       title: label ?? 'Pick a date',
       anchor: trigger,
       onPick: (value) => {
-        commit(input, value);
-        showPicked();
+        // The page may have redrawn while the picker was open (a change from
+        // another desk): then write to the field that replaced this one.
+        const field = input.isConnected ? input : sameField(input);
+        if (!field) return;
+        commit(field, value);
+        if (trigger.isConnected) showPicked();
+        else refocus(trigger, name);
       },
       stay: stay ? {
         ...stay,
@@ -378,7 +398,7 @@ function showTime(input: HTMLInputElement, trigger: HTMLButtonElement): void {
   popup.className = 'menu timepick';
   popup.setAttribute('role', 'dialog');
   popup.setAttribute('aria-label', trigger.getAttribute('aria-label') ?? 'Pick a time');
-  document.body.append(popup);
+  layerFor(trigger).append(popup);
 
   // Without a value yet, start from the current clock rather than midnight.
   const now = new Date();
@@ -531,7 +551,7 @@ function showSuggest(input: HTMLInputElement, options: string[]): void {
     menu = document.createElement('div');
     menu.className = 'menu menu--suggest';
     menu.setAttribute('role', 'listbox');
-    document.body.append(menu);
+    layerFor(input).append(menu);
     const list = menu;
     list.addEventListener('pointerdown', (event) => event.preventDefault()); // keep the field focused
     list.addEventListener('click', (event) => {

@@ -18,8 +18,8 @@ const INQUIRY_STATUS: Record<InquiryStatus, { label: string; tone: Tone }> = {
   lost: { label: 'Lost', tone: 'neutral' },
 };
 
-const ui: { filter: 'new' | 'all'; selectedId: string | null; draft: string; error: string } = {
-  filter: 'new', selectedId: null, draft: '', error: '',
+const ui: { filter: 'new' | 'all'; selectedId: string | null; draft: string; error: string; copyBlocked: boolean } = {
+  filter: 'new', selectedId: null, draft: '', error: '', copyBlocked: false,
 };
 
 const statusPill = (status: InquiryStatus): SafeHTML =>
@@ -130,6 +130,7 @@ export function render(ctx: DeskContext): SafeHTML {
 export const inputs: HandlerMap = {
   draft: ({ el }) => {
     ui.draft = (el as HTMLTextAreaElement).value;
+    ui.copyBlocked = false;
     ui.error = '';
   },
 };
@@ -143,6 +144,7 @@ export const actions: HandlerMap = {
   'select-thread': ({ el, ctx }) => {
     ui.selectedId = el.dataset.id ?? null;
     ui.draft = '';
+    ui.copyBlocked = false;
     ui.error = '';
     ctx.redraw();
   },
@@ -166,10 +168,18 @@ export const actions: HandlerMap = {
       await navigator.clipboard.writeText(ui.draft);
       copied = true;
     } catch {
-      // Clipboard can be blocked; the reply still counts as handled.
+      // Copying can be blocked. Keep the reply so it isn't lost: staff copy it
+      // by hand, and pressing the button again marks it replied.
+      if (!ui.copyBlocked) {
+        ui.copyBlocked = true;
+        ui.error = 'Copying was blocked. Select the reply above and copy it yourself, then press the button again to mark it replied.';
+        ctx.redraw();
+        return;
+      }
     }
     ui.draft = '';
     ui.error = '';
+    ui.copyBlocked = false;
     markInquiryReplied(inquiry.id, ctx.staff.id);
     ctx.toast(copied ? `Reply copied. Paste it into ${SOURCE_LABELS[inquiry.channel]}.` : 'Marked as replied');
   },

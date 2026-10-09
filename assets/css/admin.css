@@ -2522,7 +2522,8 @@ body.has-drawer .alerts {
 
 /* Phones: above the tab bar, across the screen. */
 @media (max-width: 900px) {
-  .alerts {
+  .alerts,
+  body.has-drawer .alerts {
     right: 16px;
     bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   }

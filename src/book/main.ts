@@ -15,7 +15,7 @@ import { qrPaymentRequest, sampleReceipt, sampleReference } from '../core/qr-pay
 import { MAX_NIGHTS, availabilityFor, canStayLonger, findBooking, findUnit, pendingPaymentCheck, stayNights } from '../core/rules.js';
 import { requireState } from '../core/store.js';
 import type { Booking, BookingLink, BookingPageSettings, PaymentCheck, State } from '../core/types.js';
-import { openLink, sendReceipt, submitBooking, type OpenResult } from './api.js';
+import { currentStage, openLink, sendReceipt, submitBooking, type OpenResult } from './api.js';
 import {
   bookableIds, checkingScreen, doneScreen, formScreen, guestListBody, payScreen, problemScreen, stepsFor, summary,
   type Draft, type Step,
@@ -94,6 +94,28 @@ function showChecking(page: BookingPageSettings, booking: Booking, check: Paymen
   screen = { name: 'other' };
   render(app, checkingScreen(requireState(), page, booking, check));
   window.scrollTo({ top: 0 });
+  watchForAnswer();
+}
+
+/**
+ * While the front desk checks the receipt, look again every half minute and
+ * whenever the guest comes back to the tab, so a confirmed booking (or a
+ * receipt turned down) shows without them reloading.
+ */
+let watching = false;
+function watchForAnswer(): void {
+  if (watching) return;
+  watching = true;
+  const look = async (): Promise<void> => {
+    if (document.visibilityState !== 'visible') return;
+    try {
+      if (await currentStage(code) !== 'checking') window.location.reload();
+    } catch {
+      // Offline for a moment: the next look tries again.
+    }
+  };
+  window.setInterval(() => void look(), 30_000);
+  document.addEventListener('visibilitychange', () => void look());
 }
 
 function showPayError(message: string): void {
@@ -241,6 +263,12 @@ function bind(page: BookingPageSettings): void {
     }
     card.checking = false;
     if (result.error !== undefined) {
+      // Cancelled, already paid or already sent meanwhile: show where it stands instead.
+      const stage = await currentStage(code).catch(() => 'pay');
+      if (stage !== 'pay') {
+        window.location.reload();
+        return;
+      }
       const current = findBooking(requireState(), bookingId);
       if (current) showPay(page, current, { scroll: false });
       showPayError(result.error);
@@ -294,7 +322,7 @@ async function start(): Promise<void> {
   }
   if (stage.stage === 'done') {
     // The latest payment, for its GCash reference and sender.
-    const paid = state.payments.filter((payment) => payment.bookingId === stage.booking.id).pop();
+    const paid = state.payments.filter((payment) => payment.bookingId === stage.booking.id && payment.type !== 'refund').pop();
     render(app, doneScreen(state, page, stage.booking, paid));
     return;
   }

@@ -13,7 +13,7 @@ import {
 } from '../core/actions.js';
 import { createStaticBackend } from '../core/backend.js';
 import { isMock } from '../core/config.js';
-import { loadStore, update, useBackend } from '../core/store.js';
+import { loadStore, requireState, update, useBackend } from '../core/store.js';
 import { supabaseClient } from '../core/supabase-client.js';
 import type { Booking, PaymentCheck, State } from '../core/types.js';
 
@@ -50,6 +50,16 @@ export async function openLink(code: string): Promise<OpenResult> {
   useBackend(createStaticBackend(result.state));
   await loadStore();
   return result;
+}
+
+/**
+ * Where the link stands now, without redrawing anything: the demo's data
+ * follows other tabs by itself, a Supabase build asks the server again.
+ */
+export async function currentStage(code: string): Promise<BookingLinkStage['stage']> {
+  if (isMock) return bookingLinkStage(requireState(), code).stage;
+  const result = await call<OpenResult>({ action: 'open', code });
+  return result.stage.stage;
 }
 
 export async function submitBooking(code: string, input: GuestBooking): Promise<BookingLinkResult> {

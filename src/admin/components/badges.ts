@@ -29,6 +29,8 @@ export const statusPill = (booking: Booking): SafeHTML =>
 export function paymentPill(booking: Booking): SafeHTML | '' {
   if (!isActive(booking)) return '';
   if (booking.balance <= 0) return html`<span class="pill pill--success">Paid</span>`;
+  // In house: the balance is settled as they leave (walk-ins pay this way), so it isn't overdue.
+  if (booking.status === 'checked_in') return html`<span class="pill pill--warning">${peso(booking.balance)} at check-out</span>`;
   if (booking.paid === 0) return html`<span class="pill pill--danger">Unpaid</span>`;
   if (stillToConfirm(booking) > 0) return html`<span class="pill pill--danger" title="Short of the downpayment">${peso(stillToConfirm(booking))} to confirm</span>`;
   return html`<span class="pill pill--warning">${peso(booking.balance)} due</span>`;

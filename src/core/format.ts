@@ -65,15 +65,23 @@ export const initials = (name: string): string =>
 
 export const isPHMobile = (value: string): boolean => /^(09|639)\d{9}$/.test(String(value).replace(/\D/g, ''));
 
+/**
+ * The whole number in what was typed. Amounts are whole pesos, so anything
+ * after a decimal point is dropped ("450.50" is 450, "₱1,250.00" is 1250)
+ * rather than run into the number.
+ */
+const wholeDigits = (value: string | number | null | undefined): string =>
+  String(value ?? '').split('.')[0]?.replace(/\D/g, '') ?? '';
+
 /** Digits only, grouped with commas: "12000" -> "12,000". Empty stays empty. */
 export function formatDigits(value: string | number | null | undefined): string {
-  const digits = String(value ?? '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+  const digits = wholeDigits(value).replace(/^0+(?=\d)/, '');
   return digits ? Number(digits).toLocaleString('en-PH') : '';
 }
 
 /** Reads a typed amount or count back as a number; blank counts as 0. */
 export const parseDigits = (value: string | number | null | undefined): number =>
-  Number(String(value ?? '').replace(/\D/g, '')) || 0;
+  Number(wholeDigits(value)) || 0;
 
 /** Loose check: something@something.something, the most a mock should insist on. */
 export const isEmail = (value: string): boolean => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());

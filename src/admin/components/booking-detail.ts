@@ -2,7 +2,7 @@
 // take (check a guest's GCash receipt, record payment, check in, check out, cancel).
 
 import {
-  REJECT_REASONS, applyDiscount, cancelBooking, checkIn, checkOut, confirmPaymentCheck, extendQuote, extendStay, payByQr, recordPayment,
+  REJECT_REASONS, applyDiscount, cancelBooking, checkIn, checkOut, confirmPaymentCheck, earlyCheckOut, extendQuote, extendStay, payByQr, recordPayment,
   rejectPaymentCheck, removeDiscount, setGuestList,
 } from '../../core/actions.js';
 import { $, $maybe, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
@@ -11,7 +11,7 @@ import { blankPaymentCard, paymentCard, type PaymentCardState } from '../../core
 import { appReferenceProblem, qrPaymentRequest, receiptWarnings, sampleReference } from '../../core/qr-payment.js';
 import { formatDate, formatDateTime, peso, plural, stayText, timeOf } from '../../core/format.js';
 import {
-  METHOD_LABELS, canStayLonger, downpaymentName, SOURCE_LABELS, discountAmount, discountLabel, findBooking, stillToConfirm, isEditable, findGuest, findPackage, findStaff, isActive, pendingPaymentCheck,
+  METHOD_LABELS, STATUS_LABELS, canStayLonger, downpaymentName, SOURCE_LABELS, discountAmount, discountLabel, findBooking, stillToConfirm, isEditable, findGuest, findPackage, findStaff, isActive, pendingPaymentCheck,
   productLabel,
 } from '../../core/rules.js';
 import type { Booking, Companion, PaymentCheck, PaymentMethod, State } from '../../core/types.js';
@@ -27,6 +27,8 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'booking.checked_in': 'Checked in',
   'booking.checked_out': 'Checked out',
   'booking.extended': 'Stay extended',
+  'booking.shortened': 'Left early',
+  'payment.refunded': 'Refund given',
   'booking.cancelled': 'Cancelled',
   'payment.recorded': 'Payment recorded',
   'payment.check_sent': 'GCash receipt sent',
@@ -135,7 +137,7 @@ function paymentsSection(state: State, booking: Booking, receiptShown: string | 
           return html`
           <li class="plain-list__row">
             <span>
-              <strong>${peso(payment.amount)}</strong> ${METHOD_LABELS[payment.method]} · ${payment.type === 'deposit' ? 'downpayment' : payment.type}
+              <strong>${payment.amount < 0 ? `−${peso(-payment.amount)}` : peso(payment.amount)}</strong> ${METHOD_LABELS[payment.method]} · ${payment.type === 'deposit' ? 'downpayment' : payment.type === 'refund' ? 'given back' : payment.type}
               ${check ? html`<span class="pill pill--success">Receipt checked</span>` : payment.via === 'qr' ? html`<span class="pill pill--success">GCash QR</span>` : ''}
               <span class="small muted">${formatDateTime(payment.receivedAt)}${payment.receivedBy ? ` · ${findStaff(state, payment.receivedBy)?.name}` : ''}</span>
               ${payment.senderName || payment.sentAt ? html`
@@ -380,24 +382,38 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     }
 
     if (booking.status === 'checked_in' && ctx.can('bookings.write')) {
-      if (booking.balance > 0 && ui.checkOutOpen) {
+      // A long room stay left before its last night is charged for the nights stayed.
+      const early = earlyCheckOut(ctx.state, booking);
+      const owed = early ? early.balance : booking.balance;
+      if ((owed !== 0 || early) && ui.checkOutOpen) {
         // The bill is settled as the guest leaves (walk-ins mostly pay this way).
         parts.push(html`
           <div class="action-card">
             <h4 class="action-card__title">Check out ${booking.guestName}</h4>
-            <label class="field">
-              <span class="field__label">Collect the ${peso(booking.balance)} balance via</span>
-              <select class="input" name="checkOutMethod">${methodOptions('cash')}</select>
-            </label>
+            ${early ? html`
+              <p class="small">Leaving after ${plural(early.nights, 'night')} of ${early.booked}, so only ${early.nights === 1 ? 'that night is' : 'those nights are'} charged:
+                the total goes from ${peso(booking.total)} to <strong>${peso(early.total)}</strong>, and the room is free again from tonight.</p>` : ''}
+            ${owed > 0 ? html`
+              <label class="field">
+                <span class="field__label">Collect the ${peso(owed)} balance via</span>
+                <select class="input" name="checkOutMethod">${methodOptions('cash')}</select>
+              </label>` : owed < 0 ? html`
+              <p class="pay-check__warn">They paid ${peso(booking.paid)}, which is ${peso(-owed)} more than the shorter stay.</p>
+              <label class="field">
+                <span class="field__label">Give back ${peso(-owed)} via</span>
+                <select class="input" name="checkOutMethod">${methodOptions('cash')}</select>
+              </label>` : html`
+              <p class="small muted">Nothing left to pay.</p>`}
             <div class="button-row">
               <button class="btn btn--quiet" type="button" data-action="cancel-check-out">Not now</button>
-              <button class="btn btn--primary" type="button" data-action="confirm-check-out">Collect and check out</button>
+              <button class="btn btn--primary" type="button" data-action="confirm-check-out">${owed > 0 ? 'Collect and check out' : owed < 0 ? 'Give back and check out' : 'Check out'}</button>
             </div>
           </div>`);
       } else {
         parts.push(html`
           <button class="btn btn--primary btn--block" type="button" data-action="check-out">Check out guest</button>
-          ${booking.balance > 0 ? html`<p class="small muted">${peso(booking.balance)} to collect as they leave.</p>` : ''}`);
+          ${early ? html`<p class="small muted">Leaving early: charged for ${plural(early.nights, 'night')} of ${early.booked}, ${owed > 0 ? `${peso(owed)} to collect` : owed < 0 ? `${peso(-owed)} to give back` : 'nothing left to pay'}.</p>`
+            : owed > 0 ? html`<p class="small muted">${peso(owed)} to collect as they leave.</p>` : ''}`);
       }
     }
 
@@ -410,7 +426,8 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     const discount = discountSection(ctx, booking);
     if (discount) parts.push(discount);
 
-    if (isActive(booking) && booking.status !== 'checked_out' && booking.balance > 0 && ctx.can('payments.write') && !ui.checkInOpen && !ui.qrOpen) {
+    // While checking out, the check-out card collects the balance; a second payment form would repeat it.
+    if (isActive(booking) && booking.status !== 'checked_out' && booking.balance > 0 && ctx.can('payments.write') && !ui.checkInOpen && !ui.checkOutOpen && !ui.qrOpen) {
       const suggested = stillToConfirm(booking) || booking.balance;
       parts.push(html`
         <form class="action-card" data-submit="record-payment" novalidate>
@@ -728,7 +745,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
 
       'check-out': ({ ctx, redraw }) => {
         const booking = findBooking(ctx.state, bookingId);
-        if (booking && booking.balance > 0) {
+        if (booking && (booking.balance > 0 || earlyCheckOut(ctx.state, booking))) {
           ui.checkOutOpen = true;
           ui.extendOpen = false;
           redraw();
@@ -747,12 +764,15 @@ export function createBookingDetail(bookingId: string): DrawerContent {
       'confirm-check-out': ({ root, ctx }) => {
         const booking = findBooking(ctx.state, bookingId);
         if (!booking) return;
-        const collected = booking.balance;
+        const early = earlyCheckOut(ctx.state, booking);
+        const owed = early ? early.balance : booking.balance;
         const method = ($maybe<HTMLSelectElement>('[name="checkOutMethod"]', root)?.value ?? 'cash') as PaymentMethod;
         ui.checkOutOpen = false;
-        const result = checkOut(bookingId, ctx.staff.id, { method });
+        const result = checkOut(bookingId, ctx.staff.id, owed !== 0 ? { method } : undefined);
         if (result.error !== undefined) ctx.toast(result.error, 'error');
-        else ctx.toast(`${result.booking.guestName} checked out · collected ${peso(collected)}`);
+        else if (owed > 0) ctx.toast(`${result.booking.guestName} checked out · collected ${peso(owed)}`);
+        else if (owed < 0) ctx.toast(`${result.booking.guestName} checked out · ${peso(-owed)} given back`);
+        else ctx.toast(`${result.booking.guestName} checked out`);
       },
 
       'open-extend': ({ redraw }) => {
@@ -818,7 +838,9 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         });
         if (!answer) return;
         const cancelled = cancelBooking(bookingId, answer.choice, ctx.staff.id);
-        ctx.toast(`${cancelled.guestName}'s booking was cancelled`, 'warning');
+        // Someone may have checked them in while the pop-up was open.
+        if (cancelled.status !== 'cancelled') ctx.toast(`${cancelled.guestName} is already ${STATUS_LABELS[cancelled.status].toLowerCase()}, so the booking can't be cancelled.`, 'error');
+        else ctx.toast(`${cancelled.guestName}'s booking was cancelled`, 'warning');
       },
     },
   };

@@ -44,6 +44,8 @@ export function createBookingLinkPanel(prefill: BookingPrefill = {}): DrawerCont
   const ui: { created: BookingLink | null; error: string } = { created: null, error: '' };
 
   function createdBlock(state: State): SafeHTML | '' {
+    // Used or cancelled since (here or at another desk): it is no longer one to send.
+    if (ui.created && state.bookingLinks.find((link) => link.code === ui.created?.code)?.status !== 'sent') ui.created = null;
     if (!ui.created) return '';
     const url = linkUrl(ui.created.code);
     return html`
@@ -97,7 +99,7 @@ export function createBookingLinkPanel(prefill: BookingPrefill = {}): DrawerCont
                 </label>
                 <label class="field">
                   <span class="field__label">Date</span>
-                  <input class="input" name="date" data-input="field" type="date" value="${draft.date}">
+                  <input class="input" name="date" data-input="field" type="date" min="${state.meta.asOf}" value="${draft.date >= state.meta.asOf ? draft.date : ''}">
                 </label>
               </div>
               <label class="field">
@@ -169,6 +171,8 @@ export function createBookingLinkPanel(prefill: BookingPrefill = {}): DrawerCont
       'book-by-hand': ({ ctx }) => ctx.newBooking({ product: draft.product, date: draft.date }),
 
       'create-link': ({ ctx, redraw }) => {
+        // A date that has passed (carried over from an old form) is dropped, not sent.
+        if (draft.date && draft.date < ctx.state.meta.asOf) draft.date = '';
         ui.created = createBookingLink(draft, ctx.staff.id);
         redraw();
         ctx.toast('Booking link created');
@@ -191,9 +195,10 @@ export function createBookingLinkPanel(prefill: BookingPrefill = {}): DrawerCont
           keepLabel: 'Keep link',
         });
         if (!answer) return;
-        cancelBookingLink(el.dataset.code ?? '', ctx.staff.id);
+        const cancelled = cancelBookingLink(el.dataset.code ?? '', ctx.staff.id);
         if (ui.created?.code === el.dataset.code) ui.created = null;
-        ctx.toast('Link cancelled', 'warning');
+        if (cancelled) ctx.toast('Link cancelled', 'warning');
+        else ctx.toast('That link was already used or cancelled.', 'error');
       },
 
       'open-linked-booking': ({ el, ctx }) => ctx.openBooking(el.dataset.id ?? ''),

@@ -139,7 +139,9 @@ export function render(ctx: DeskContext): SafeHTML {
   const first = days[0] ?? state.meta.asOf;
   const last = days[days.length - 1] ?? first;
   const results = state.bookings
-    .filter((b) => b.date >= first && b.date <= last && matches(b))
+    // A room stay shows on every night it covers, like the calendar: one that
+    // started before the shown days still counts if it runs into them.
+    .filter((b) => b.date <= last && addDays(b.date, Math.max(1, b.nights) - 1) >= first && matches(b))
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const key = calendar.enterKey(state);
   if (key !== listKey) {

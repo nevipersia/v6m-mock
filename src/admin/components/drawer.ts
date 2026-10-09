@@ -64,13 +64,74 @@ export function closeDrawer(): void {
 export function syncDrawer(ctx: DeskContext): void {
   if (!current) return;
   current.ctx = ctx;
-  if (current.content.live) draw();
+  if (!current.content.live) return;
+  if (running) draw();
+  else drawKeepingTyped();
 }
+
+type Field = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+/**
+ * A live panel redraws when the data changes underneath it (another desk, a
+ * receipt arriving). Whatever staff were typing or picking in it is carried
+ * over, with the cursor, so a half-filled payment or check-in isn't wiped.
+ */
+function drawKeepingTyped(): void {
+  const fields = (): Field[] => [...bodySlot.querySelectorAll<Field>('input[name], select[name], textarea[name]')]
+    .filter((field) => !(field instanceof HTMLInputElement && ['hidden', 'file', 'button', 'submit'].includes(field.type)));
+  const keyOf = (field: Field, list: Field[]): string =>
+    `${field.name}#${list.filter((other) => other.name === field.name).indexOf(field)}`;
+
+  const before = fields();
+  const typed = new Map(before.map((field) => [keyOf(field, before), {
+    value: field.value,
+    checked: field instanceof HTMLInputElement ? field.checked : false,
+  }]));
+  const active = document.activeElement as Field | null;
+  const focusKey = active && before.includes(active) ? keyOf(active, before) : null;
+  const selection = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement
+    ? { start: active.selectionStart, end: active.selectionEnd } : null;
+
+  draw();
+
+  const after = fields();
+  after.forEach((field) => {
+    const was = typed.get(keyOf(field, after));
+    if (!was) return;
+    if (field instanceof HTMLInputElement && (field.type === 'checkbox' || field.type === 'radio')) field.checked = was.checked;
+    else if (field instanceof HTMLSelectElement) {
+      if ([...field.options].some((option) => option.value === was.value)) field.value = was.value;
+    } else field.value = was.value;
+  });
+  const again = focusKey ? after.find((field) => keyOf(field, after) === focusKey) : undefined;
+  if (again) {
+    again.focus();
+    try {
+      if (selection && !(again instanceof HTMLSelectElement)) again.setSelectionRange(selection.start, selection.end);
+    } catch {
+      // Not every input type has a selection.
+    }
+  }
+}
+
+/**
+ * How many of the panel's own handlers are running. A change they make (record
+ * a payment, check in) redraws the panel fresh; only changes from elsewhere
+ * keep what was typed (drawKeepingTyped).
+ */
+let running = 0;
 
 function run(kind: 'actions' | 'inputs', name: string | undefined, el: HTMLElement, event: Event): void {
   if (!current || !name) return;
   const payload: DrawerPayload = { el, event, ctx: current.ctx, root: bodySlot, redraw: draw };
-  void current.content[kind]?.[name]?.(payload);
+  running += 1;
+  let result: unknown;
+  try {
+    result = current.content[kind]?.[name]?.(payload);
+  } finally {
+    if (result instanceof Promise) void result.finally(() => { running -= 1; });
+    else running -= 1;
+  }
 }
 
 on(root, 'click', '[data-action]', (event, el) => {

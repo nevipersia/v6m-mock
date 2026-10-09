@@ -123,7 +123,7 @@ export function financeRange(state: State, from: ISODate, to: ISODate): FinanceR
 
 // ---------- The ledger ----------
 
-const TYPE_LABELS: Record<PaymentType, string> = { deposit: 'Downpayment', balance: 'Balance', full: 'Paid in full' };
+const TYPE_LABELS: Record<PaymentType, string> = { deposit: 'Downpayment', balance: 'Balance', full: 'Paid in full', refund: 'Refund' };
 
 /** One line of the ledger: a payment that came in, or an expense that went out. */
 export interface LedgerEntry {
@@ -156,8 +156,9 @@ export function ledgerEntries(state: State, from: ISODate, to: ISODate, view: Le
       sub: payment.bookingId,
       category: `Booking · ${TYPE_LABELS[payment.type]}`,
       method: payment.method,
-      amountIn: payment.amount,
-      amountOut: 0,
+      // A refund is money going back out.
+      amountIn: Math.max(0, payment.amount),
+      amountOut: Math.max(0, -payment.amount),
       kind: 'payment',
       id: payment.bookingId,
     }));

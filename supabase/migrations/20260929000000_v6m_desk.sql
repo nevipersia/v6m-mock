@@ -170,7 +170,7 @@ create table public.payments (
   booking_id text not null references public.bookings (id) on delete cascade,
   amount numeric(12, 2) not null,
   method text not null check (method in ('cash', 'gcash', 'bank_transfer')),
-  type text not null check (type in ('deposit', 'balance', 'full')),
+  type text not null check (type in ('deposit', 'balance', 'full', 'refund')),
   reference text,
   proof_attached boolean not null default false,
   received_at timestamptz not null default now(),

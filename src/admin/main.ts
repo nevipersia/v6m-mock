@@ -116,11 +116,24 @@ const focusKey = (): string | null =>
  * back on the control that had it before the redraw.
  */
 function showModals(key: string | null): void {
+  let reopened = false;
   app.querySelectorAll<HTMLDialogElement>('dialog[data-modal]').forEach((dialog) => {
-    if (!dialog.open) dialog.showModal();
+    if (!dialog.open) {
+      dialog.showModal();
+      reopened = true;
+    }
     // A pop-up that names its button sits next to it, not in the middle.
     if (dialog.dataset.anchor) placeNear(dialog, app.querySelector<HTMLElement>(dialog.dataset.anchor));
     if (key) dialog.querySelector<HTMLElement>(`[data-focus-key="${key}"]`)?.focus();
+  });
+  // A date picker or "Are you sure?" opened from that pop-up lives at the end of
+  // the page; reopening the pop-up put it on top, so lift those back above it.
+  if (!reopened) return;
+  document.querySelectorAll<HTMLDialogElement>('body > dialog[open]').forEach((top) => {
+    const had = document.activeElement;
+    top.close();
+    top.showModal();
+    if (had instanceof HTMLElement && top.contains(had)) had.focus();
   });
 }
 

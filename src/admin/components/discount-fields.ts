@@ -2,7 +2,7 @@
 // Owners may leave the note blank; everyone else must say why.
 
 import { html, type SafeHTML } from '../../core/dom.js';
-import { formatDigits, peso } from '../../core/format.js';
+import { formatDigits, parseDigits, peso } from '../../core/format.js';
 import { discountAmount } from '../../core/rules.js';
 import type { DiscountKind, Staff } from '../../core/types.js';
 
@@ -53,7 +53,7 @@ export function readDiscountField(draft: DiscountDraft, field: HTMLInputElement 
     return null;
   }
   if (field.name === 'discountValue') {
-    const digits = Number(field.value.replace(/\D/g, '')) || 0;
+    const digits = parseDigits(field.value);
     draft.value = draft.kind === 'percent' ? Math.min(digits, 100) : digits;
     return !draft.value ? '' : draft.kind === 'percent' ? String(draft.value) : formatDigits(draft.value);
   }

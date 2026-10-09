@@ -150,8 +150,8 @@ export function render(ctx: DeskContext): SafeHTML {
       ${card({ label: 'Arriving today', value: String(arriving.length), detail: plural(headcount(arriving), 'guest'), action: 'show-arriving', opens: 'See who is arriving today' })}
       ${card({ label: 'In house', value: String(inHouse.length), detail: `${plural(headcount(inHouse), 'guest')} checked in`, action: 'show-inhouse', opens: 'See who is checked in now' })}
       ${ctx.canView('finances')
-        ? card({ label: 'Collected today', value: peso(collected), detail: plural(payments.length, 'payment'), href: '#/finances', opens: 'Open the books' })
-        : card({ label: 'Collected today', value: peso(collected), detail: plural(payments.length, 'payment'), action: 'show-balances', opens: "Open today's bookings" })}
+        ? card({ label: 'Collected today', value: peso(collected), detail: plural(payments.filter((p) => p.amount > 0).length, 'payment'), href: '#/finances', opens: 'Open the books' })
+        : card({ label: 'Collected today', value: peso(collected), detail: plural(payments.filter((p) => p.amount > 0).length, 'payment'), action: 'show-balances', opens: "Open today's bookings" })}
       ${card({
         label: 'Balances due',
         value: peso(balancesDue),
