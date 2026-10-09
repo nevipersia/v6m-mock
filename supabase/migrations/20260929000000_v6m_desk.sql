@@ -181,7 +181,8 @@ create table public.payments (
 );
 create index payments_booking_idx on public.payments (booking_id);
 -- A GCash reference can only pay once.
-create unique index payments_qr_reference_key on public.payments (reference) where via = 'qr' and reference is not null;
+create unique index payments_qr_reference_key on public.payments (reference)
+  where via = 'qr' and reference is not null and length(regexp_replace(reference, '\D', '', 'g')) = 13;
 
 -- GCash payments a guest sent from a booking link, with their receipt, until
 -- staff find them in the resort's GCash app. A confirmed one becomes a payment.

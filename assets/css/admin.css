@@ -2260,18 +2260,6 @@ body.has-drawer {
   font-size: 14px;
 }
 
-.cat-list__row--ask {
-  flex-wrap: wrap;
-  background: var(--terra-soft);
-  border-color: transparent;
-}
-
-.cat-list__buttons {
-  display: flex;
-  gap: 6px;
-  margin-left: auto;
-}
-
 .cat-list__delete {
   display: grid;
   place-items: center;
@@ -4451,6 +4439,65 @@ dialog.is-entering::backdrop {
 
 .report-modal__spacer {
   flex: 1;
+}
+
+/* The "Are you sure?" pop-up before anything is deleted or cancelled. */
+.confirm-modal {
+  width: min(440px, calc(100vw - 32px));
+}
+
+.confirm-modal .report-modal__head {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.confirm-modal .report-modal__main {
+  padding-top: 8px;
+}
+
+.confirm-modal .report-modal__foot {
+  border-top: 0;
+  padding-top: 4px;
+}
+
+/* Points about a GCash receipt worth a second look, on the receipt card and in its pop-up. */
+.pay-check__warn,
+.confirm-modal__warn {
+  padding: 10px 12px;
+  background: var(--orange-soft);
+  border-radius: var(--radius-sm);
+  color: var(--amber-ink);
+  font-size: 14px;
+}
+
+.pay-check__warn-title,
+.confirm-modal__warn-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.pay-check__warn-title .icon,
+.confirm-modal__warn-title .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.pay-check__warn ul,
+.confirm-modal__warn ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.45;
+}
+
+.confirm-modal__message {
+  margin: 0;
+  color: var(--ink-muted);
+  line-height: 1.5;
 }
 
 /* Finances' Show all: the whole table in the same pop-up, its head kept in view. */

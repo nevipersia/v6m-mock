@@ -9,7 +9,7 @@ import {
   isEditable, findPromo, live, MAX_NIGHTS, canStayLonger, pendingPaymentCheck, permissionsFor, productLabel, quote, sessionFor, stayNights, type DiscountInput,
 } from './rules.js';
 import { OTHER_CATEGORY } from './finance.js';
-import { formatReference, referenceProblem } from './qr-payment.js';
+import { appReference, appReferenceProblem, formatReference, referenceProblem } from './qr-payment.js';
 import type {
   Booking, BookingLink, BookingSource, Companion, EventPackage, EventStage, Expense, ExpenseCategory, ExpenseCategoryDef, ExtraCharge, Guest,
   ISODate, Inquiry, Invite, Payment, PaymentCheck, PaymentMethod, PriceLine, Promo, ResortEvent, Role, Staff, StaffStatus, State,
@@ -545,9 +545,10 @@ export type ConfirmCheckResult = { error: string } | { error?: undefined; bookin
 
 /**
  * Staff found the guest's payment in GCash: it becomes a payment, and the
- * booking is confirmed once the downpayment is met. Staff may type its
- * reference number from the receipt; when they do, it is checked, so the same
- * payment cannot be counted twice. Left blank, the payment has none.
+ * booking is confirmed once the downpayment is met. Staff type its reference
+ * number from the resort's GCash app (all of it, or the last 4 digits), so a
+ * receipt is never confirmed without someone looking, and the same payment
+ * cannot be counted twice (`appReferenceProblem`).
  */
 export function confirmPaymentCheck(checkId: string, reference: string, staffId: string): ConfirmCheckResult {
   return update((state): ConfirmCheckResult => {
@@ -555,11 +556,9 @@ export function confirmPaymentCheck(checkId: string, reference: string, staffId:
     if (!check || check.status !== 'pending') return { error: 'This receipt was already checked.' };
     // Older saves kept the guest's typed number on the receipt; it must not count against itself.
     check.reference = null;
-    if (reference.trim()) {
-      const problem = referenceProblem(state, reference);
-      if (problem) return { error: problem };
-      check.reference = formatReference(reference);
-    }
+    const problem = appReferenceProblem(state, reference, check.amount);
+    if (problem) return { error: problem };
+    check.reference = appReference(reference);
     const booking = findBooking(state, check.bookingId);
     if (!booking || !isActive(booking)) return { error: 'This booking was cancelled. Refund the guest in GCash, then reject the receipt.' };
     const amount = Math.min(check.amount, booking.balance);

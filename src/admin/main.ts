@@ -1,5 +1,6 @@
 // V6M Desk entry point: sign-in, hash routing, and event dispatch to views.
 
+import { askConfirm } from './components/confirm.js';
 import { isMock } from '../core/config.js';
 import { $, html, on, render } from '../core/dom.js';
 import { canReset, getState, loadStore, onSaveError, resetStore, subscribe } from '../core/store.js';
@@ -189,8 +190,13 @@ const globalActions: HandlerMap = {
 
   'reset-data': async () => {
     if (!canReset()) return;
-    const confirmed = window.confirm('Reset the demo? Bookings, payments, invites and booking links you added in this browser will be removed.');
-    if (!confirmed) return;
+    const answer = await askConfirm({
+      title: 'Reset the demo?',
+      message: 'Bookings, payments, invites and booking links you added in this browser will be removed.',
+      confirmLabel: 'Reset demo',
+      keepLabel: 'Keep my changes',
+    });
+    if (!answer) return;
     closeDrawer();
     await resetStore();
     showToast('Demo data reset');

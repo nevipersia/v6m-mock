@@ -10,6 +10,7 @@ import type { Tone } from '../components/badges.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { ROLES, ROLE_LABELS, ROLE_SUMMARIES } from '../auth.js';
 import { avatar } from '../components/badges.js';
+import { askConfirm } from '../components/confirm.js';
 import { icon } from '../components/icons.js';
 import { emptyState, pageHead } from '../layout.js';
 
@@ -241,16 +242,34 @@ export const actions: HandlerMap = {
     ctx.redraw();
   },
 
-  'revoke-invite': ({ el, ctx }) => {
+  'revoke-invite': async ({ el, ctx }) => {
+    const invite = ctx.state.invites.find((item) => item.code === el.dataset.code);
+    const person = invite ? findStaff(ctx.state, invite.staffId) : undefined;
+    const answer = await askConfirm({
+      title: 'Revoke this invite?',
+      message: `${person ? `${person.name}'s` : 'The'} invite code stops working. You can send a new invite later.`,
+      confirmLabel: 'Revoke invite',
+      keepLabel: 'Keep invite',
+    });
+    if (!answer) return;
     revokeInvite(el.dataset.code ?? '', ctx.staff.id);
     if (ui.lastInvite?.code === el.dataset.code) ui.lastInvite = null;
     ctx.toast('Invite revoked', 'warning');
   },
 
-  'toggle-status': ({ el, ctx }) => {
+  'toggle-status': async ({ el, ctx }) => {
     const staff = findStaff(ctx.state, el.dataset.id);
     if (!staff) return;
     const next: StaffStatus = staff.status === 'active' ? 'suspended' : 'active';
+    if (next === 'suspended') {
+      const answer = await askConfirm({
+        title: `Suspend ${staff.name}?`,
+        message: 'They are signed out and can no longer use the desk until you reactivate them. Their bookings and history stay.',
+        confirmLabel: 'Suspend',
+        keepLabel: 'Keep access',
+      });
+      if (!answer) return;
+    }
     setUserStatus(staff.id, next, ctx.staff.id);
     ctx.toast(`${staff.name} ${next === 'active' ? 'reactivated' : 'suspended'}`, next === 'active' ? 'success' : 'warning');
   },

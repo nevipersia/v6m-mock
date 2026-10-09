@@ -8,6 +8,7 @@ import { allProductIds, productGroups } from '../../core/catalog.js';
 import { findBooking, findStaff, productLabel } from '../../core/rules.js';
 import type { BookingLink, State } from '../../core/types.js';
 import { asField, type BookingPrefill, type DrawerContent } from '../types.js';
+import { askConfirm } from './confirm.js';
 import { icon } from './icons.js';
 
 const linkUrl = (code: string): string => new URL(`../book/?code=${encodeURIComponent(code)}`, window.location.href).href;
@@ -182,7 +183,14 @@ export function createBookingLinkPanel(prefill: BookingPrefill = {}): DrawerCont
         }
       },
 
-      'cancel-link': ({ el, ctx }) => {
+      'cancel-link': async ({ el, ctx }) => {
+        const answer = await askConfirm({
+          title: 'Cancel this booking link?',
+          message: `${el.dataset.code ?? 'The link'} stops working. A guest who opens it is told to ask the resort for a new one.`,
+          confirmLabel: 'Cancel link',
+          keepLabel: 'Keep link',
+        });
+        if (!answer) return;
         cancelBookingLink(el.dataset.code ?? '', ctx.staff.id);
         if (ui.created?.code === el.dataset.code) ui.created = null;
         ctx.toast('Link cancelled', 'warning');

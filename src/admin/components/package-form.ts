@@ -16,6 +16,7 @@ import { formatDate, peso } from '../../core/format.js';
 import { findExclusive, findPackage, findUnit, live, promoStatus, type PromoStatus } from '../../core/rules.js';
 import type { Promo, State } from '../../core/types.js';
 import { asField, type DeskContext, type DrawerContent } from '../types.js';
+import { askConfirm } from './confirm.js';
 import { icon } from './icons.js';
 
 export const KIND_WORDS: Record<PackageKind, { one: string; title: string }> = {
@@ -408,9 +409,28 @@ export function createPackageForm(kind: PackageKind, id = '', options: PackageFo
         ctx.closeDrawer();
       },
 
-      'ask-delete-package': ({ redraw }) => {
-        confirmDelete = true;
-        redraw();
+      'ask-delete-package': async ({ ctx, root, redraw }) => {
+        const busy = packageInUse(ctx.state, kind, id);
+        if (busy) {
+          // Still booked: say why it can't go yet.
+          confirmDelete = true;
+          redraw();
+          return;
+        }
+        const answer = await askConfirm({
+          title: `Delete ${draft?.name || 'this package'}?`,
+          message: 'It disappears from the booking forms, the guest booking page and the calendar. Past bookings keep their price and still show its name.',
+          confirmLabel: 'Delete',
+        });
+        if (!answer) return;
+        const result = deletePackage(kind, id, ctx.staff.id);
+        if ('error' in result) {
+          error = result.error;
+          showText(root, 'error', error);
+          return;
+        }
+        ctx.toast(`${draft?.name ?? 'Package'} deleted`, 'warning');
+        ctx.closeDrawer();
       },
 
       'keep-package': ({ redraw }) => {

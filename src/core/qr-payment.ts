@@ -5,8 +5,9 @@
 // number; staff then find the payment in the resort's GCash app and confirm it
 // in the desk (see submitPaymentCheck and confirmPaymentCheck in actions.ts).
 
+import { peso } from './format.js';
 import { downpaymentDue } from './rules.js';
-import type { Booking, State } from './types.js';
+import type { Booking, PaymentCheck, State } from './types.js';
 
 const REFERENCE_DIGITS = 13;
 
@@ -65,6 +66,56 @@ export function referenceProblem(state: State, reference: string): string | null
     || state.paymentChecks.some((check) => check.status !== 'rejected' && check.reference && referenceDigits(check.reference) === digits);
   if (used) return 'That reference was already used for another payment.';
   return null;
+}
+
+/** How many digits from the end staff may type instead of the whole reference. */
+export const REFERENCE_TAIL = 4;
+
+/**
+ * The reference staff read off the resort's own GCash app when confirming a
+ * receipt: all 13 digits, or just the last 4. Typing it from the app (not the
+ * guest's screenshot) means someone looked for the money. @returns the problem, or ''.
+ */
+export function appReferenceProblem(state: State, reference: string, amount: number): string {
+  const digits = referenceDigits(reference);
+  if (!digits) return `Type the reference number of this payment from the resort's GCash app: all ${REFERENCE_DIGITS} digits, or the last ${REFERENCE_TAIL}.`;
+  if (digits.length === REFERENCE_DIGITS) return referenceProblem(state, digits) ?? '';
+  if (digits.length !== REFERENCE_TAIL) return `Type all ${REFERENCE_DIGITS} digits, or just the last ${REFERENCE_TAIL}.`;
+  // Only the end is known, so the same ending on a payment of the same amount is suspicious.
+  const twin = state.payments.find((payment) => payment.amount === amount && payment.reference
+    && referenceDigits(payment.reference).endsWith(digits));
+  return twin ? `A ${peso(amount)} GCash payment ending in ${digits} was already counted (${twin.bookingId}). Make sure this is a different one.` : '';
+}
+
+/** How a reference typed at confirm is kept: the full number, or "…1234" for just its end. */
+export const appReference = (reference: string): string => {
+  const digits = referenceDigits(reference);
+  return digits.length === REFERENCE_TAIL ? `…${digits}` : formatReference(digits);
+};
+
+const nameWords = (name: string): string[] =>
+  name.toLowerCase().normalize('NFD').replace(/[^a-z\s]/g, ' ').split(/\s+/).filter((word) => word.length >= 2);
+
+/**
+ * Things about a receipt worth a second look before confirming it. None of
+ * them blocks anything: a parent may pay for a child, say. Staff decide.
+ */
+export function receiptWarnings(state: State, booking: Booking, check: PaymentCheck): string[] {
+  // The guest doesn't state an amount (check.amount is what was due), so the
+  // amount itself is for staff to compare in GCash.
+  const warnings: string[] = [];
+  // GCash hides most letters of a name ("JU*N D**A C."), so compare the start of each word.
+  const guest = nameWords(booking.guestName).map((word) => word.slice(0, 2));
+  const sender = nameWords(check.senderName.replace(/\*/g, '')).map((word) => word.slice(0, 2));
+  if (sender.length && !sender.some((start) => guest.includes(start))) {
+    warnings.push(`Sent by ${check.senderName}, not ${booking.guestName}. It may be a relative or friend; check it is this payment.`);
+  }
+  if (check.sentAt.slice(0, 16) < booking.createdAt.slice(0, 16)) warnings.push('The receipt is dated before this booking was made. It may be an old receipt.');
+  const twin = check.receipt
+    ? state.paymentChecks.find((other) => other.id !== check.id && other.receipt === check.receipt && other.status !== 'rejected')
+    : undefined;
+  if (twin) warnings.push(`The same picture was sent for ${twin.bookingId === booking.id ? 'this booking before' : `another booking (${twin.bookingId})`}.`);
+  return warnings;
 }
 
 /** A believable, unused 13-digit reference for the "simulate a payment" shortcut. */

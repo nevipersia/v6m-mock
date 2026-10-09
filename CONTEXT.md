@@ -344,9 +344,15 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   `core/qr.ts` and not scannable), type the amount, then send a screenshot of the receipt and the
   sender's name (`submitPaymentCheck`); they don't type the reference. That makes a `PaymentCheck`
   (collection `paymentChecks`, table `payment_checks`), not a payment: the booking stays on hold and
-  the link shows "Receipt sent". Staff find the money in the resort's GCash app, may type its reference
-  number from the receipt (optional), and press Confirm (`confirmPaymentCheck`: it becomes a payment, `via: 'qr'`, and the booking is confirmed) or
-  Reject with a reason (`rejectPaymentCheck`; the guest's link asks again and shows why). Receipts
+  the link shows "Receipt sent". Staff find the money in the resort's GCash app, type its reference
+  number from the resort's GCash app (required: all 13 digits, or the last 4, kept as "…1234";
+  `appReferenceProblem` refuses a used full reference, or the same last 4 on a payment of the same
+  amount) in the Confirm pop-up, and press Confirm (`confirmPaymentCheck`: it becomes a payment,
+  `via: 'qr'`, and the booking is confirmed) or Reject with a reason in its own pop-up
+  (`rejectPaymentCheck`; the guest's link asks again and shows why). The guest doesn't state an
+  amount: `check.amount` is what was due, shown as "Should be". `receiptWarnings` flags a sender name
+  that doesn't match the guest, a receipt dated before the booking, and the same picture sent twice;
+  they show on the receipt card and in the Confirm pop-up but block nothing. Receipts
   are kept as image data URLs, shrunk to 1200px JPEG (`readReceipt`); a Supabase build should move
   them to Storage. Reference rules (checked when staff type one): 13 digits, not one repeated digit, not
   already used on a payment. Staff with the guest at the desk can show the same QR from the booking
@@ -416,6 +422,13 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   `removeExpenseCategory`). Deleting moves that category's expenses to Other, which always stays.
 - Profit shows green and a loss red on the dashboard summary, the Finances totals, the report
   preview and the ledger PDF.
+
+- Anything that deletes or cancels asks first in a pop-up in the middle of the screen
+  (`askConfirm` in `components/confirm.ts`, resolves with the chosen option or null): cancel a
+  booking (with the reason), remove a discount, remove an expense, delete an expense category,
+  delete a package (when it is still booked, the package form says why it can't go yet), cancel a
+  booking link, revoke an invite, suspend a user, reset the demo. Esc, the backdrop or Keep back out;
+  focus starts on the safe button, and Esc doesn't close the side panel underneath.
 
 ## Mock data
 

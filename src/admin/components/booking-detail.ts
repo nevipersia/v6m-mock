@@ -8,7 +8,7 @@ import {
 import { $, $maybe, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { blankCompanion, fitGuestList, guestListEditor, readGuestListField } from '../../core/guest-list.js';
 import { blankPaymentCard, paymentCard, type PaymentCardState } from '../../core/payment-card.js';
-import { qrPaymentRequest, sampleReference } from '../../core/qr-payment.js';
+import { appReferenceProblem, qrPaymentRequest, receiptWarnings, sampleReference } from '../../core/qr-payment.js';
 import { formatDate, formatDateTime, peso, plural, stayText, timeOf } from '../../core/format.js';
 import {
   METHOD_LABELS, canStayLonger, downpaymentName, SOURCE_LABELS, discountAmount, discountLabel, findBooking, stillToConfirm, isEditable, findGuest, findPackage, findStaff, isActive, pendingPaymentCheck,
@@ -19,6 +19,7 @@ import type { DeskContext, DrawerContent } from '../types.js';
 import { kindDot, paymentPill, statusPill } from './badges.js';
 import { downloadBookingPdf } from './booking-pdf.js';
 import { blankDiscount, discountFields, readDiscountField, type DiscountDraft } from './discount-fields.js';
+import { askConfirm } from './confirm.js';
 import { icon } from './icons.js';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -179,7 +180,6 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     /** Extending a room stay, and by how many nights. */
     extendOpen: boolean;
     extendNights: number;
-    confirmCancel: boolean;
     guestListOpen: boolean;
     guestList: Companion[];
     qrOpen: boolean;
@@ -190,17 +190,13 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     errors: { checkIn?: string; payment?: string };
     /** The receipt being checked is shown large. */
     receiptLarge: boolean;
-    rejecting: boolean;
-    rejectReason: string;
-    /** The reference number staff read off the receipt. */
-    checkReference: string;
     checkError: string;
     /** A past receipt opened from the payments list. */
     receiptShown: string | null;
   } = {
-    checkInOpen: false, checkOutOpen: false, extendOpen: false, extendNights: 1, confirmCancel: false, guestListOpen: false, guestList: [], qrOpen: false, discountOpen: false, discount: blankDiscount(), discountError: '',
+    checkInOpen: false, checkOutOpen: false, extendOpen: false, extendNights: 1, guestListOpen: false, guestList: [], qrOpen: false, discountOpen: false, discount: blankDiscount(), discountError: '',
     card: blankPaymentCard(), errors: {},
-    receiptLarge: false, rejecting: false, rejectReason: REJECT_REASONS[0] ?? '', checkReference: '', checkError: '', receiptShown: null,
+    receiptLarge: false, checkError: '', receiptShown: null,
   };
 
   const discountKindChanged = (before: DiscountDraft['kind']) => before !== ui.discount.kind;
@@ -289,8 +285,9 @@ export function createBookingDetail(bookingId: string): DrawerContent {
   }
 
   /** The guest's GCash receipt, for staff to find in the resort's GCash and confirm or turn down. */
-  function checkSection(ctx: DeskContext, check: PaymentCheck): SafeHTML {
+  function checkSection(ctx: DeskContext, booking: Booking, check: PaymentCheck): SafeHTML {
     const canDecide = ctx.can('payments.write');
+    const warnings = receiptWarnings(ctx.state, booking, check);
     return html`
       <section class="detail-section pay-check" id="payment-check" aria-labelledby="payment-check-title">
         <div class="pay-check__head">
@@ -304,33 +301,21 @@ export function createBookingDetail(bookingId: string): DrawerContent {
               <span class="pay-check__zoom small">${ui.receiptLarge ? 'Smaller' : 'Larger'}</span>
             </button>` : html`<p class="small muted">No receipt picture was sent.</p>`}
           <dl class="pay-check__facts">
-            <div><dt>Amount</dt><dd><strong>${peso(check.amount)}</strong></dd></div>
+            <div><dt>Should be</dt><dd><strong>${peso(check.amount)}</strong></dd></div>
             <div><dt>GCash sender</dt><dd>${check.senderName}</dd></div>
             <div><dt>Sent</dt><dd>${formatDateTime(check.sentAt)}</dd></div>
           </dl>
         </div>
-        <p class="small muted">Find this payment in the resort’s GCash app before confirming it.</p>
-        ${canDecide ? ui.rejecting ? html`
-          <div class="action-card">
-            <label class="field">
-              <span class="field__label">Why can't it be confirmed? The guest sees this.</span>
-              <select class="input" name="rejectReason" data-input="rejectReason">
-                ${REJECT_REASONS.map((reason) => html`<option ${reason === ui.rejectReason ? 'selected' : ''}>${reason}</option>`)}
-              </select>
-            </label>
-            <div class="button-row">
-              <button class="btn btn--quiet" type="button" data-action="keep-check">Back</button>
-              <button class="btn btn--danger" type="button" data-action="reject-check" data-id="${check.id}">Reject receipt</button>
-            </div>
-          </div>` : html`
-          <label class="field">
-            <span class="field__label">GCash reference number <span class="muted">(optional)</span></span>
-            <input class="input mono" name="checkReference" data-input="checkReference" value="${ui.checkReference}"
-              inputmode="numeric" autocomplete="off" placeholder="1234 567 890123">
-          </label>
+        ${warnings.length ? html`
+          <div class="pay-check__warn" role="note">
+            <p class="pay-check__warn-title">${icon('alert')} Check before you confirm</p>
+            <ul>${warnings.map((warning) => html`<li>${warning}</li>`)}</ul>
+          </div>` : ''}
+        <p class="small muted">A screenshot can be edited. Only the resort’s GCash app shows the money really arrived.</p>
+        ${canDecide ? html`
           <div class="button-row">
             <button class="btn btn--primary" type="button" data-action="confirm-check" data-id="${check.id}">${icon('check')} Found it · confirm payment</button>
-            <button class="btn btn--quiet btn--danger-text" type="button" data-action="ask-reject">Not found</button>
+            <button class="btn btn--quiet btn--danger-text" type="button" data-action="ask-reject" data-id="${check.id}">Not found</button>
           </div>` : html`<p class="small muted">Someone with payment access confirms it.</p>`}
         <p class="form-error" role="alert">${ui.checkError}</p>
       </section>`;
@@ -451,21 +436,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     }
 
     if (canArrive && ctx.can('bookings.cancel')) {
-      parts.push(ui.confirmCancel ? html`
-        <div class="action-card action-card--danger">
-          <h4 class="action-card__title">Cancel this booking?</h4>
-          <label class="field">
-            <span class="field__label">Reason</span>
-            <select class="input" name="cancelReason">
-              ${CANCEL_REASONS.map((reason) => html`<option>${reason}</option>`)}
-            </select>
-          </label>
-          <p class="small muted">The slot opens up again. Payments already recorded stay on file.</p>
-          <div class="button-row">
-            <button class="btn btn--quiet" type="button" data-action="keep-booking">Keep booking</button>
-            <button class="btn btn--danger" type="button" data-action="confirm-cancel">Cancel booking</button>
-          </div>
-        </div>` : html`
+      parts.push(html`
         <button class="btn btn--quiet btn--danger-text" type="button" data-action="ask-cancel">Cancel booking</button>`);
     }
 
@@ -502,7 +473,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
             <span class="small muted mono">${booking.id}</span>
           </div>
 
-          ${pending ? checkSection(ctx, pending) : ''}
+          ${pending ? checkSection(ctx, booking, pending) : ''}
           ${facts(ctx.state, booking)}
           ${priceSection(ctx.state, booking)}
           ${guestListSection(ctx, booking)}
@@ -547,15 +518,6 @@ export function createBookingDetail(bookingId: string): DrawerContent {
       reference: ({ el }) => {
         ui.card.reference = (el as HTMLInputElement).value;
         ui.card.error = '';
-      },
-
-      checkReference: ({ el }) => {
-        ui.checkReference = (el as HTMLInputElement).value;
-        ui.checkError = '';
-      },
-
-      rejectReason: ({ el }) => {
-        ui.rejectReason = (el as HTMLSelectElement).value;
       },
     },
 
@@ -620,7 +582,15 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         ctx.toast(`${peso(result.booking.discount?.amount ?? 0)} discount saved · new total ${peso(result.booking.total)}`);
       },
 
-      'remove-discount': ({ ctx }) => {
+      'remove-discount': async ({ ctx }) => {
+        const booking = findBooking(ctx.state, bookingId);
+        if (!booking?.discount) return;
+        const answer = await askConfirm({
+          title: 'Remove the discount?',
+          message: `The ${peso(booking.discount.amount)} discount comes off and the total goes back to ${peso(booking.pricing.total)}.`,
+          confirmLabel: 'Remove discount',
+        });
+        if (!answer) return;
         const result = removeDiscount(bookingId, ctx.staff.id);
         if (result.error !== undefined) ctx.toast(result.error, 'error');
         else ctx.toast(`Discount removed · total back to ${peso(result.booking.total)}`);
@@ -670,41 +640,58 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         redraw();
       },
 
-      'ask-reject': ({ redraw }) => {
-        ui.rejecting = true;
-        ui.checkError = '';
-        redraw();
-      },
-
-      'keep-check': ({ redraw }) => {
-        ui.rejecting = false;
-        redraw();
-      },
-
-      'confirm-check': ({ el, ctx, redraw }) => {
-        const result = confirmPaymentCheck(el.dataset.id ?? '', ui.checkReference, ctx.staff.id);
+      'ask-reject': async ({ el, ctx, redraw }) => {
+        const check = ctx.state.paymentChecks.find((item) => item.id === el.dataset.id);
+        const booking = findBooking(ctx.state, bookingId);
+        if (!check || !booking) return;
+        const answer = await askConfirm({
+          title: `Reject ${booking.guestName}'s receipt?`,
+          message: `The receipt from ${check.senderName} for the ${peso(check.amount)} downpayment. The booking stays on hold, and ${booking.guestName} is asked to send another receipt from their link, with the reason below.`,
+          choice: { label: 'Why can’t it be confirmed? The guest sees this.', options: [...REJECT_REASONS] },
+          confirmLabel: 'Reject receipt',
+          keepLabel: 'Back',
+        });
+        if (!answer) return;
+        const result = rejectPaymentCheck(check.id, answer.choice, ctx.staff.id);
         if (result.error !== undefined) {
           ui.checkError = result.error;
           redraw();
           return;
         }
-        ui.checkError = '';
-        ui.checkReference = '';
-        ui.receiptLarge = false;
-        ctx.toast(`${peso(result.payment.amount)} GCash payment confirmed${result.booking.status === 'confirmed' ? ' · booking confirmed' : ''}`);
-      },
-
-      'reject-check': ({ el, ctx, redraw }) => {
-        const result = rejectPaymentCheck(el.dataset.id ?? '', ui.rejectReason, ctx.staff.id);
-        if (result.error !== undefined) {
-          ui.checkError = result.error;
-          redraw();
-          return;
-        }
-        ui.rejecting = false;
         ui.checkError = '';
         ui.receiptLarge = false;
         ctx.toast(`Receipt rejected · ${result.booking.guestName} can send another from their link`, 'warning');
+      },
+
+      'confirm-check': async ({ el, ctx, redraw }) => {
+        const check = ctx.state.paymentChecks.find((item) => item.id === el.dataset.id);
+        const booking = findBooking(ctx.state, bookingId);
+        if (!check || !booking) return;
+        const answer = await askConfirm({
+          title: `Is ${peso(check.amount)} in the resort's GCash?`,
+          message: `Open the resort's GCash app and find the payment from ${check.senderName}, sent ${formatDateTime(check.sentAt)}. Only confirm if it is there and it is exactly ${peso(check.amount)}; if it is less, choose Not yet and reject it as "Amount does not match".`,
+          warnings: receiptWarnings(ctx.state, booking, check),
+          input: {
+            label: 'Reference number, from the GCash app',
+            placeholder: 'Last 4 digits, or all 13',
+            hint: 'Read it from the app’s transaction history, not from the guest’s screenshot.',
+            numeric: true,
+            check: (value) => appReferenceProblem(ctx.state, value, check.amount),
+          },
+          confirmLabel: 'Found it · confirm payment',
+          keepLabel: 'Not yet',
+          tone: 'plain',
+        });
+        if (!answer) return;
+        const result = confirmPaymentCheck(check.id, answer.value, ctx.staff.id);
+        if (result.error !== undefined) {
+          ui.checkError = result.error;
+          redraw();
+          return;
+        }
+        ui.checkError = '';
+        ui.receiptLarge = false;
+        ctx.toast(`${peso(result.payment.amount)} GCash payment confirmed${result.booking.status === 'confirmed' ? ' · booking confirmed' : ''}`);
       },
 
       'download-pdf': ({ ctx }) => {
@@ -819,21 +806,19 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         ctx.toast(`${peso(amount)} recorded for ${booking.guestName}`);
       },
 
-      'ask-cancel': ({ redraw }) => {
-        ui.confirmCancel = true;
-        redraw();
-      },
-
-      'keep-booking': ({ redraw }) => {
-        ui.confirmCancel = false;
-        redraw();
-      },
-
-      'confirm-cancel': ({ root, ctx }) => {
-        const reason = $<HTMLSelectElement>('[name="cancelReason"]', root).value;
-        ui.confirmCancel = false;
-        const booking = cancelBooking(bookingId, reason, ctx.staff.id);
-        ctx.toast(`${booking.guestName}'s booking was cancelled`, 'warning');
+      'ask-cancel': async ({ ctx }) => {
+        const booking = findBooking(ctx.state, bookingId);
+        if (!booking) return;
+        const answer = await askConfirm({
+          title: `Cancel ${booking.guestName}'s booking?`,
+          message: `${productLabel(ctx.state, booking.product)}, ${booking.nights > 1 ? stayText(booking.date, booking.nights) : formatDate(booking.date, 'long')}. The slot opens up again.${booking.paid ? ` The ${peso(booking.paid)} already paid stays on file; refund it separately if needed.` : ''}`,
+          choice: { label: 'Reason', options: [...CANCEL_REASONS] },
+          confirmLabel: 'Cancel booking',
+          keepLabel: 'Keep booking',
+        });
+        if (!answer) return;
+        const cancelled = cancelBooking(bookingId, answer.choice, ctx.staff.id);
+        ctx.toast(`${cancelled.guestName}'s booking was cancelled`, 'warning');
       },
     },
   };

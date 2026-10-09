@@ -11,6 +11,7 @@ import { formatDate, formatDigits, parseDigits, peso, plural } from '../../core/
 import { METHOD_LABELS } from '../../core/rules.js';
 import type { Expense, ExpenseCategory, PaymentMethod, State } from '../../core/types.js';
 import { asField, type DrawerContent } from '../types.js';
+import { askConfirm } from './confirm.js';
 import { icon } from './icons.js';
 
 const METHODS: PaymentMethod[] = ['cash', 'gcash', 'bank_transfer'];
@@ -54,13 +55,11 @@ const blankDraft = (state: State): NewExpense => ({
 export function createExpenseForm(existing?: Expense): DrawerContent {
   let draft: NewExpense | null = existing ? draftFrom(existing) : null;
   let error = '';
-  let confirmRemove = false;
   /** Typing a new category's name, and the name so far. */
   let adding = false;
   let newName = '';
-  /** The list of categories with a delete button on each, and the one being asked about. */
+  /** The list of categories with a delete button on each. */
   let editingList = false;
-  let askDelete: ExpenseCategory | null = null;
   // The actions below, so Enter in the new category's box can run Add.
   let actionsRef: NonNullable<DrawerContent['actions']>;
 
@@ -113,16 +112,6 @@ export function createExpenseForm(existing?: Expense): DrawerContent {
               <ul class="cat-list">
                 ${categories.map((category) => {
                   const count = state.expenses.filter((expense) => expense.category === category.id).length;
-                  if (askDelete === category.id) {
-                    return html`
-                      <li class="cat-list__row cat-list__row--ask">
-                        <span>Delete <strong>${category.label}</strong>?${count ? ` Its ${plural(count, 'expense')} move to Other.` : ''}</span>
-                        <span class="cat-list__buttons">
-                          <button class="btn btn--quiet btn--sm" type="button" data-action="keep-category">Keep</button>
-                          <button class="btn btn--danger btn--sm" type="button" data-action="delete-category" data-id="${category.id}">Delete</button>
-                        </span>
-                      </li>`;
-                  }
                   return html`
                     <li class="cat-list__row">
                       <span>${category.label} <span class="small muted">${count ? plural(count, 'expense') : 'unused'}</span></span>
@@ -184,16 +173,7 @@ export function createExpenseForm(existing?: Expense): DrawerContent {
 
         ${existing ? html`
           <div class="detail-section">
-            ${confirmRemove ? html`
-              <div class="action-card action-card--danger">
-                <h4 class="action-card__title">Remove this expense?</h4>
-                <p class="small muted">${existing.item} · ${peso(existing.amount)} on ${formatDate(existing.date, 'long')}. The profit and loss figures change straight away.</p>
-                <div class="button-row">
-                  <button class="btn btn--quiet" type="button" data-action="keep-expense">Keep it</button>
-                  <button class="btn btn--danger" type="button" data-action="confirm-remove">Remove expense</button>
-                </div>
-              </div>` : html`
-              <button class="btn btn--quiet btn--danger-text" type="button" data-action="ask-remove">${icon('trash')} Remove expense</button>`}
+            <button class="btn btn--quiet btn--danger-text" type="button" data-action="ask-remove">${icon('trash')} Remove expense</button>
           </div>` : ''}`;
     },
 
@@ -262,23 +242,20 @@ export function createExpenseForm(existing?: Expense): DrawerContent {
 
       'toggle-categories': ({ redraw }) => {
         editingList = !editingList;
-        askDelete = null;
         redraw();
       },
 
-      'ask-delete-category': ({ el, redraw }) => {
-        askDelete = el.dataset.id ?? null;
-        redraw();
-      },
-
-      'keep-category': ({ redraw }) => {
-        askDelete = null;
-        redraw();
-      },
-
-      'delete-category': ({ el, ctx, root, redraw }) => {
-        const result = removeExpenseCategory(el.dataset.id ?? '', ctx.staff.id);
-        askDelete = null;
+      'ask-delete-category': async ({ el, ctx, root, redraw }) => {
+        const category = expenseCategories(ctx.state).find((item) => item.id === el.dataset.id);
+        if (!category) return;
+        const count = ctx.state.expenses.filter((expense) => expense.category === category.id).length;
+        const answer = await askConfirm({
+          title: `Delete ${category.label}?`,
+          message: count ? `Its ${plural(count, 'expense')} ${count === 1 ? 'moves' : 'move'} to Other.` : 'No expenses use it.',
+          confirmLabel: 'Delete category',
+        });
+        if (!answer) return;
+        const result = removeExpenseCategory(category.id, ctx.staff.id);
         if (result.error !== undefined) {
           error = result.error;
           showError(root);
@@ -305,22 +282,17 @@ export function createExpenseForm(existing?: Expense): DrawerContent {
         ctx.closeDrawer();
       },
 
-      'ask-remove': ({ redraw }) => {
-        confirmRemove = true;
-        redraw();
-      },
-
-      'keep-expense': ({ redraw }) => {
-        confirmRemove = false;
-        redraw();
-      },
-
-      'confirm-remove': ({ ctx, root }) => {
+      'ask-remove': async ({ ctx, root }) => {
         if (!existing) return;
+        const answer = await askConfirm({
+          title: 'Remove this expense?',
+          message: `${existing.item} · ${peso(existing.amount)} on ${formatDate(existing.date, 'long')}. The profit and loss figures change straight away.`,
+          confirmLabel: 'Remove expense',
+        });
+        if (!answer) return;
         const result = removeExpense(existing.id, ctx.staff.id);
         if (result.error !== undefined) {
           error = result.error;
-          confirmRemove = false;
           showError(root);
           return;
         }

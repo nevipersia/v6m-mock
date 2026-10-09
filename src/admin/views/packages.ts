@@ -3,13 +3,14 @@
 // prices and the one promotion each is on, and below them the promotions
 // themselves. Editing happens in the side panel (components/package-form.ts).
 
-import type { PackageKind } from '../../core/actions.js';
+import { deletePackage, packageDraft, packageInUse, type PackageKind } from '../../core/actions.js';
 import { flag, html, type SafeHTML } from '../../core/dom.js';
 import { formatTime, peso, plural } from '../../core/format.js';
 import { guestRange, live, promoFor, promoStatus } from '../../core/rules.js';
 import type { State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { KIND_WORDS, STATUS_WORDS, promoWhen } from '../components/package-form.js';
+import { askConfirm } from '../components/confirm.js';
 import { icon } from '../components/icons.js';
 import { emptyState, pageHead } from '../layout.js';
 
@@ -187,8 +188,25 @@ export const actions: HandlerMap = {
     if (isKind(el.dataset.kind)) ctx.editPackage(el.dataset.kind, el.dataset.id);
   },
 
-  'delete-package': ({ el, ctx }) => {
-    if (isKind(el.dataset.kind)) ctx.editPackage(el.dataset.kind, el.dataset.id, true);
+  'delete-package': async ({ el, ctx }) => {
+    const kind = el.dataset.kind;
+    const id = el.dataset.id ?? '';
+    if (!isKind(kind)) return;
+    // Still booked: the package form says what has to move first.
+    if (packageInUse(ctx.state, kind, id)) {
+      ctx.editPackage(kind, id, true);
+      return;
+    }
+    const name = packageDraft(ctx.state, kind, id).name || 'this package';
+    const answer = await askConfirm({
+      title: `Delete ${name}?`,
+      message: 'It disappears from the booking forms, the guest booking page and the calendar. Past bookings keep their price and still show its name.',
+      confirmLabel: 'Delete',
+    });
+    if (!answer) return;
+    const result = deletePackage(kind, id, ctx.staff.id);
+    if ('error' in result) ctx.toast(result.error, 'error');
+    else ctx.toast(`${name} deleted`, 'warning');
   },
 
   'new-promo-alone': ({ ctx }) => ctx.editPromo(),
