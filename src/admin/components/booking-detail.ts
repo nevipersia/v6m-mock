@@ -109,7 +109,7 @@ function priceSection(state: State, booking: Booking): SafeHTML {
         <div class="line-items__row line-items__row--total"><dt>Total</dt><dd>${peso(booking.total)}</dd></div>
         <div class="line-items__row line-items__row--downpayment ${stillToConfirm(booking) && isActive(booking) ? 'is-due' : ''}">
           <dt>${downpaymentName(state, booking.product, booking.nights)}</dt>
-          <dd>${peso(booking.depositRequired)}${stillToConfirm(booking) ? '' : ' ✓'}</dd>
+          <dd>${peso(booking.depositRequired)}${booking.paid >= booking.depositRequired ? ' ✓' : ''}</dd>
         </div>
         <div class="line-items__row"><dt>Paid</dt><dd>${peso(booking.paid)}</dd></div>
         <div class="line-items__row line-items__row--balance ${booking.balance > 0 && isActive(booking) ? 'is-due' : ''}">
@@ -811,16 +811,12 @@ export function createBookingDetail(bookingId: string): DrawerContent {
           return;
         }
         ui.errors = {};
-        // Paying an event off moves it along on the Events page; say so.
-        const paysOffEvent = amount === booking.balance
-          ? ctx.state.events.find((item) => item.bookingId === bookingId && item.stage !== 'done')
-          : undefined;
         recordPayment(bookingId, {
           amount,
           method: value('method') as PaymentMethod,
           reference: value('reference').trim(),
         }, ctx.staff.id);
-        ctx.toast(`${peso(amount)} recorded for ${booking.guestName}${paysOffEvent ? ` · ${paysOffEvent.title} moved to Paid` : ''}`);
+        ctx.toast(`${peso(amount)} recorded for ${booking.guestName}`);
       },
 
       'ask-cancel': ({ redraw }) => {

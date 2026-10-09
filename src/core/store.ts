@@ -37,6 +37,10 @@ function normalize(loaded: State): State {
   loaded.invites ??= [];
   loaded.expenses ??= [];
   loaded.paymentChecks ??= [];
+  // Long stays added a nights count; every booking from before is one night.
+  for (const booking of loaded.bookings ?? []) {
+    if (!(booking.nights >= 1)) booking.nights = 1;
+  }
   // Expense categories became editable; data from before starts with the usual five.
   if (!loaded.expenseCategories?.length) loaded.expenseCategories = DEFAULT_CATEGORIES.map((category) => ({ ...category }));
   // The ocular visit stage and its date were dropped: an event still at that

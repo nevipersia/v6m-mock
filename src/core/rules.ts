@@ -164,10 +164,13 @@ export const closingEvent = (state: State, date: ISODate): ResortEvent | undefin
 export const unitBookingOn = (state: State, unitId: string, date: ISODate, excludeId?: string): Booking | undefined =>
   state.bookings.find((b) => b.id !== excludeId && isActive(b) && b.product === unitId && nightsOf(b).includes(date));
 
-/** Guests counted against a pool session's capacity. Exclusive rentals are not a shared session. */
+/**
+ * Guests counted against a pool session's capacity. Exclusive rentals are not a
+ * shared session. A long room stay's guests count on every night of it.
+ */
 export const poolGuests = (state: State, date: ISODate, sessionId: string, excludeId?: string): number =>
   state.bookings
-    .filter((b) => b.id !== excludeId && isActive(b) && b.date === date && b.session === sessionId && b.productType !== 'exclusive')
+    .filter((b) => b.id !== excludeId && isActive(b) && b.session === sessionId && b.productType !== 'exclusive' && nightsOf(b).includes(date))
     .reduce((sum, b) => sum + b.adults + b.kids, 0);
 
 export interface BookingRequest {
@@ -216,16 +219,19 @@ export function checkAvailability(state: State, { product, date, adults = 0, kid
     return { ok: false, reason: `${unit.name} is already booked for the night of ${formatDate(taken)}.` };
   }
 
+  // The pool has to fit the group on every night of a stay; the fullest night decides.
   const session = sessionFor(state, product);
-  const slotsLeft = session.capacity - poolGuests(state, date, session.id, excludeId);
+  const poolNights = unit ? nightsFrom(date, stay) : [date];
+  const left = poolNights.map((night) => ({ night, slots: session.capacity - poolGuests(state, night, session.id, excludeId) }));
+  const { night: tightest, slots: slotsLeft } = left.reduce((low, item) => (item.slots < low.slots ? item : low));
   if (adults + kids > slotsLeft && overLimits) {
-    return { ok: true, slotsLeft, over: `Over the ${session.label.toLowerCase()} limit: ${Math.max(0, slotsLeft)} slots were left on ${formatDate(date)}.` };
+    return { ok: true, slotsLeft, over: `Over the ${session.label.toLowerCase()} limit: ${Math.max(0, slotsLeft)} slots were left on ${formatDate(tightest)}.` };
   }
   if (adults + kids > slotsLeft) {
     return {
       ok: false,
       slotsLeft: Math.max(0, slotsLeft),
-      reason: `Only ${Math.max(0, slotsLeft)} ${session.label.toLowerCase()} slots are left on ${formatDate(date)}.`,
+      reason: `Only ${Math.max(0, slotsLeft)} ${session.label.toLowerCase()} slots are left on ${formatDate(tightest)}.`,
     };
   }
   return { ok: true, slotsLeft };

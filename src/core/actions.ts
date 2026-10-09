@@ -192,9 +192,10 @@ function reprice(state: State, booking: Booking, staffId: string, { keepConfirme
   booking.total = booking.pricing.total - (booking.discount?.amount ?? 0);
   booking.depositRequired = depositRequired(state, booking.product, booking.total, booking.nights);
   booking.balance = booking.total - booking.paid;
-  if (booking.status === 'hold' && booking.paid > 0 && downpaymentDue(booking) === 0) {
+  // A discount down to ₱0 leaves nothing to pay, so the booking is confirmed too.
+  if (booking.status === 'hold' && (booking.paid > 0 || booking.total <= 0) && downpaymentDue(booking) === 0) {
     booking.status = 'confirmed';
-    logActivity(state, staffId, 'booking.confirmed', booking.id, 'Downpayment met after the price changed');
+    logActivity(state, staffId, 'booking.confirmed', booking.id, booking.total <= 0 ? 'Nothing to pay after the discount' : 'Downpayment met after the price changed');
   } else if (booking.status === 'confirmed' && downpaymentDue(booking) > 0 && !keepConfirmed) {
     booking.status = 'hold';
     logActivity(state, staffId, 'booking.unconfirmed', booking.id, `${peso(downpaymentDue(booking))} short of the downpayment after the price changed`);
@@ -568,7 +569,7 @@ export function confirmPaymentCheck(checkId: string, reference: string, staffId:
     }, staffId);
     payment.sentAt = check.sentAt;
     Object.assign(check, { status: 'confirmed', reviewedBy: staffId, reviewedAt: demoNow(state), paymentId: payment.id } satisfies Partial<PaymentCheck>);
-    logActivity(state, staffId, 'payment.check_confirmed', booking.id, `${peso(amount)} found in GCash · ${check.reference}`);
+    logActivity(state, staffId, 'payment.check_confirmed', booking.id, `${peso(amount)} found in GCash${check.reference ? ` · ${check.reference}` : ''}`);
     return { booking, payment };
   });
 }

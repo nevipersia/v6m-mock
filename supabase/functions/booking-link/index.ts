@@ -39,7 +39,8 @@ const anonymous = (booking: any) => ({
 function publicState(state: any, stage: any) {
   const link = stage.stage === 'problem' ? null : stage.link;
   const own = stage.stage === 'pay' || stage.stage === 'checking' || stage.stage === 'done' ? stage.booking.id : null;
-  // Overnight stays that started a few days back can still overlap today.
+  // Overnight stays that started a few days back can still overlap today, and a
+  // long room stay that began weeks ago still holds its room until it checks out.
   const from = addDays(state.meta.asOf, -3);
   return {
     ...state,
@@ -58,7 +59,7 @@ function publicState(state: any, stage: any) {
       .filter((event: any) => event.date >= from)
       .map((event: any) => ({ ...event, title: '', notes: null, contactGuestId: '', coordinatorId: '', addOns: [] })),
     bookings: state.bookings
-      .filter((booking: any) => booking.id === own || booking.date >= from)
+      .filter((booking: any) => booking.id === own || booking.date >= from || String(booking.endsAt ?? '').slice(0, 10) >= state.meta.asOf)
       .map((booking: any) => (booking.id === own ? booking : anonymous(booking))),
   };
 }

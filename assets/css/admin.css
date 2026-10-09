@@ -1168,6 +1168,18 @@ body.has-drawer .jump {
   border-top: 0;
 }
 
+/* A row that opens something wherever it is clicked (Availability on the day view). */
+.row--click {
+  margin: 0 -8px;
+  padding-inline: 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.row--click:hover {
+  background: #FDE7D3;
+}
+
 .row__main {
   display: flex;
   flex: 1;

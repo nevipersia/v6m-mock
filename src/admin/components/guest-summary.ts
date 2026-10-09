@@ -25,7 +25,7 @@ export const inHouseNow = (state: State): Booking[] =>
 export const headcount = (bookings: Booking[]): number => bookings.reduce((sum, b) => sum + b.adults + b.kids, 0);
 
 const COPY: Record<GuestGroup, { title: string; empty: string; owed: string }> = {
-  arriving: { title: 'Arriving today', empty: 'No more arrivals today.', owed: 'To collect on arrival' },
+  arriving: { title: 'Arriving today', empty: 'No more arrivals today.', owed: 'To collect at check-out' },
   inhouse: { title: 'In house', empty: 'Nobody is checked in right now.', owed: 'Still owed by guests here' },
 };
 

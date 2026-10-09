@@ -122,13 +122,18 @@ function dayView(ctx: DeskContext, day: ISODate): SafeHTML {
           ${live(state.units).map((unit) => {
             const booking = unitBookingOn(state, unit.id, day);
             const held = exclusiveOverlapping(state, bookingWindow(state, unit.id, day));
+            // The whole row opens the booking (or books the free unit), not just its button.
+            const canBook = !booking && !held && ctx.can('bookings.write');
+            const rowAction = booking
+              ? html` class="row row--click" data-action="open-booking" data-id="${booking.id}"`
+              : canBook ? html` class="row row--click" data-action="new-booking" data-product="${unit.id}" data-date="${day}"` : html` class="row"`;
             return html`
-              <li class="row">
+              <li${rowAction}>
                 <span class="row__main"><span class="row__title">${unit.name}</span></span>
                 ${booking
                   ? html`<button class="btn btn--quiet btn--sm" type="button" data-action="open-booking" data-id="${booking.id}">${shortName(booking.guestName)}</button>`
-                  : event || held || !ctx.can('bookings.write')
-                    ? html`<span class="small muted">${event ? 'Closed' : held ? 'Exclusive' : 'Open'}</span>`
+                  : held || !ctx.can('bookings.write')
+                    ? html`<span class="small muted">${held ? 'Exclusive' : 'Open'}</span>`
                     : html`<button class="btn btn--secondary btn--sm" type="button" data-action="new-booking" data-product="${unit.id}" data-date="${day}">Book</button>`}
               </li>`;
           })}

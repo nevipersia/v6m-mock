@@ -128,7 +128,10 @@ export function render(ctx: DeskContext): SafeHTML {
   const inHouse = inHouseNow(state);
   const payments = state.payments.filter((p) => p.receivedAt.startsWith(today));
   const collected = payments.reduce((sum, p) => sum + p.amount, 0);
-  const owing = state.bookings.filter((b) => isActive(b) && b.status !== 'checked_out' && b.date === today && b.balance > 0);
+  // Balances are collected at check-out: today's bookings, plus guests still in
+  // house from an earlier day (a long room stay leaving today, say).
+  const owing = state.bookings.filter((b) => isActive(b) && b.status !== 'checked_out' && b.balance > 0
+    && (b.date === today || b.status === 'checked_in'));
   const balancesDue = owing.reduce((sum, b) => sum + b.balance, 0);
 
   return html`
