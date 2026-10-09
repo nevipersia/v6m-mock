@@ -58,7 +58,7 @@ function stamp(booking: Booking, timestamp: Timestamp | null): string {
 /**
  * The money in two parts: what was paid before arrival (the downpayment, or
  * more), and what was paid at the resort: from check-in on, such as the
- * balance settled at check-in, and for a walk-in anything paid at the counter
+ * balance settled at check-out, and for a walk-in anything paid at the counter
  * on the day itself, even before staff pressed check-in.
  */
 function paidSplit(state: State, booking: Booking): { advance: number; atResort: number } {

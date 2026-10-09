@@ -382,7 +382,7 @@ export function doneScreen(state: State, page: BookingPageSettings, booking: Boo
         <div class="facts__row"><dt>Guests</dt><dd>${plural(booking.adults + booking.kids, 'guest')}${booking.guestList?.length ? ` · ${booking.guestList.length} on the list` : ''}</dd></div>
         <div class="facts__row"><dt>Total</dt><dd>${peso(booking.total)}</dd></div>
         <div class="facts__row"><dt>Downpayment paid</dt><dd>${peso(booking.paid)}${payment?.method === 'gcash' ? html`<span class="book__sub mono">GCash${payment.reference ? ` ${payment.reference}` : ''}${payment.senderName ? ` · ${payment.senderName}` : ''}</span>` : ''}</dd></div>
-        <div class="facts__row"><dt>Balance at check-in</dt><dd>${peso(booking.balance)}</dd></div>
+        <div class="facts__row"><dt>Balance at check-out</dt><dd>${peso(booking.balance)}</dd></div>
         ${pkg ? html`<div class="facts__row"><dt>Time</dt><dd>${formatTime(pkg.start)}–${formatTime(pkg.end)}</dd></div>`
           : unit ? html`<div class="facts__row"><dt>Check in</dt><dd>${formatTime(unit.checkIn)}</dd></div>` : ''}
       </dl>

@@ -605,11 +605,11 @@ function checkInInState(state: State, booking: Booking, payment: CheckInPayment 
   logActivity(state, staffId, 'booking.checked_in', booking.id, 'Valid ID verified');
 }
 
-/** Verifies ID, collects any balance and marks the guest as arrived. */
-export function checkIn(bookingId: string, { method }: { method: PaymentMethod }, staffId: string): Booking {
+/** Verifies ID and marks the guest as arrived. Any balance is collected at check-out. */
+export function checkIn(bookingId: string, staffId: string): Booking {
   return update((state) => {
     const booking = must(findBooking(state, bookingId), `Booking ${bookingId}`);
-    checkInInState(state, booking, { method }, staffId);
+    checkInInState(state, booking, null, staffId);
     return booking;
   });
 }

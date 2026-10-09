@@ -384,11 +384,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
           <div class="action-card">
             <h4 class="action-card__title">Check in ${booking.guestName}</h4>
             <label class="checkbox"><input type="checkbox" name="idChecked"> Valid ID checked</label>
-            ${booking.balance > 0 ? html`
-              <label class="field">
-                <span class="field__label">Collect balance of ${peso(booking.balance)} via</span>
-                <select class="input" name="checkInMethod">${methodOptions('cash')}</select>
-              </label>` : html`<p class="small muted">Fully paid. Nothing to collect.</p>`}
+            <p class="small muted">${booking.balance > 0 ? `The ${peso(booking.balance)} balance is collected at check-out.` : 'Fully paid.'}</p>
             <p class="form-error">${ui.errors.checkIn}</p>
             <div class="button-row">
               <button class="btn btn--quiet" type="button" data-action="cancel-check-in">Not now</button>
@@ -735,14 +731,12 @@ export function createBookingDetail(bookingId: string): DrawerContent {
           redraw();
           return;
         }
-        const method = ($maybe<HTMLSelectElement>('[name="checkInMethod"]', root)?.value ?? 'cash') as PaymentMethod;
         const booking = findBooking(ctx.state, bookingId);
         if (!booking) return;
-        const collected = booking.balance;
         ui.checkInOpen = false;
         ui.errors = {};
-        checkIn(bookingId, { method }, ctx.staff.id);
-        ctx.toast(`${booking.guestName} checked in${collected ? ` · collected ${peso(collected)}` : ''}`);
+        checkIn(bookingId, ctx.staff.id);
+        ctx.toast(`${booking.guestName} checked in${booking.balance ? ` · ${peso(booking.balance)} to collect at check-out` : ''}`);
       },
 
       'check-out': ({ ctx, redraw }) => {

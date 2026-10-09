@@ -363,8 +363,9 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   short chime (`announcePayments`, `components/chime.ts`); clicking the pop-up opens the booking
   the same way. Receipts already waiting when someone signs in are only in the bell. The tab title
   starts with the number waiting, e.g. "(2) Dashboard · V6M Desk".
-- Check-in needs a valid-ID tick and collects any balance. Check-out is refused while a balance is
-  due (`checkOutProblem` in `core/actions.ts`); the panel disables the button and says what to collect.
+- Check-in needs a valid-ID tick only; most guests pay the balance at check-out. Check-out asks how
+  the balance is paid and collects it (`checkOut` with a payment); without one, a balance blocks it
+  (`checkOutProblem` in `core/actions.ts`).
 - Walk-ins: a new booking's payment method starts on Cash for a walk-in and GCash otherwise (until
   staff pick one); reference, time sent and sender only show for GCash or bank transfer. A walk-in
   for today (`isWalkInToday`) turns Save booking into Check in: the form asks for the valid-ID tick,
@@ -404,8 +405,8 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   free and add the cost to the balance. A confirmed booking stays confirmed even when the new 50%
   downpayment is more than was paid (`reprice` `keepConfirmed`; `stillToConfirm` hides the shortfall
   labels for confirmed bookings).
-- Walk-ins pay on the way out: a walk-in for today checks in straight from the form with nothing
-  owed up front (an optional "Paid now" amount is recorded). `checkOut(id, staff, payment)` collects
+- Guests pay on the way out: check-in (`checkIn`) no longer collects the balance, and a walk-in for
+  today checks in straight from the form with nothing owed up front (an optional "Paid now" amount is recorded). `checkOut(id, staff, payment)` collects
   any balance as the guest leaves; the panel asks for the method first.
 - The date picker no longer prints "Open", "Booked" and similar under each day: days a booking can't
   have are greyed out, and a full pool session the desk may still overbook is grey but clickable.
