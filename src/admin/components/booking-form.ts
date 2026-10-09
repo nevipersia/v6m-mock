@@ -6,8 +6,8 @@ import { $, $maybe, html, render, type SafeHTML } from '../../core/dom.js';
 import { allProductIds, productGroups } from '../../core/catalog.js';
 import { formatDigits, isEmail, isPHMobile, parseDigits, peso } from '../../core/format.js';
 import {
-  DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, checkAvailability, closingEvent, depositRequired, discountAmount,
-  discountProblem, findBooking, findExclusive, findGuest, findUnit, quote,
+  DOWNPAYMENT_FLAT, DOWNPAYMENT_PERCENT, LONG_STAY_NIGHTS, METHOD_LABELS, SOURCE_LABELS, canStayLonger, checkAvailability, depositRequired,
+  discountAmount, discountProblem, downpaymentName, findBooking, findExclusive, findGuest, findUnit, quote, stayNights,
 } from '../../core/rules.js';
 import type { Booking, BookingSource, Companion, ExtraCharge, PaymentMethod, State } from '../../core/types.js';
 import { asField, type BookingPrefill, type DrawerContent } from '../types.js';
@@ -19,10 +19,10 @@ const SOURCES: BookingSource[] = ['walk_in', 'phone', 'messenger', 'instagram', 
 const NEW_SOURCES: BookingSource[] = ['walk_in', 'phone', 'messenger', 'instagram', 'website'];
 const METHODS: PaymentMethod[] = ['gcash', 'cash', 'bank_transfer'];
 
-type NumberField = 'adults' | 'kids' | 'deposit' | 'scPwd';
+type NumberField = 'adults' | 'kids' | 'deposit' | 'scPwd' | 'nights';
 type TextField = 'guestName' | 'mobile' | 'product' | 'date' | 'reference' | 'notes' | 'address' | 'email' | 'sentTime' | 'senderName';
 
-const NUMBER_FIELDS: readonly string[] = ['adults', 'kids', 'deposit', 'scPwd'] satisfies NumberField[];
+const NUMBER_FIELDS: readonly string[] = ['adults', 'kids', 'deposit', 'scPwd', 'nights'] satisfies NumberField[];
 const TEXT_FIELDS: readonly string[] = [
   'guestName', 'mobile', 'product', 'date', 'reference', 'notes', 'address', 'email', 'sentTime', 'senderName',
 ] satisfies TextField[];
@@ -42,6 +42,8 @@ type Draft = Omit<NewBooking, 'extras'> & {
   mobile: string; reference: string; notes: string; inquiryId: string | null;
   address: string; email: string; scPwd: number; extras: ExtraDraft[]; sentTime: string; senderName: string;
   guestList: Companion[];
+  /** Nights for a room stay; 1 for anything else. */
+  nights: number;
   /** A walk-in for today is checked in from the form, which needs the valid ID ticked. */
   idVerified: boolean;
 };
@@ -62,6 +64,7 @@ function initialDraft(state: State, prefill: BookingPrefill): Draft {
     source,
     product,
     date: prefill.date || state.meta.asOf,
+    nights: 1,
     adults,
     kids: 0,
     deposit: 0,
@@ -94,6 +97,7 @@ function draftFromBooking(state: State, booking: Booking): Draft {
     source: booking.source,
     product: booking.product,
     date: booking.date,
+    nights: booking.nights || 1,
     adults: booking.adults,
     kids: booking.kids,
     deposit: 0,
@@ -127,9 +131,10 @@ function summaryTemplate(state: State, draft: Draft, { discount, editing }: Summ
 
   const availability = checkAvailability(state, { ...draft, excludeId: editing?.id, overLimits: true });
   const { estimate, off, total } = priced(state, draft, discount);
-  const required = depositRequired(state, draft.product, total);
+  const nights = stayNights(state, draft.product, draft.nights);
+  const required = depositRequired(state, draft.product, total, nights);
   const walkIn = !editing && isWalkInToday(state, draft);
-  const paid = editing ? editing.paid : walkIn ? total : draft.deposit;
+  const paid = editing ? editing.paid : draft.deposit;
   const short = paid > 0 && paid < required;
 
   return html`
@@ -150,15 +155,15 @@ function summaryTemplate(state: State, draft: Draft, { discount, editing }: Summ
         ${editing && editing.total !== total ? html`
           <div class="line-items__row"><dt>Was</dt><dd class="muted">${peso(editing.total)}</dd></div>` : ''}
         ${walkIn
-          ? html`<div class="line-items__row line-items__row--downpayment"><dt>Collect now</dt><dd>${peso(total)}</dd></div>`
-          : html`<div class="line-items__row line-items__row--downpayment"><dt>${DOWNPAYMENT_PERCENT}% downpayment to confirm</dt><dd>${peso(required)}</dd></div>`}
+          ? html`<div class="line-items__row line-items__row--downpayment"><dt>Pays on the way out</dt><dd>${peso(Math.max(0, total - paid))}</dd></div>`
+          : html`<div class="line-items__row line-items__row--downpayment"><dt>${downpaymentName(state, draft.product, nights)} to confirm</dt><dd>${peso(required)}</dd></div>`}
         ${editing ? html`<div class="line-items__row"><dt>Already paid</dt><dd>${peso(editing.paid)}</dd></div>` : ''}
         ${walkIn ? '' : html`<div class="line-items__row"><dt>${editing ? 'Balance' : 'Balance after this payment'}</dt><dd>${peso(Math.max(0, total - paid))}</dd></div>`}
       </dl>
       ${[availability.over, ...estimate.warnings].filter(Boolean).map((warning) => html`<p class="small is-due">${warning} Saving anyway is fine.</p>`)}
       ${editing && total < editing.paid ? html`<p class="form-error">The guest already paid ${peso(editing.paid)}, so the total can't go below that.</p>` : ''}
       <p class="small ${short ? 'is-due' : 'muted'}">
-        ${walkIn ? 'A walk-in for today pays in full and is checked in when you press Check in.' : paid >= required
+        ${walkIn ? 'A walk-in for today is checked in now and pays the bill on the way out, when you check them out.' : paid >= required
           ? `The downpayment is covered, so the booking ${editing ? 'stays' : 'is saved as'} confirmed.`
           : short
             ? `${peso(required - paid)} short of the downpayment, so the booking ${editing ? 'will be' : 'stays'} on hold.`
@@ -166,7 +171,7 @@ function summaryTemplate(state: State, draft: Draft, { discount, editing }: Summ
       </p>
       ${editing || walkIn || draft.deposit === required ? '' : html`
         <button class="btn btn--quiet btn--sm" type="button" data-action="use-suggested-deposit" data-amount="${required}">
-          Use the ${DOWNPAYMENT_PERCENT}% downpayment of ${peso(required)}
+          Use the ${peso(required)} downpayment
         </button>`}
     </div>`;
 }
@@ -333,10 +338,10 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
                 </select>
               </label>
               <label class="field form-grid__wide">
-                <span class="field__label">Date</span>
+                <span class="field__label">${canStayLonger(state, form.product) ? 'Check-in to check-out' : 'Date'}</span>
                 <input class="input" name="date" data-input="field" type="date" value="${form.date}"
-                  data-availability="${editId ?? ''}" data-legend="Which days are open for the booking above.">
-                ${closingEvent(state, form.date) ? html`<span class="small muted">Closed that day for a private event.</span>` : ''}
+                  data-availability="${editId ?? ''}">
+                <input type="hidden" name="nights" data-input="field" value="${stayNights(state, form.product, form.nights)}">
               </label>
               <label class="field">
                 <span class="field__label">Adults</span>
@@ -369,13 +374,12 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
 
           ${editing ? '' : html`
             <fieldset class="form-section">
-              <legend class="form-section__title">${walkIn ? 'Payment' : 'Downpayment received'}</legend>
+              <legend class="form-section__title">${walkIn ? 'Paid now (optional)' : 'Downpayment received'}</legend>
               <div class="form-grid">
-                ${walkIn ? '' : html`
-                  <label class="field">
-                    <span class="field__label">Amount (₱)</span>
-                    <input class="input input--amount" name="deposit" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${form.deposit ? formatDigits(form.deposit) : ''}">
-                  </label>`}
+                <label class="field">
+                  <span class="field__label">Amount (₱)</span>
+                  <input class="input input--amount" name="deposit" data-input="field" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="${form.deposit ? formatDigits(form.deposit) : ''}">
+                </label>
                 <label class="field">
                   <span class="field__label">Method</span>
                   <select class="input" name="method" data-input="field">
@@ -403,8 +407,8 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
                   <input type="checkbox" name="idVerified" data-input="field" ${form.idVerified ? 'checked' : ''}>
                   Valid ID checked
                 </label>
-                <p class="small muted">The guest is here today, so they pay the full amount and are checked in now. For another date, the booking is saved with a downpayment instead.</p>`
-              : html`<p class="small muted">A booking is confirmed once ${DOWNPAYMENT_PERCENT}% is paid. Leave the amount blank to hold the slot; the guest can pay later by GCash QR from the booking.</p>`}
+                <p class="small muted">The guest is here today, so they are checked in now and pay when they leave. Leave the amount blank unless they pay something now. For another date, the booking is saved with a downpayment instead.</p>`
+              : html`<p class="small muted">A booking is confirmed once its downpayment is paid: ${peso(DOWNPAYMENT_FLAT)} (or the whole amount when it costs less), or ${DOWNPAYMENT_PERCENT}% for a room stay of ${LONG_STAY_NIGHTS} nights or more. Leave the amount blank to hold the slot; the guest can pay later by GCash QR from the booking.</p>`}
             </fieldset>`}
 
           <p class="form-error" data-slot="error" role="alert">${error}</p>
@@ -500,8 +504,15 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         } else if (TEXT_FIELDS.includes(field.name)) {
           draft[field.name as TextField] = field.value;
           if (field.name === 'product' || field.name === 'date') chosen[field.name] = field.value;
+          // Only a room is booked for several nights.
+          if (field.name === 'product') draft.nights = stayNights(ctx.state, field.value, draft.nights);
         }
         error = '';
+        // The booking decides whether the date is a stay; nights show on the date button.
+        if (['product', 'nights'].includes(field.name)) {
+          redraw();
+          return;
+        }
         // Source and date decide between saving and checking in; the method decides which payment fields show.
         if (!editId && ['source', 'date', 'method'].includes(field.name)) {
           redraw();
@@ -575,7 +586,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         else if (discountError) error = discountError;
         else if (!chosen && discount.note.trim() && canDiscount && discountChanged) error = 'Enter the discount amount, or clear the reason.';
         else if (editing && total < editing.paid) error = `The guest already paid ${peso(editing.paid)}, so the total can't go below that.`;
-        else if (!editing && !walkIn && draft.deposit > total) error = `The payment can't be more than the ${peso(total)} total.`;
+        else if (!editing && draft.deposit > total) error = `The payment can't be more than the ${peso(total)} total.`;
         else if (walkIn && !draft.idVerified) error = 'Tick Valid ID checked to check the guest in.';
         else error = '';
 
@@ -591,6 +602,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
             source: draft.source,
             product: draft.product,
             date: draft.date,
+            nights: draft.nights,
             adults: draft.adults,
             kids: draft.kids,
             notes: draft.notes,
@@ -619,7 +631,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
         const input = { ...draft, ...payment, mobile: draft.mobile.trim(), discount: canDiscount ? chosen : null };
         if (walkIn) {
           const booking = checkInWalkIn(input, ctx.staff.id);
-          ctx.toast(`${booking.guestName} checked in · collected ${peso(booking.paid)}`);
+          ctx.toast(`${booking.guestName} checked in · ${booking.balance ? `${peso(booking.balance)} to pay at check-out` : 'paid in full'}`);
           ctx.openBooking(booking.id);
           return;
         }
@@ -628,7 +640,7 @@ export function createBookingForm(prefill: BookingPrefill = {}, { editId }: Form
           ? booking.balance === 0 ? `Booking confirmed, paid in full (${peso(booking.paid)})` : `Booking confirmed with a ${peso(booking.paid)} downpayment`
           : booking.paid
             ? `Booking on hold: ${peso(booking.depositRequired - booking.paid)} more needed to confirm`
-            : `Booking on hold until the ${DOWNPAYMENT_PERCENT}% downpayment is paid`);
+            : `Booking on hold until the ${peso(booking.depositRequired)} downpayment is paid`);
         ctx.openBooking(booking.id);
       },
     },

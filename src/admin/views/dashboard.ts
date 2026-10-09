@@ -4,7 +4,7 @@
 
 import { flag, html, type SafeHTML } from '../../core/dom.js';
 import { formatDate, peso, plural } from '../../core/format.js';
-import { closingEvent, exclusiveOn, isActive, productLabel } from '../../core/rules.js';
+import { exclusiveOn, isActive, productLabel } from '../../core/rules.js';
 import { financeReport } from '../../core/finance.js';
 import { SALES_RANGES, salesReport } from '../../core/sales.js';
 import type { Staff } from '../../core/types.js';
@@ -49,7 +49,7 @@ function card({ label, value, detail, action, href, opens, tone }: CardOptions):
 /** One line of the summary: a name on the left, its figure on the right. */
 function line(label: string, value: string, tone = ''): SafeHTML {
   return html`
-    <div class="summary__line ${tone ? `summary__line--${tone}` : ''}">
+    <div class="summary__line ${tone.split(' ').filter(Boolean).map((word) => `summary__line--${word}`).join(' ')}">
       <dt>${label}</dt>
       <dd>${value}</dd>
     </div>`;
@@ -105,7 +105,7 @@ function summarySection(ctx: DeskContext): SafeHTML {
               ${line('Income', peso(money.income), 'strong')}
               ${line('Expenses', peso(money.spend))}
               ${line('Biggest cost', biggest ? `${biggest.label} · ${Math.round(biggest.share * 100)}%` : 'Nothing spent')}
-              ${line(money.profit < 0 ? 'Loss' : 'Profit', peso(Math.abs(money.profit)), money.profit < 0 ? 'total warn' : 'total')}
+              ${line(money.profit < 0 ? 'Loss' : 'Profit', peso(Math.abs(money.profit)), money.profit < 0 ? 'total warn' : 'total good')}
             </dl>
             <p class="summary__note small muted">
               ${money.margin === null ? 'Nothing came in' : `${Math.round(money.margin * 100)}% of income`}
@@ -130,7 +130,6 @@ export function render(ctx: DeskContext): SafeHTML {
   const collected = payments.reduce((sum, p) => sum + p.amount, 0);
   const owing = state.bookings.filter((b) => isActive(b) && b.status !== 'checked_out' && b.date === today && b.balance > 0);
   const balancesDue = owing.reduce((sum, b) => sum + b.balance, 0);
-  const closedFor = closingEvent(state, today);
 
   return html`
     ${pageHead({
@@ -141,7 +140,6 @@ export function render(ctx: DeskContext): SafeHTML {
         <button class="btn btn--primary" type="button" data-action="new-booking">${icon('plus')} New booking</button>` : '',
     })}
 
-    ${closedFor ? html`<p class="notice notice--event">V6M is closed today for ${closedFor.title}.</p>` : ''}
     ${exclusiveOn(state, today) ? html`
       <p class="notice notice--exclusive">Exclusive rental today: ${exclusiveOn(state, today)?.guestName} has ${productLabel(state, exclusiveOn(state, today)?.product ?? '')}. No other guests during their time.</p>` : ''}
 

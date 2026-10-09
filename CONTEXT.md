@@ -74,7 +74,7 @@ then removed on request; its inquiries stay in the data as inbox history.
 
 - **V6M Desk** (`/admin/`): staff app — email and password sign-in (two demo accounts, or an invite
   code that also sets a password),
-  Dashboard, Bookings (calendar or list, by month, week or day), Finances, Packages, Inbox, Events, Users.
+  Dashboard, Bookings (calendar or list, by month, week or day), Finances, Packages, Inbox, Users.
 - **Booking link** (`/book/?code=…`): single-use page a staff member sends to one guest; the booking
   they submit lands on the calendar as a hold under that staff member. The guest goes through steps
   (What and when → Your details → Who is coming → Check and confirm), then pays. It starts blank unless
@@ -128,8 +128,8 @@ src/                        TypeScript sources (compiled to assets/js/, which is
                             (remembered in localStorage) and carries the signed-in account,
                             which phones show in the top bar instead
     components/             drawer, booking-detail, booking-form, booking-link, booking-pdf, ledger-pdf,
-                            event-form, expense-form, guest-summary, jump, badges, icons, toast
-    views/                  login, dashboard, calendar, bookings, finances, packages, inbox, events, users
+                            expense-form, guest-summary, jump, badges, icons, toast
+    views/                  login, dashboard, calendar, bookings, finances, packages, inbox, users
 assets/
   img/                      Logo
   css/                      tokens.css, base.css, fields.css (shared) · admin.css · book.css
@@ -215,6 +215,11 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   trend and the share charts. Handlers read `event.type` to tell arriving from leaving.
 - `flag()` in `core/dom.ts` renders "true"/"false" for ARIA state attributes: a bare boolean renders
   as nothing in these templates, which would leave `aria-pressed=""`.
+- **Events were removed from the Desk (Oct 2026).** There is no Events page, no Events kind in
+  Packages, no event row or closures on the calendar, and no event alerts. The events data, its
+  table and the event actions in `core/actions.ts` remain unused underneath. Events no longer close
+  the resort (`checkAvailability` and `dayAvailability` ignore them), and an old event booking reads
+  as an ordinary booking. The notes below on events describe how it worked before.
 - Private events: `createEvent` and `bookEvent` in `core/actions.ts`, form in
   `admin/components/event-form.ts`. Stage decides whether a booking is written: `reserved`, `paid`
   and `done` take the date, `inquiry` and `ocular` do not. Event bookings skip `quote`/`schedule`
@@ -321,7 +326,9 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   are many charges, so the totals stay clear of the signatures. Time in / out are the actual
   check-in and check-out times (blank until then, with the day added when it differs from the
   booking's). Money paid from check-in on is shown as "Paid at the resort", apart from the downpayment.
-- Every booking needs a 50% downpayment (`depositRequired`, rounded up to the peso)
+- Downpayment (`depositRequired` in `core/rules.ts`): ₱1,000 (`DOWNPAYMENT_FLAT`), or the whole
+  total when the booking costs less; a room stay of 2 nights or more (`isLongStay`) pays 50%,
+  rounded up to the peso. `downpaymentName` labels it. (It used to be 50% for everything.)
   before it is confirmed; less stays on hold. `applyPayment` in `core/actions.ts` enforces it.
 - Editing (`updateBooking` in `core/actions.ts`, form `booking-form.ts` with `editId`): hold or
   confirmed bookings only (`isEditable`), not events. Re-checks availability excluding the
@@ -330,7 +337,7 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
 - Manual discounts (`applyDiscount` / `removeDiscount`, rules in `core/rules.ts`): permission
   `discounts.apply` (both roles). The reason note is optional for everyone.
   Stored as `booking.discount`; `booking.total` = `pricing.total` − discount, and `reprice()` moves
-  the booking between hold and confirmed as the 50% downpayment changes. The total can't drop below
+  the booking between hold and confirmed as the downpayment changes. The total can't drop below
   what was paid.
 - GCash is a personal account, so nothing tells the site a payment arrived. Booking-link guests
   scan the resort's QR (`GCASH_ACCOUNT` in `core/qr-payment.ts`, a demo stand-in drawn by
@@ -385,6 +392,29 @@ tsconfig.json               Strict TypeScript, ES modules, no bundler
   Under 420px, two-field form rows stack (guest counts excepted). Under 380px, the tab bar sizes
   each tab to its name so all seven fit 320px. Under 360px, the date pill drops "Demo date ·".
   Every screen was audited at 375px and 320px with no sideways scroll or cut text.
+
+- Long stays: rooms only (`canStayLonger`, unit kind `room`) can be booked for several nights, up to
+  `MAX_NIGHTS` (30). In the Desk's booking form and on the booking link, a room's date field is
+  "Check-in to check-out": the picker (`stay` option in `components/date-picker.ts`) takes the
+  check-in, then a check-out the whole stay fits before. The nights go in the form's hidden
+  `[name=nights]` (`setStayProducts` in `components/fields.ts`). `booking.nights`, `bookingWindow`,
+  `quote` (room price × nights; entrance per head charged once), and `checkAvailability` (every night
+  free) all follow it. The calendar shows a stay on each of its nights.
+- Extend stay (booking panel, rooms only): `extendStay` / `extendQuote` add nights if the room is
+  free and add the cost to the balance. A confirmed booking stays confirmed even when the new 50%
+  downpayment is more than was paid (`reprice` `keepConfirmed`; `stillToConfirm` hides the shortfall
+  labels for confirmed bookings).
+- Walk-ins pay on the way out: a walk-in for today checks in straight from the form with nothing
+  owed up front (an optional "Paid now" amount is recorded). `checkOut(id, staff, payment)` collects
+  any balance as the guest leaves; the panel asks for the method first.
+- The date picker no longer prints "Open", "Booked" and similar under each day: days a booking can't
+  have are greyed out, and a full pool session the desk may still overbook is grey but clickable.
+- Expense categories are data (`state.expenseCategories`, table `expense_categories`, the five
+  defaults seeded by `normalize`). The expense form's Category dropdown has "+ New category…" and
+  an "Edit categories" list with a delete button on each (`addExpenseCategory`,
+  `removeExpenseCategory`). Deleting moves that category's expenses to Other, which always stays.
+- Profit shows green and a loss red on the dashboard summary, the Finances totals, the report
+  preview and the ledger PDF.
 
 ## Mock data
 

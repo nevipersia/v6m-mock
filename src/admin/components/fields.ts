@@ -36,6 +36,32 @@ export function setDayAvailability(fn: Availability): void {
   availability = fn;
 }
 
+/** For a product, whether it is booked as a stay of nights (rooms), and the most it can run to. */
+type StayRule = (product: string) => number | null;
+let stayRule: StayRule | null = null;
+
+/**
+ * Date fields marked data-availability whose form has a room chosen open as a
+ * stay: check-in, then check-out. The nights go into the form's [name=nights].
+ */
+export function setStayProducts(fn: StayRule): void {
+  stayRule = fn;
+}
+
+const formProduct = (input: HTMLInputElement): string =>
+  input.form?.querySelector<HTMLSelectElement | HTMLInputElement>('[name="product"]')?.value ?? '';
+
+const nightsInput = (input: HTMLInputElement): HTMLInputElement | null =>
+  input.form?.querySelector<HTMLInputElement>('[name="nights"]') ?? null;
+
+/** The stay this date field is part of, if its form has a room chosen. */
+function stayFor(input: HTMLInputElement): { nights: number; maxNights: number } | null {
+  if (!stayRule || !('availability' in input.dataset)) return null;
+  const maxNights = stayRule(formProduct(input));
+  const field = nightsInput(input);
+  return maxNights && field ? { nights: Math.max(1, Number(field.value) || 1), maxNights } : null;
+}
+
 function dayInfoFor(input: HTMLInputElement): ((day: ISODate) => DayAvailability) | null {
   if (!availability || !('availability' in input.dataset)) return null;
   const product = input.form?.querySelector<HTMLSelectElement | HTMLInputElement>('[name="product"]')?.value;
@@ -222,10 +248,17 @@ function enhanceSelect(select: HTMLSelectElement): void {
 
 // ---------- Dates ----------
 
-const dateText = (value: string): string =>
-  value
-    ? parseDate(value).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
-    : 'Pick a date';
+const dateText = (value: string, nights = 1): string => {
+  if (!value) return 'Pick a date';
+  const from = parseDate(value);
+  if (nights <= 1) return from.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  const to = new Date(from.getFullYear(), from.getMonth(), from.getDate() + nights);
+  const short = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${short(from)} – ${short(to)} · ${nights} nights`;
+};
+
+/** What the date button says: a date, or a stay's check-in to check-out. */
+const fieldDateText = (input: HTMLInputElement): string => dateText(input.value, stayFor(input)?.nights ?? 1);
 
 function enhanceDate(input: HTMLInputElement): void {
   input.dataset.enhanced = '';
@@ -237,29 +270,48 @@ function enhanceDate(input: HTMLInputElement): void {
   trigger.setAttribute('aria-haspopup', 'dialog');
   const label = input.getAttribute('aria-label')
     ?? input.closest('.field')?.querySelector('.field__label')?.textContent?.trim();
-  render(trigger, html`${icon('calendar')}<span class="field-trigger__text">${dateText(input.value)}</span>${icon('chevronDown')}`);
+  render(trigger, html`${icon('calendar')}<span class="field-trigger__text">${fieldDateText(input)}</span>${icon('chevronDown')}`);
   nameAfterField(trigger, input);
   trigger.addEventListener('click', () => {
     const name = input.name;
     const dayInfo = dayInfoFor(input);
+    const stay = stayFor(input);
+    const showPicked = (): void => {
+      trigger.querySelector('.field-trigger__text')!.textContent = fieldDateText(input);
+      trigger.classList.toggle('is-placeholder', !input.value);
+      nameAfterField(trigger, input);
+      refocus(trigger, name);
+    };
     openDatePicker({
       value: input.value,
       today,
       min: input.min,
       max: input.max,
       dayInfo,
-      legend: dayInfo ? input.dataset.legend ?? '' : '',
       // Only a date the form can do without offers Clear: mark it data-optional.
       clearable: 'optional' in input.dataset,
       title: label ?? 'Pick a date',
       anchor: trigger,
       onPick: (value) => {
         commit(input, value);
-        trigger.querySelector('.field-trigger__text')!.textContent = dateText(value);
-        trigger.classList.toggle('is-placeholder', !value);
-        nameAfterField(trigger, input);
-        refocus(trigger, name);
+        showPicked();
       },
+      stay: stay ? {
+        ...stay,
+        onPickStay: (checkIn, nights) => {
+          // Writing one field can redraw the form and replace the other, so
+          // each is looked up again in the form as it is now.
+          const formKey = input.form?.dataset.submit;
+          const live = (field: string): HTMLInputElement | null =>
+            document.querySelector<HTMLInputElement>(`${formKey ? `form[data-submit="${formKey}"] ` : ''}[name="${field}"]`);
+          const nightsField = live('nights');
+          if (nightsField) commit(nightsField, String(nights));
+          const dateField = live(name) ?? input;
+          commit(dateField, checkIn);
+          if (trigger.isConnected) showPicked();
+          else refocus(trigger, name);
+        },
+      } : null,
     });
   });
   hide(input);

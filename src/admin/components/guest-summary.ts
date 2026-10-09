@@ -11,7 +11,7 @@ import { kindDot, paymentPill } from './badges.js';
 
 export type GuestGroup = 'arriving' | 'inhouse';
 
-/** Today's bookings that have not checked in yet. Events have their own page. */
+/** Today's bookings that have not checked in yet (not private-event bookings). */
 export const arrivingToday = (state: State): Booking[] =>
   state.bookings
     .filter((b) => b.date === state.meta.asOf && isActive(b) && b.product !== 'event' && ['hold', 'confirmed'].includes(b.status))

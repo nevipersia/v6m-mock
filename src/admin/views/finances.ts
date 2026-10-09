@@ -11,10 +11,10 @@
 import { flag, html, type SafeHTML } from '../../core/dom.js';
 import { demoNow } from '../../core/actions.js';
 import { formatDate, formatDateTime, parseDate, peso, pesoShort, plural, toISODate } from '../../core/format.js';
-import { CATEGORY_LABELS, financeRange, ledgerEntries, ledgerTotals, type FinancePoint, type LedgerEntry, type LedgerView } from '../../core/finance.js';
+import { expenseCategories, financeRange, ledgerEntries, ledgerTotals, type FinancePoint, type LedgerEntry, type LedgerView } from '../../core/finance.js';
 import { rankSlices, sumOf, within, type Bucket, type Slice } from '../../core/period.js';
 import { METHOD_LABELS, isActive } from '../../core/rules.js';
-import type { Booking, ExpenseCategory, ISODate, State } from '../../core/types.js';
+import type { Booking, ISODate, State } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
 import { paymentPill } from '../components/badges.js';
 import { openDatePicker } from '../components/date-picker.js';
@@ -409,7 +409,7 @@ function previewStep(found: LedgerReport): SafeHTML {
     ? [['Income', income, 'in']]
     : found.view === 'out'
       ? [['Expenses', spend, 'out']]
-      : [['Income', income, 'in'], ['Expenses', spend, 'out'], [profit < 0 ? 'Loss' : 'Profit', Math.abs(profit), profit < 0 ? 'owed' : '']];
+      : [['Income', income, 'in'], ['Expenses', spend, 'out'], [profit < 0 ? 'Loss' : 'Profit', Math.abs(profit), profit < 0 ? 'owed' : 'in']];
   return html`
     <p class="small muted report-modal__line">
       ${found.label} · ${VIEW_WORDS[found.view]} · ${plural(found.entries.length, 'entry', 'entries')}
@@ -516,9 +516,9 @@ export function render(ctx: DeskContext): SafeHTML {
   const income = sumOf(rows.map((row) => row.amountIn));
   const spend = sumOf(rows.map((row) => row.amountOut));
   const profit = income - spend;
-  const categories = rankSlices(Object.entries(CATEGORY_LABELS).map(([key, text]) => {
-    const spent = state.expenses.filter((expense) => expense.category === (key as ExpenseCategory) && within(expense.date, from, to));
-    return { key, label: text, amount: sumOf(spent.map((expense) => expense.amount)), count: spent.length, share: 0 };
+  const categories = rankSlices(expenseCategories(state).map(({ id, label: text }) => {
+    const spent = state.expenses.filter((expense) => expense.category === id && within(expense.date, from, to));
+    return { key: id, label: text, amount: sumOf(spent.map((expense) => expense.amount)), count: spent.length, share: 0 };
   }));
 
   return html`
@@ -554,7 +554,7 @@ export function render(ctx: DeskContext): SafeHTML {
           <span class="fin-total__label"><span class="chart__key chart__key--out"></span>Expenses</span>
           <span class="fin-total__value">${peso(spend)}</span>
         </div>
-        <div class="fin-total ${profit < 0 ? 'fin-total--loss' : ''}">
+        <div class="fin-total ${profit < 0 ? 'fin-total--loss' : 'fin-total--profit'}">
           <span class="fin-total__label">${profit < 0 ? 'Loss' : 'Profit'}</span>
           <span class="fin-total__value">${peso(Math.abs(profit))}
             <small>${income ? `${Math.round((profit / income) * 100)}% of income` : 'nothing came in'}</small>

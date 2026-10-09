@@ -1069,6 +1069,12 @@ body.has-drawer .jump {
   color: var(--terra-ink);
 }
 
+/* A profit reads green, a loss red (--warn above). */
+.summary__line--good dt,
+.summary__line--good dd {
+  color: var(--green-ink);
+}
+
 .summary__note {
   margin: 0;
 }
@@ -2201,6 +2207,92 @@ body.has-drawer {
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
+}
+
+/* The expense form's category list: add a name inline, delete with the bin. */
+.inline-add {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.inline-add .input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cat-edit-toggle {
+  justify-self: start;
+  font-size: 13px;
+  color: var(--orange-strong);
+}
+
+.cat-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cat-list__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  padding: 4px 6px 4px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+
+.cat-list__row--ask {
+  flex-wrap: wrap;
+  background: var(--terra-soft);
+  border-color: transparent;
+}
+
+.cat-list__buttons {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.cat-list__delete {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.cat-list__delete:hover {
+  background: var(--terra-soft);
+  color: var(--terra-ink);
+}
+
+.cat-list__delete .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Extend stay: how many more nights, with − and + either side. */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stepper__value {
+  min-width: 120px;
+  text-align: center;
+  font-size: 15px;
 }
 
 /* A guest's GCash receipt waiting in the booking drawer for staff to confirm. */
@@ -3708,6 +3800,11 @@ dialog.is-entering::backdrop {
 .fin-total--loss .fin-total__label,
 .fin-total--loss .fin-total__value {
   color: var(--terra-ink);
+}
+
+.fin-total--profit .fin-total__label,
+.fin-total--profit .fin-total__value {
+  color: var(--green-ink);
 }
 
 .chart--short {

@@ -5,12 +5,12 @@
 
 import { productGroups, productInfo, type ProductGroup } from '../core/catalog.js';
 import { html, type SafeHTML, type TemplateValue } from '../core/dom.js';
-import { formatDate, formatDateTime, formatTime, peso, plural } from '../core/format.js';
+import { formatDate, formatDateTime, formatTime, peso, plural, stayText } from '../core/format.js';
 import { guestListEditor, namesAsked } from '../core/guest-list.js';
 import { paymentCard, type PaymentCardState } from '../core/payment-card.js';
 import type { QrPaymentRequest } from '../core/qr-payment.js';
 import {
-  DOWNPAYMENT_PERCENT, checkAvailability, depositRequired, findExclusive, findStaff, findUnit, productLabel, quote,
+  canStayLonger, checkAvailability, depositRequired, downpaymentName, stayNights, findExclusive, findStaff, findUnit, productLabel, quote,
 } from '../core/rules.js';
 import type { Booking, BookingLink, BookingPageSettings, Companion, Payment, PaymentCheck, State } from '../core/types.js';
 
@@ -26,6 +26,8 @@ export interface Draft {
   scPwd: number;
   notes: string;
   guestList: Companion[];
+  /** Nights for a room stay; 1 for anything else. */
+  nights: number;
 }
 
 /** The form's steps, in order. The last one shows everything for the guest to check before sending. */
@@ -110,7 +112,7 @@ export function summary(state: State, page: BookingPageSettings, draft: Draft): 
         ${estimate.promo ? html`
           <div class="line-items__row line-items__row--discount"><dt>${estimate.promo.name} (${estimate.promo.percent}%)</dt><dd>−${peso(estimate.discount)}</dd></div>` : ''}
         <div class="line-items__row line-items__row--total"><dt>Estimated total</dt><dd>${peso(estimate.total)}</dd></div>
-        <div class="line-items__row"><dt>${DOWNPAYMENT_PERCENT}% downpayment to confirm</dt><dd>${peso(depositRequired(state, draft.product, estimate.total))}</dd></div>
+        <div class="line-items__row"><dt>${downpaymentName(state, draft.product, stayNights(state, draft.product, draft.nights))} to confirm</dt><dd>${peso(depositRequired(state, draft.product, estimate.total, stayNights(state, draft.product, draft.nights)))}</dd></div>
       </dl>
       ${estimate.warnings.map((warning) => html`<p class="form-error">${warning}</p>`)}
     </div>`;
@@ -177,9 +179,11 @@ function bookingStep(state: State, page: BookingPageSettings, draft: Draft): Saf
     <div data-slot="product">${draft.product ? productCard(state, draft.product) : ''}</div>
 
     <label class="field">
-      <span class="field__label">Date of reservation</span>
+      <span class="field__label">${canStayLonger(state, draft.product) ? 'Check-in to check-out' : 'Date of reservation'}</span>
       <input class="input" name="date" data-input type="date" value="${draft.date}" min="${state.meta.asOf}"
-        data-availability data-legend="Which days are open for the booking you picked.">
+        data-availability>
+      <input type="hidden" name="nights" data-input value="${stayNights(state, draft.product, draft.nights)}">
+      ${canStayLonger(state, draft.product) ? html`<span class="book__note">Tap the day you arrive, then the day you leave.</span>` : ''}
     </label>
 
     <div class="form-grid">
@@ -271,7 +275,7 @@ function reviewStep(state: State, page: BookingPageSettings, draft: Draft, steps
   return html`
     ${reviewBlock(STEP_TITLES.booking, 'booking', [
       ['Booking', productLabel(state, draft.product)],
-      ['Date', formatDate(draft.date, 'long')],
+      [canStayLonger(state, draft.product) && draft.nights > 1 ? 'Stay' : 'Date', stayText(draft.date, stayNights(state, draft.product, draft.nights))],
       ['Guests', headcount(draft)],
     ])}
     ${reviewBlock(STEP_TITLES.details, 'details', detailRows)}
@@ -332,7 +336,7 @@ export function payScreen(
         </p>` : ''}
       <dl class="facts">
         <div class="facts__row"><dt>Reference</dt><dd class="mono">${booking.id}</dd></div>
-        <div class="facts__row"><dt>Booking</dt><dd>${productLabel(state, booking.product)} · ${formatDate(booking.date, 'long')}</dd></div>
+        <div class="facts__row"><dt>Booking</dt><dd>${productLabel(state, booking.product)} · ${stayText(booking.date, booking.nights)}</dd></div>
         <div class="facts__row"><dt>Estimated total</dt><dd>${peso(booking.total)}</dd></div>
         ${booking.paid ? html`<div class="facts__row"><dt>Already paid</dt><dd>${peso(booking.paid)}</dd></div>` : ''}
       </dl>
@@ -353,7 +357,7 @@ export function checkingScreen(state: State, page: BookingPageSettings, booking:
       </div>
       <dl class="facts">
         <div class="facts__row"><dt>Reference</dt><dd class="mono">${booking.id}</dd></div>
-        <div class="facts__row"><dt>Booking</dt><dd>${productLabel(state, booking.product)} · ${formatDate(booking.date, 'long')}</dd></div>
+        <div class="facts__row"><dt>Booking</dt><dd>${productLabel(state, booking.product)} · ${stayText(booking.date, booking.nights)}</dd></div>
         <div class="facts__row"><dt>Sent</dt><dd>${peso(check.amount)} by GCash<span class="book__sub">from ${check.senderName} · ${formatDateTime(check.sentAt)}</span></dd></div>
         <div class="facts__row"><dt>Status</dt><dd><span class="pill pill--warning">Waiting for the front desk</span></dd></div>
       </dl>
@@ -374,7 +378,7 @@ export function doneScreen(state: State, page: BookingPageSettings, booking: Boo
       <p class="book__intro">${page.copy.thanksText} <strong class="mono">${booking.id}</strong></p>
       <dl class="facts">
         <div class="facts__row"><dt>Booking</dt><dd>${productLabel(state, booking.product)}</dd></div>
-        <div class="facts__row"><dt>Date</dt><dd>${formatDate(booking.date, 'long')}</dd></div>
+        <div class="facts__row"><dt>${booking.nights > 1 ? 'Stay' : 'Date'}</dt><dd>${stayText(booking.date, booking.nights)}</dd></div>
         <div class="facts__row"><dt>Guests</dt><dd>${plural(booking.adults + booking.kids, 'guest')}${booking.guestList?.length ? ` · ${booking.guestList.length} on the list` : ''}</dd></div>
         <div class="facts__row"><dt>Total</dt><dd>${peso(booking.total)}</dd></div>
         <div class="facts__row"><dt>Downpayment paid</dt><dd>${peso(booking.paid)}${payment?.method === 'gcash' ? html`<span class="book__sub mono">GCash${payment.reference ? ` ${payment.reference}` : ''}${payment.senderName ? ` · ${payment.senderName}` : ''}</span>` : ''}</dd></div>

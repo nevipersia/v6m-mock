@@ -12,7 +12,7 @@
 
 import { html, type SafeHTML } from '../../core/dom.js';
 import { addDays, formatDate, formatDateTime, peso, plural } from '../../core/format.js';
-import { downpaymentDue, findBooking, isActive, liveEvents, pendingPaymentCheck, pendingPaymentChecks, productLabel } from '../../core/rules.js';
+import { downpaymentDue, findBooking, isActive, pendingPaymentCheck, pendingPaymentChecks, productLabel } from '../../core/rules.js';
 import { demoNow } from '../../core/actions.js';
 import type { State, Staff, Timestamp } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
@@ -157,14 +157,6 @@ export function alertsFor(ctx: DeskContext): Alert[] {
   }));
   if (holds.length > MAX_HOLDS_SHOWN) {
     alerts.push({ icon: 'wallet', lead: plural(holds.length - MAX_HOLDS_SHOWN, 'more booking'), text: 'on hold, downpayment due', href: '#/bookings' });
-  }
-
-  const upcomingEvent = liveEvents(state).find((event) => event.bookingId && event.date >= today);
-  const eventBooking = upcomingEvent && state.bookings.find((b) => b.id === upcomingEvent.bookingId);
-  if (upcomingEvent && eventBooking && eventBooking.balance > 0 && isActive(eventBooking)) {
-    alerts.push({
-      icon: 'sparkles', lead: upcomingEvent.title, text: `on ${formatDate(upcomingEvent.date)} still owes ${peso(eventBooking.balance)}`, bookingId: eventBooking.id,
-    });
   }
 
   const nextExclusive = state.bookings.find((b) => isActive(b) && b.productType === 'exclusive' && b.date >= today && b.date <= addDays(today, 14));

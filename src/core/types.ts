@@ -341,7 +341,19 @@ export interface BookingLink {
  * breakdown gives each one a colour, and a sixth would stop being tellable
  * apart. Anything unusual goes under 'other' with its own description.
  */
-export type ExpenseCategory = 'payroll' | 'utilities' | 'supplies' | 'upkeep' | 'other';
+export type ExpenseCategory = string;
+
+/**
+ * A kind of spending the resort tracks. Staff add and delete them in the
+ * expense form; 'other' always stays, and catches a deleted category's expenses.
+ */
+export interface ExpenseCategoryDef {
+  id: ExpenseCategory;
+  label: string;
+  /** What belongs in it, shown under the picker in the form. */
+  hint: string;
+  sort: number;
+}
 
 /** Money the resort spent. Dated by the day it went out, not when it was typed in. */
 export interface Expense {
@@ -384,6 +396,7 @@ export interface State {
   payments: Payment[];
   paymentChecks: PaymentCheck[];
   expenses: Expense[];
+  expenseCategories: ExpenseCategoryDef[];
   events: ResortEvent[];
   inquiries: Inquiry[];
   bookingLinks: BookingLink[];

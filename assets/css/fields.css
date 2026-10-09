@@ -421,51 +421,21 @@ dialog.picker.is-anchored.is-entering {
   animation: picker-drop 0.18s cubic-bezier(0.2, 0.75, 0.25, 1);
 }
 
-/* ---------- Date pickers that show each day's availability ----------
- * The booking date opens with a label under every day ("Open", "Booked"),
- * for the booking chosen in the same form. Wider, with taller days to fit it. */
+/* ---------- Date pickers that know each day's availability ----------
+ * The booking date greys out the days the chosen booking can't have. The desk
+ * may still overbook a full pool session, so that day is grey but stays open. */
 
-.picker--slots,
-.picker--slots.is-anchored {
-  width: min(352px, calc(100vw - 24px));
+.picker__day.is-full:not(:disabled) {
+  opacity: 0.45;
 }
 
-.picker--slots .picker__day,
-.picker--slots.is-anchored .picker__day {
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 1px;
-  aspect-ratio: auto;
-  height: 46px;
+/* A stay: check-in and check-out are picked; the nights between are lit. */
+.picker__day.is-in-stay {
+  background: var(--orange-soft);
+  color: var(--amber-ink);
   border-radius: 10px;
-  line-height: 1.1;
 }
 
-.picker__slots {
-  font-size: 10px;
-  font-weight: 500;
-  white-space: nowrap;
-  color: var(--green-ink);
-}
-
-.picker__day.is-full .picker__slots {
-  color: var(--terra-ink);
-}
-
-.picker__day.is-picked .picker__slots {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-/* A day that can't be booked still says why, so it keeps more of its colour. */
-.picker--slots .picker__day:disabled,
-.picker--slots .picker__day:disabled:hover {
-  opacity: 0.55;
-  background: var(--sand);
-}
-
-.picker__legend {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--ink-muted);
+.picker__stay {
+  margin-right: auto;
 }

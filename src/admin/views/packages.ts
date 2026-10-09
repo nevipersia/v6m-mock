@@ -17,7 +17,6 @@ const TABS: { kind: PackageKind; label: string }[] = [
   { kind: 'entrance', label: 'Entrance' },
   { kind: 'unit', label: 'Rooms and cottages' },
   { kind: 'exclusive', label: 'Exclusive rentals' },
-  { kind: 'event', label: 'Events' },
 ];
 
 /** The tab on screen. Kept while the app is open. */
@@ -172,7 +171,7 @@ export function render(ctx: DeskContext): SafeHTML {
 }
 
 const isKind = (value: string | undefined): value is PackageKind =>
-  value === 'entrance' || value === 'unit' || value === 'exclusive' || value === 'event';
+  value === 'entrance' || value === 'unit' || value === 'exclusive';
 
 export const actions: HandlerMap = {
   'package-tab': ({ el, ctx }) => {

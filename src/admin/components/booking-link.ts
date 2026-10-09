@@ -73,9 +73,9 @@ export function createBookingLinkPanel(prefill: BookingPrefill = {}): DrawerCont
       return html`
         <div class="detail">
           <p class="small muted">
-            Send this to a guest who is ready to book. They fill in their own details once and pay the
-            50% downpayment by GCash QR. The booking lands on your calendar under your name, on hold
-            until the downpayment is verified.
+            Send this to a guest who is ready to book. They fill in their own details once, pay the
+            downpayment by GCash and send the receipt. The booking lands on your calendar under your
+            name, on hold until you check the receipt.
           </p>
           <div class="form-aside">
             <p class="small muted">Guest on the phone or at the gate?</p>

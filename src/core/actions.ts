@@ -6,11 +6,12 @@ import { addDays, formatDate, isEmail, isPHMobile, peso, plural } from './format
 import {
   DOWNPAYMENT_RATE, METHOD_LABELS, STAGE_LABELS, bookingWindow, checkAvailability, depositRequired, discountAmount,
   discountProblem, downpaymentDue, findBooking, findExclusive, findGuest, findPackage, findStaff, findUnit, hasGuestLimit, isActive,
-  isEditable, findPromo, live, pendingPaymentCheck, permissionsFor, productLabel, quote, sessionFor, type DiscountInput,
+  isEditable, findPromo, live, MAX_NIGHTS, canStayLonger, pendingPaymentCheck, permissionsFor, productLabel, quote, sessionFor, stayNights, type DiscountInput,
 } from './rules.js';
+import { OTHER_CATEGORY } from './finance.js';
 import { formatReference, referenceProblem } from './qr-payment.js';
 import type {
-  Booking, BookingLink, BookingSource, Companion, EventPackage, EventStage, Expense, ExpenseCategory, ExtraCharge, Guest,
+  Booking, BookingLink, BookingSource, Companion, EventPackage, EventStage, Expense, ExpenseCategory, ExpenseCategoryDef, ExtraCharge, Guest,
   ISODate, Inquiry, Invite, Payment, PaymentCheck, PaymentMethod, PriceLine, Promo, ResortEvent, Role, Staff, StaffStatus, State,
   Timestamp,
 } from './types.js';
@@ -92,7 +93,7 @@ interface PaymentInput {
 }
 
 /**
- * Records a payment. A booking on hold only becomes confirmed once the 50%
+ * Records a payment. A booking on hold only becomes confirmed once its
  * downpayment is met; anything less stays on hold as a partial payment.
  */
 /**
@@ -174,21 +175,27 @@ export interface NewBooking {
   /** Payment details for the downpayment, from the guest's receipt. */
   sentTime?: string;
   senderName?: string;
+  /** Nights for a room; anything else is one visit. */
+  nights?: number;
 }
 
 export function createBooking(input: NewBooking, staffId: string): Booking {
   return update((state) => createBookingInState(state, input, staffId));
 }
 
-/** Sets total, downpayment and balance from the pricing and any manual discount. */
-function reprice(state: State, booking: Booking, staffId: string): void {
+/**
+ * Sets total, downpayment and balance from the pricing and any manual discount.
+ * `keepConfirmed`: a confirmed booking stays confirmed even if the new
+ * downpayment is more than was paid (an extended stay adds to the balance only).
+ */
+function reprice(state: State, booking: Booking, staffId: string, { keepConfirmed = false } = {}): void {
   booking.total = booking.pricing.total - (booking.discount?.amount ?? 0);
-  booking.depositRequired = depositRequired(state, booking.product, booking.total);
+  booking.depositRequired = depositRequired(state, booking.product, booking.total, booking.nights);
   booking.balance = booking.total - booking.paid;
   if (booking.status === 'hold' && booking.paid > 0 && downpaymentDue(booking) === 0) {
     booking.status = 'confirmed';
     logActivity(state, staffId, 'booking.confirmed', booking.id, 'Downpayment met after the price changed');
-  } else if (booking.status === 'confirmed' && downpaymentDue(booking) > 0) {
+  } else if (booking.status === 'confirmed' && downpaymentDue(booking) > 0 && !keepConfirmed) {
     booking.status = 'hold';
     logActivity(state, staffId, 'booking.unconfirmed', booking.id, `${peso(downpaymentDue(booking))} short of the downpayment after the price changed`);
   }
@@ -241,8 +248,8 @@ export function removeDiscount(bookingId: string, staffId: string): DiscountResu
 }
 
 /** Times, session and type for a product on a date. */
-function schedule(state: State, product: string, date: ISODate): Pick<Booking, 'session' | 'productType' | 'startsAt' | 'endsAt'> {
-  const window = bookingWindow(state, product, date);
+function schedule(state: State, product: string, date: ISODate, nights = 1): Pick<Booking, 'session' | 'productType' | 'startsAt' | 'endsAt'> {
+  const window = bookingWindow(state, product, date, nights);
   if (findExclusive(state, product)) return { session: 'exclusive', productType: 'exclusive', ...window };
   const unit = findUnit(state, product);
   return { session: sessionFor(state, product).id, productType: unit ? unit.kind : 'entrance', ...window };
@@ -254,9 +261,10 @@ const sortBookings = (state: State): void => {
 
 function createBookingInState(state: State, input: NewBooking, staffId: string): Booking {
   const extras = cleanExtras(input.extras);
-  const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, { ...input, extras });
+  const nights = stayNights(state, input.product, input.nights);
+  const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, { ...input, nights, extras });
   const guest = findOrCreateGuest(state, { name: input.guestName, mobile: input.mobile ?? null, address: input.address ?? null, email: input.email ?? null });
-  const when = schedule(state, input.product, input.date);
+  const when = schedule(state, input.product, input.date, nights);
 
   const booking: Booking = {
     id: `BK-${input.date.slice(5, 7)}${input.date.slice(8, 10)}-${pad(nextSequence(state.bookings), 3)}`,
@@ -265,7 +273,7 @@ function createBookingInState(state: State, input: NewBooking, staffId: string):
     product: input.product,
     productType: when.productType,
     date: input.date,
-    nights: 1,
+    nights,
     session: when.session,
     startsAt: when.startsAt,
     endsAt: when.endsAt,
@@ -276,7 +284,7 @@ function createBookingInState(state: State, input: NewBooking, staffId: string):
     status: 'hold',
     pricing,
     total: pricing.total,
-    depositRequired: depositRequired(state, input.product, pricing.total),
+    depositRequired: depositRequired(state, input.product, pricing.total, nights),
     paid: 0,
     balance: pricing.total,
     idVerified: false,
@@ -333,13 +341,15 @@ export interface BookingEdit {
   discount: DiscountInput | null | 'keep';
   /** The companions sheet. Left out, the current list stays. */
   guestList?: Companion[];
+  /** Nights for a room. Left out, the current number stays. */
+  nights?: number;
 }
 
 export type EditResult = { error: string } | { error?: undefined; booking: Booking };
 
 /**
  * Changes a booking that has not arrived yet. Payments stay; the price,
- * discount and 50% downpayment are worked out again, so the booking can move
+ * discount and downpayment are worked out again, so the booking can move
  * between on hold and confirmed.
  */
 export function updateBooking(bookingId: string, input: BookingEdit, staffId: string): EditResult {
@@ -351,13 +361,14 @@ export function updateBooking(bookingId: string, input: BookingEdit, staffId: st
     if (!isEditable(state, booking)) return { error: 'This booking can no longer be edited.' };
 
     const guests = input.adults + input.kids;
-    const availability = checkAvailability(state, { ...input, excludeId: booking.id, overLimits: true });
+    const nights = stayNights(state, input.product, input.nights ?? booking.nights);
+    const availability = checkAvailability(state, { ...input, nights, excludeId: booking.id, overLimits: true });
     if (!input.guestName.trim()) return { error: 'Enter the guest name.' };
     if (guests === 0) return { error: 'Add at least one guest.' };
     if (!availability.ok) return { error: availability.reason ?? 'Not available.' };
 
     const extras = cleanExtras(input.extras);
-    const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, { ...input, extras });
+    const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, { ...input, nights, extras });
     const current = booking.discount ?? null;
     let discount: DiscountInput | null;
     if (input.discount === 'keep') {
@@ -387,13 +398,14 @@ export function updateBooking(bookingId: string, input: BookingEdit, staffId: st
       source: input.source,
       product: input.product,
       date: input.date,
+      nights,
       adults: input.adults,
       kids: input.kids,
       notes: input.notes.trim() || null,
       scPwd: Math.max(0, Math.round(input.scPwd)),
       extras,
       pricing,
-      ...schedule(state, input.product, input.date),
+      ...schedule(state, input.product, input.date, nights),
     } satisfies Partial<Booking>);
 
     if (input.guestList) {
@@ -586,8 +598,9 @@ export function rejectPaymentCheck(checkId: string, reason: string, staffId: str
 
 type CheckInPayment = Omit<PaymentInput, 'amount' | 'via'>;
 
-function checkInInState(state: State, booking: Booking, payment: CheckInPayment, staffId: string): void {
-  if (booking.balance > 0) applyPayment(state, booking, { ...payment, amount: booking.balance }, staffId);
+/** Marks the guest as arrived; with a payment, collects the balance as they come in. */
+function checkInInState(state: State, booking: Booking, payment: CheckInPayment | null, staffId: string): void {
+  if (payment && booking.balance > 0) applyPayment(state, booking, { ...payment, amount: booking.balance }, staffId);
   Object.assign(booking, { status: 'checked_in', idVerified: true, checkedInAt: demoNow(state) } satisfies Partial<Booking>);
   logActivity(state, staffId, 'booking.checked_in', booking.id, 'Valid ID verified');
 }
@@ -601,46 +614,96 @@ export function checkIn(bookingId: string, { method }: { method: PaymentMethod }
   });
 }
 
-/** A walk-in for today counts as arriving now: it is booked, paid in full and checked in at once. */
+/** A walk-in for today counts as arriving now: it is booked and checked in at once. */
 export const isWalkInToday = (state: State, input: { source: BookingSource; date: ISODate }): boolean =>
   input.source === 'walk_in' && input.date === state.meta.asOf;
 
 /**
- * A walk-in for today, booked, paid in full and checked in as one step at the
- * counter. The payment and the check-in share a time, so the registration
- * sheet shows the money as paid at the resort.
+ * A walk-in for today, booked and checked in as one step at the counter.
+ * Walk-ins pay as they leave: nothing is owed up front, and check-out collects
+ * the bill. Anything they do pay now is recorded and counts toward it.
  */
 export function checkInWalkIn(input: NewBooking, staffId: string): Booking {
   return update((state) => {
     const booking = createBookingInState(state, { ...input, deposit: 0 }, staffId);
-    checkInInState(state, booking, {
-      method: input.method, reference: input.reference ?? null, sentTime: input.sentTime ?? null, senderName: input.senderName ?? null,
-    }, staffId);
+    const paidNow = Math.min(Math.max(0, Math.round(input.deposit ?? 0)), booking.balance);
+    if (paidNow > 0) {
+      applyPayment(state, booking, {
+        amount: paidNow, method: input.method, reference: input.reference ?? null, sentTime: input.sentTime ?? null, senderName: input.senderName ?? null,
+      }, staffId);
+    }
+    checkInInState(state, booking, null, staffId);
     return booking;
   });
 }
 
 export type CheckOutResult = { error: string } | { error?: undefined; booking: Booking };
 
-/** A guest leaves only once the bill is paid in full. */
+/** Why a guest can't leave yet: a balance with no way to collect it. */
 export const checkOutProblem = (booking: Booking): string =>
   booking.balance > 0 ? `Collect the ${peso(booking.balance)} balance before checking out.` : '';
 
-export function checkOut(bookingId: string, staffId: string): CheckOutResult {
+/**
+ * The guest leaves. Whatever is still owed is collected now by `payment`
+ * (walk-ins mostly pay this way); without it, a balance blocks check-out.
+ */
+export function checkOut(bookingId: string, staffId: string, payment?: CheckInPayment): CheckOutResult {
   return update((state): CheckOutResult => {
     const booking = findBooking(state, bookingId);
     if (!booking) return { error: 'This booking no longer exists.' };
+    if (booking.balance > 0 && payment) applyPayment(state, booking, { ...payment, amount: booking.balance }, staffId);
     const problem = checkOutProblem(booking);
     if (problem) return { error: problem };
     Object.assign(booking, { status: 'checked_out', checkedOutAt: demoNow(state) } satisfies Partial<Booking>);
     logActivity(state, staffId, 'booking.checked_out', booking.id);
-    // An event checked out has happened; it leaves the Events page for Bookings.
+    // An event checked out has happened.
     const event = state.events.find((item) => item.bookingId === booking.id);
     if (event && event.stage !== 'done') {
       event.stage = 'done';
       logActivity(state, staffId, 'event.done', event.id, event.title);
     }
     return { booking };
+  });
+}
+
+export type ExtendResult = { error: string } | { error?: undefined; booking: Booking; added: number };
+
+/** What extending a room stay by `extra` nights would cost, or why it can't be done. */
+export function extendQuote(state: State, booking: Booking, extra: number): { error: string } | { error?: undefined; nights: number; added: number; checkOut: Timestamp } {
+  if (!canStayLonger(state, booking.product)) return { error: 'Only room stays can be extended.' };
+  if (!['hold', 'confirmed', 'checked_in'].includes(booking.status)) return { error: 'This booking can no longer be extended.' };
+  const nights = booking.nights + Math.max(1, Math.round(extra));
+  if (nights > MAX_NIGHTS) return { error: `A stay can run to ${MAX_NIGHTS} nights at most.` };
+  const availability = checkAvailability(state, {
+    product: booking.product, date: booking.date, nights, adults: booking.adults, kids: booking.kids, excludeId: booking.id, overLimits: true,
+  });
+  if (!availability.ok) return { error: availability.reason ?? 'The room is not free for those nights.' };
+  const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, { ...booking, nights, extras: booking.extras ?? [] });
+  const off = booking.discount ? discountAmount(pricing.total, booking.discount.kind, booking.discount.value) : 0;
+  return { nights, added: pricing.total - off - booking.total, checkOut: bookingWindow(state, booking.product, booking.date, nights).endsAt };
+}
+
+/**
+ * Adds nights to a room stay, if the room is free for them. The price grows by
+ * the extra nights; a confirmed booking stays confirmed (the extra is added to
+ * the balance, paid at check-out).
+ */
+export function extendStay(bookingId: string, extra: number, staffId: string): ExtendResult {
+  return update((state): ExtendResult => {
+    const booking = findBooking(state, bookingId);
+    if (!booking) return { error: 'This booking no longer exists.' };
+    const found = extendQuote(state, booking, extra);
+    if (found.error !== undefined) return { error: found.error };
+    const before = booking.nights;
+    const { promo: _promo, warnings: _warnings, ...pricing } = quote(state, { ...booking, nights: found.nights, extras: booking.extras ?? [] });
+    booking.nights = found.nights;
+    booking.pricing = pricing;
+    booking.endsAt = found.checkOut;
+    if (booking.discount) booking.discount = { ...booking.discount, amount: discountAmount(pricing.total, booking.discount.kind, booking.discount.value) };
+    reprice(state, booking, staffId, { keepConfirmed: true });
+    logActivity(state, staffId, 'booking.extended', booking.id,
+      `${before} → ${plural(found.nights, 'night')} · ${peso(found.added)} added · checks out ${formatDate(found.checkOut.slice(0, 10))}`);
+    return { booking, added: found.added };
   });
 }
 
@@ -912,12 +975,59 @@ export interface NewExpense {
 
 export type ExpenseResult = { expense: Expense; error?: undefined } | { expense?: undefined; error: string };
 
+export type CategoryResult = { error: string } | { error?: undefined; category: ExpenseCategoryDef };
+
+/** Adds an expense category. Names are unique, whatever their capitals. */
+export function addExpenseCategory(label: string, staffId: string): CategoryResult {
+  return update((state): CategoryResult => {
+    const staff = findStaff(state, staffId);
+    if (!staff?.permissions.includes('expenses.manage')) return { error: 'Your account cannot change expense categories.' };
+    const name = label.trim().replace(/\s+/g, ' ');
+    if (!name) return { error: 'Type a name for the category.' };
+    if (name.length > 40) return { error: 'Keep the name under 40 letters.' };
+    const same = state.expenseCategories.find((category) => category.label.toLowerCase() === name.toLowerCase());
+    if (same) return { error: `There is already a category called ${same.label}.` };
+    const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'category';
+    let id = base;
+    for (let n = 2; state.expenseCategories.some((category) => category.id === id); n += 1) id = `${base}-${n}`;
+    const sort = Math.max(0, ...state.expenseCategories.filter((category) => category.id !== OTHER_CATEGORY).map((category) => category.sort)) + 1;
+    const category: ExpenseCategoryDef = { id, label: name, hint: '', sort };
+    state.expenseCategories.push(category);
+    logActivity(state, staffId, 'expense.category_added', id, name);
+    return { category };
+  });
+}
+
+export type RemoveCategoryResult = { error: string } | { error?: undefined; label: string; moved: number };
+
+/** Deletes a category; its expenses move to Other, so every total still adds up. Other itself stays. */
+export function removeExpenseCategory(id: ExpenseCategory, staffId: string): RemoveCategoryResult {
+  return update((state): RemoveCategoryResult => {
+    const staff = findStaff(state, staffId);
+    if (!staff?.permissions.includes('expenses.manage')) return { error: 'Your account cannot change expense categories.' };
+    if (id === OTHER_CATEGORY) return { error: 'Other always stays: deleted categories move their expenses there.' };
+    const category = state.expenseCategories.find((item) => item.id === id);
+    if (!category) return { error: 'That category was already deleted.' };
+    let moved = 0;
+    for (const expense of state.expenses) {
+      if (expense.category === id) {
+        expense.category = OTHER_CATEGORY;
+        moved += 1;
+      }
+    }
+    state.expenseCategories = state.expenseCategories.filter((item) => item.id !== id);
+    logActivity(state, staffId, 'expense.category_removed', id, `${category.label}${moved ? ` · ${plural(moved, 'expense')} moved to Other` : ''}`);
+    return { label: category.label, moved };
+  });
+}
+
 /** Checks shared by recording and editing: the same rules either way. */
 function expenseProblem(state: State, input: NewExpense): string | null {
   if (!input.item.trim()) return 'Say what the money was spent on.';
   if (!input.date) return 'Pick the day it was spent.';
   if (input.date > state.meta.asOf) return 'That date is in the future. Record it on the day it was spent.';
   if (!Number.isFinite(input.amount) || input.amount <= 0) return 'Enter how much it was.';
+  if (!state.expenseCategories.some((category) => category.id === input.category)) return 'Pick a category.';
   return null;
 }
 
@@ -1133,7 +1243,7 @@ export type BookingLinkStage =
 
 /**
  * Where a guest opening a link should land: the form, the downpayment step
- * (the link was used but the booking still owes its 50%), the wait while staff
+ * (the link was used but the booking still owes its downpayment), the wait while staff
  * check their receipt, the thank-you once the downpayment is in, or a problem.
  */
 export function bookingLinkStage(state: State, code: string | null | undefined): BookingLinkStage {
@@ -1156,7 +1266,7 @@ export function bookingLinkStage(state: State, code: string | null | undefined):
   return { stage: 'form', link };
 }
 
-export type GuestBooking = Pick<NewBooking, 'guestName' | 'mobile' | 'product' | 'date' | 'adults' | 'kids' | 'notes' | 'address' | 'email' | 'scPwd' | 'guestList'>;
+export type GuestBooking = Pick<NewBooking, 'guestName' | 'mobile' | 'product' | 'date' | 'adults' | 'kids' | 'notes' | 'address' | 'email' | 'scPwd' | 'guestList' | 'nights'>;
 
 /**
  * `retry` means the guest can fix the form and send it again (the date filled
@@ -1185,6 +1295,7 @@ export function guestBookingInput(raw: unknown): GuestBooking {
     adults: count(input.adults),
     kids: count(input.kids),
     scPwd: count(input.scPwd),
+    nights: Math.max(1, count(input.nights)),
     notes: text(input.notes, 1000),
     guestList: list.map((row): Companion => {
       const item = (row && typeof row === 'object' ? row : {}) as Record<string, unknown>;

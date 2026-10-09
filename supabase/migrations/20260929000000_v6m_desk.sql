@@ -201,12 +201,27 @@ create table public.payment_checks (
 );
 create index payment_checks_booking_idx on public.payment_checks (booking_id);
 
+-- The kinds of spending, editable from the expense form. 'other' always stays:
+-- deleting a category moves its expenses there.
+create table public.expense_categories (
+  id text primary key,
+  label text not null,
+  hint text not null default '',
+  sort integer not null default 0
+);
+insert into public.expense_categories (id, label, hint, sort) values
+  ('payroll', 'Staff pay', 'Wages, overtime and extra hands for an event', 1),
+  ('utilities', 'Utilities', 'Electricity, water, internet, LPG', 2),
+  ('supplies', 'Supplies', 'Pool chemicals, kitchen, linen, cleaning, guest amenities', 3),
+  ('upkeep', 'Upkeep and repairs', 'Repairs, paint, garden, equipment, fuel', 4),
+  ('other', 'Other', 'Permits, fees, transport, anything else', 99);
+
 -- What the resort spent. Dated on the day the money went out, so the dashboard
 -- can set it against the payments received over the same window.
 create table public.expenses (
   id text primary key,
   date date not null,
-  category text not null check (category in ('payroll', 'utilities', 'supplies', 'upkeep', 'other')),
+  category text not null,
   item text not null,
   amount numeric(12, 2) not null check (amount > 0),
   method text not null check (method in ('cash', 'gcash', 'bank_transfer')),
@@ -309,7 +324,7 @@ declare
 begin
   -- Day-to-day records: any active staff member reads and writes them. The
   -- desk checks the finer permissions (payments.write, bookings.cancel…).
-  foreach t in array array['guests', 'bookings', 'payments', 'payment_checks', 'expenses', 'events', 'inquiries', 'booking_links', 'activity_log'] loop
+  foreach t in array array['guests', 'bookings', 'payments', 'payment_checks', 'expense_categories', 'expenses', 'events', 'inquiries', 'booking_links', 'activity_log'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('create policy "staff read" on public.%I for select to authenticated using (public.is_staff())', t);
     execute format('create policy "staff add" on public.%I for insert to authenticated with check (public.is_staff())', t);
@@ -319,6 +334,8 @@ begin
   -- An expense can be typed in wrong, so it is the one day-to-day record staff
   -- may delete. The desk asks for the expenses.manage permission first.
   create policy "staff remove" on public.expenses for delete to authenticated using (public.is_staff());
+  -- A category can be deleted too (the desk moves its expenses to Other first), but never Other.
+  create policy "staff remove" on public.expense_categories for delete to authenticated using (public.is_staff() and id <> 'other');
 
   -- An event inquiry that came to nothing can be removed; a booked event is
   -- cancelled through its booking instead.
@@ -352,7 +369,7 @@ revoke all on all tables in schema public from anon;
 
 alter publication supabase_realtime add table
   public.staff, public.invites, public.guests, public.bookings, public.payments, public.payment_checks,
-  public.expenses, public.events, public.inquiries, public.booking_links, public.activity_log,
+  public.expense_categories, public.expenses, public.events, public.inquiries, public.booking_links, public.activity_log,
   public.pool_sessions, public.exclusive_packages, public.units, public.promos, public.event_packages;
 
 -- ---------- First owner ----------

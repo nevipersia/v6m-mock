@@ -111,16 +111,31 @@ export function productKind(state: State, product: string): string {
   return findUnit(state, product)?.kind ?? product;
 }
 
-/** Start and end of a product's time window on a date. */
-export function bookingWindow(state: State, product: string, date: ISODate): { startsAt: Timestamp; endsAt: Timestamp } {
+/** The most nights one room booking can run to. */
+export const MAX_NIGHTS = 30;
+
+/** Rooms can be booked for several nights; everything else is one visit. */
+export const canStayLonger = (state: State, product: string): boolean => findUnit(state, product)?.kind === 'room';
+
+/** The nights a booking of this product can have: 1 unless it is a room. */
+export const stayNights = (state: State, product: string, nights: number | undefined): number =>
+  canStayLonger(state, product) ? Math.min(MAX_NIGHTS, Math.max(1, Math.round(nights ?? 1))) : 1;
+
+/** Start and end of a product's time window from a date, over its nights (rooms only). */
+export function bookingWindow(state: State, product: string, date: ISODate, nights = 1): { startsAt: Timestamp; endsAt: Timestamp } {
   const pkg = findExclusive(state, product);
   const unit = findUnit(state, product);
   const session = pkg ? null : sessionFor(state, product);
   const start = pkg ? pkg.start : unit ? unit.checkIn : session!.start;
   const end = pkg ? pkg.end : unit ? unit.checkOut : session!.end;
-  const endDate = end <= start ? addDays(date, 1) : date;
+  const stay = stayNights(state, product, nights);
+  const endDate = end <= start ? addDays(date, stay) : addDays(date, stay - 1);
   return { startsAt: `${date}T${start}:00+08:00`, endsAt: `${endDate}T${end}:00+08:00` };
 }
+
+/** The night of each day a room is held, from the first. */
+export const nightsFrom = (date: ISODate, nights: number): ISODate[] =>
+  Array.from({ length: Math.max(1, nights) }, (_, index) => addDays(date, index));
 
 const overlapsWindow = (booking: Booking, window: { startsAt: Timestamp; endsAt: Timestamp }): boolean =>
   booking.startsAt < window.endsAt && window.startsAt < booking.endsAt;
@@ -174,12 +189,9 @@ export interface Availability {
   over?: string;
 }
 
-export function checkAvailability(state: State, { product, date, adults = 0, kids = 0, excludeId, overLimits = false }: BookingRequest): Availability {
-  if (closingEvent(state, date)) {
-    return { ok: false, reason: `V6M is closed on ${formatDate(date)} for a private event.` };
-  }
-
-  const window = bookingWindow(state, product, date);
+export function checkAvailability(state: State, { product, date, adults = 0, kids = 0, nights = 1, excludeId, overLimits = false }: BookingRequest): Availability {
+  const stay = stayNights(state, product, nights);
+  const window = bookingWindow(state, product, date, stay);
   const pkg = findExclusive(state, product);
   if (pkg) {
     const clash = bookingsOverlapping(state, window, excludeId)[0];
@@ -199,8 +211,9 @@ export function checkAvailability(state: State, { product, date, adults = 0, kid
   }
 
   const unit = findUnit(state, product);
-  if (unit && unitBookingOn(state, product, date, excludeId)) {
-    return { ok: false, reason: `${unit.name} is already booked for ${formatDate(date)}.` };
+  const taken = unit ? nightsFrom(date, stay).find((night) => unitBookingOn(state, product, night, excludeId)) : undefined;
+  if (unit && taken) {
+    return { ok: false, reason: `${unit.name} is already booked for the night of ${formatDate(taken)}.` };
   }
 
   const session = sessionFor(state, product);
@@ -228,7 +241,6 @@ export interface DayAvailability {
 
 export function dayAvailability(state: State, product: string, date: ISODate, { excludeId, strict = false }: { excludeId?: string; strict?: boolean } = {}): DayAvailability {
   const shut = (label: string): DayAvailability => ({ label, tone: 'full', disabled: true });
-  if (closingEvent(state, date)) return shut('Closed');
 
   const window = bookingWindow(state, product, date);
   if (findExclusive(state, product)) {
@@ -290,7 +302,8 @@ const extraLines = (extras: ExtraCharge[] = []): PriceLine[] =>
 
 /** Price breakdown in the same shape as booking.pricing, plus the promo and warnings. */
 export function quote(state: State, request: BookingRequest & { extras?: ExtraCharge[] }): Quote {
-  const { product, date, adults = 0, kids = 0, nights = 1 } = request;
+  const { product, date, adults = 0, kids = 0 } = request;
+  const nights = stayNights(state, product, request.nights);
   const pkg = findExclusive(state, product);
   if (pkg) {
     const lines = [{ label: `Exclusive · ${pkg.name} (${exclusiveSessionLabel(pkg)})`, qty: 1, unitPrice: pkg.price, amount: pkg.price }, ...extraLines(request.extras)];
@@ -307,7 +320,7 @@ export function quote(state: State, request: BookingRequest & { extras?: ExtraCh
     if (adults) lines.push({ label: `Adult entrance (${session.label})`, qty: adults, unitPrice: session.adult, amount: adults * session.adult });
     if (kids) lines.push({ label: `Kid entrance (${session.label})`, qty: kids, unitPrice: session.kid, amount: kids * session.kid });
   }
-  if (unit) lines.push({ label: unit.name, qty: nights, unitPrice: unit.price, amount: unit.price * nights });
+  if (unit) lines.push({ label: nights > 1 ? `${unit.name} · ${nights} nights` : unit.name, qty: nights, unitPrice: unit.price, amount: unit.price * nights });
   lines.push(...extraLines(request.extras));
 
   const subtotal = lines.reduce((sum, line) => sum + line.amount, 0);
@@ -383,14 +396,37 @@ export function isEditable(_state: State, booking: Booking): boolean {
 // ---------- Downpayment ----------
 
 /** Every booking needs this share of its total paid before it counts as confirmed. */
+/** The usual downpayment, or the whole total when the booking costs less. */
+export const DOWNPAYMENT_FLAT = 1000;
+/** A room stay of this many nights or more pays a share of its total instead. */
+export const LONG_STAY_NIGHTS = 2;
 export const DOWNPAYMENT_RATE = 0.5;
 export const DOWNPAYMENT_PERCENT = Math.round(DOWNPAYMENT_RATE * 100);
 
-/** The required downpayment: 50% of the total rounded up to the peso. */
-export function depositRequired(_state: State, _product: string, total: number): number {
-  return Math.ceil(total * DOWNPAYMENT_RATE);
+/** A room booked for two nights or more. */
+export const isLongStay = (state: State, product: string, nights: number): boolean =>
+  canStayLonger(state, product) && nights >= LONG_STAY_NIGHTS;
+
+/**
+ * The required downpayment: ₱1,000 (or the whole total when it is less), and
+ * 50% of the total, rounded up to the peso, for a long stay in a room.
+ */
+export function depositRequired(state: State, product: string, total: number, nights = 1): number {
+  if (isLongStay(state, product, nights)) return Math.ceil(total * DOWNPAYMENT_RATE);
+  return Math.min(DOWNPAYMENT_FLAT, Math.max(0, total));
 }
+
+/** "50% downpayment" for a long stay, "Downpayment" otherwise: how labels name it. */
+export const downpaymentName = (state: State, product: string, nights: number): string =>
+  isLongStay(state, product, nights) ? `${DOWNPAYMENT_PERCENT}% downpayment` : 'Downpayment';
 
 /** What is still needed to reach the downpayment; 0 once it is met. */
 export const downpaymentDue = (booking: Booking): number => Math.max(0, booking.depositRequired - booking.paid);
+
+/**
+ * What still stands between a booking and confirmed: the downpayment due while
+ * it is on hold, 0 once confirmed (an extended stay can raise the downpayment
+ * of a confirmed booking without putting it back on hold).
+ */
+export const stillToConfirm = (booking: Booking): number => (booking.status === 'hold' ? downpaymentDue(booking) : 0);
 

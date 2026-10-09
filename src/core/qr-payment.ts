@@ -1,4 +1,4 @@
-// GCash payment for the 50% downpayment, sent to the resort's own GCash
+// GCash payment for the downpayment, sent to the resort's own GCash
 // account. A personal account's QR is fixed: it cannot carry the amount or the
 // booking, and nothing tells the website when money arrives. So the guest
 // scans it, types the amount, and sends back their receipt and reference

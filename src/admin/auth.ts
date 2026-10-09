@@ -42,7 +42,6 @@ const PAGE_REQUIREMENTS: Record<PageId, Permission | null> = {
   finances: 'expenses.manage',
   packages: 'packages.manage',
   inbox: 'inbox.write',
-  events: 'events.manage',
   users: 'users.manage',
 };
 

@@ -27,29 +27,51 @@ export interface DatePickerOptions {
   title?: string;
   /** Offers a Clear button that answers ''. */
   clearable?: boolean;
-  /** What each day holds for the chosen booking ("Open", "Booked"), shown under its number. */
+  /**
+   * What each day holds for the chosen booking. A day that can't be booked is
+   * greyed out; what it holds is only read out to screen readers.
+   */
   dayInfo?: ((day: ISODate) => DayAvailability) | null;
-  /** A line under the days explaining the labels. */
-  legend?: string;
   /** The button it opened from: the picker sits next to it. */
   anchor?: HTMLElement | null;
   onPick: (value: ISODate | '') => void;
+  /**
+   * A stay of one or more nights (rooms): tap the check-in day, then the
+   * check-out day. `nights` is the stay already chosen. Answers through
+   * onPickStay instead of onPick.
+   */
+  stay?: { nights: number; maxNights: number; onPickStay: (checkIn: ISODate, nights: number) => void } | null;
 }
 
 const monthStart = (year: number, month: number): ISODate => toISODate(new Date(year, month, 1));
 const monthEnd = (year: number, month: number): ISODate => toISODate(new Date(year, month + 1, 0));
 
 export function openDatePicker(options: DatePickerOptions): void {
-  const { today, min = '', max = '', mode = 'day', clearable = false, dayInfo = null, legend = '', onPick } = options;
-  const title = options.title ?? (mode === 'month' ? 'Go to a month' : 'Pick a date');
+  const { today, min = '', max = '', mode = 'day', clearable = false, dayInfo = null, onPick, stay = null } = options;
+  const baseTitle = options.title ?? (mode === 'month' ? 'Go to a month' : 'Pick a date');
+  /** The check-in tapped, while waiting for the check-out. */
+  let checkIn: ISODate | null = null;
+  const nightsBetween = (from: ISODate, to: ISODate): number =>
+    Math.round((parseDate(to).getTime() - parseDate(from).getTime()) / 86_400_000);
+  /** Every night from check-in to the night before this day is free. */
+  const canLeaveOn = (day: ISODate): boolean => {
+    if (!checkIn || day <= checkIn) return false;
+    const nights = nightsBetween(checkIn, day);
+    if (!stay || nights > stay.maxNights) return false;
+    for (let index = 0; index < nights; index += 1) {
+      const night = toISODate(new Date(parseDate(checkIn).getFullYear(), parseDate(checkIn).getMonth(), parseDate(checkIn).getDate() + index));
+      if (outOfRange(night) || dayInfo?.(night).disabled) return false;
+    }
+    return true;
+  };
   const start = parseDate(options.value || today);
   let year = start.getFullYear();
   let month = start.getMonth();
   const returnTo = document.activeElement as HTMLElement | null;
 
   const dialog = document.createElement('dialog');
-  dialog.className = `picker is-entering ${dayInfo ? 'picker--slots' : ''}`;
-  dialog.setAttribute('aria-label', title);
+  dialog.className = 'picker is-entering';
+  dialog.setAttribute('aria-label', baseTitle);
   document.body.append(dialog);
 
   const outOfRange = (day: ISODate): boolean => (!!min && day < min) || (!!max && day > max);
@@ -57,12 +79,18 @@ export function openDatePicker(options: DatePickerOptions): void {
     (!!min && monthEnd(y, m) < min) || (!!max && monthStart(y, m) > max);
 
   function draw(focusKey?: string): void {
+    const title = stay ? (checkIn ? 'Now the check-out day' : 'Check-in day') : baseTitle;
     const first = new Date(year, month, 1);
     const leading = (first.getDay() + 6) % 7; // Monday first
     const length = new Date(year, month + 1, 0).getDate();
     const days = Array.from({ length }, (_, index) => toISODate(new Date(year, month, index + 1)));
     const chosen = options.value;
     const shownMonth = options.value ? parseDate(options.value) : null;
+    // The stay on show: the one being picked, else the one already chosen.
+    const rangeFrom = stay ? checkIn ?? (chosen || null) : null;
+    const rangeTo = stay && !checkIn && chosen && stay.nights > 1
+      ? toISODate(new Date(parseDate(chosen).getFullYear(), parseDate(chosen).getMonth(), parseDate(chosen).getDate() + stay.nights))
+      : null;
 
     const body: SafeHTML = html`
       <div class="picker__body">
@@ -97,18 +125,25 @@ export function openDatePicker(options: DatePickerOptions): void {
               ${days.map((day) => {
                 const info = dayInfo && !outOfRange(day) ? dayInfo(day) : null;
                 const label = info ? `${formatDate(day, 'long')}, ${info.label}` : formatDate(day, 'long');
+                // Picking a check-out: a later day the whole stay fits before; an earlier one starts over.
+                const leaving = !!checkIn && day > checkIn;
+                const blocked = outOfRange(day) || (leaving ? !canLeaveOn(day) : !!info?.disabled);
+                const picked = stay ? day === rangeFrom || day === rangeTo : day === chosen;
+                const inStay = !!rangeFrom && !!rangeTo && day > rangeFrom && day < rangeTo;
                 return html`
-                <button class="picker__day ${day === today ? 'is-today' : ''} ${day === chosen ? 'is-picked' : ''} ${info ? `is-${info.tone}` : ''}" type="button"
-                  data-pick="day" data-date="${day}" data-key="day-${day}" ${outOfRange(day) || info?.disabled ? 'disabled' : ''}
-                  aria-label="${label}">${parseDate(day).getDate()}${info ? html`<span class="picker__slots">${info.label}</span>` : ''}</button>`;
+                <button class="picker__day ${day === today ? 'is-today' : ''} ${picked ? 'is-picked' : ''} ${inStay ? 'is-in-stay' : ''} ${info && !leaving ? `is-${info.tone}` : ''}" type="button"
+                  data-pick="day" data-date="${day}" data-key="day-${day}" ${blocked ? 'disabled' : ''}
+                  aria-label="${label}">${parseDate(day).getDate()}</button>`;
               })}
             </div>
-            ${legend ? html`<p class="picker__legend">${legend}</p>` : ''}
           </div>` : ''}
 
         <div class="picker__shortcuts">
           ${mode === 'day'
-            ? html`<button class="btn btn--secondary btn--sm" type="button" data-pick="today" ${outOfRange(today) || dayInfo?.(today).disabled ? 'disabled' : ''}>Today</button>`
+            ? checkIn
+              ? html`<span class="picker__stay small muted">Check-in ${formatDate(checkIn)}</span>
+                <button class="btn btn--quiet btn--sm" type="button" data-pick="one-night">Just 1 night</button>`
+              : html`<button class="btn btn--secondary btn--sm" type="button" data-pick="today" ${outOfRange(today) || dayInfo?.(today).disabled ? 'disabled' : ''}>Today</button>`
             : html`<button class="btn btn--secondary btn--sm" type="button" data-pick="this-month">This month</button>`}
           ${clearable ? html`<button class="btn btn--quiet btn--sm" type="button" data-pick="clear">Clear</button>` : ''}
         </div>
@@ -151,8 +186,35 @@ export function openDatePicker(options: DatePickerOptions): void {
         if (mode === 'month') answer(monthStart(year, month));
         else draw(el.dataset.key);
         break;
-      case 'day': answer(el.dataset.date ?? ''); break;
-      case 'today': answer(today); break;
+      case 'day': {
+        const day = el.dataset.date ?? '';
+        if (!stay) {
+          answer(day);
+        } else if (checkIn && day > checkIn) {
+          const nights = nightsBetween(checkIn, day);
+          close();
+          stay.onPickStay(checkIn, nights);
+        } else {
+          checkIn = day;
+          draw(`day-${day}`);
+        }
+        break;
+      }
+      case 'today':
+        if (stay) {
+          checkIn = today;
+          draw(`day-${today}`);
+        } else {
+          answer(today);
+        }
+        break;
+      case 'one-night':
+        if (stay && checkIn) {
+          const from = checkIn;
+          close();
+          stay.onPickStay(from, 1);
+        }
+        break;
       case 'this-month': {
         const now = parseDate(today);
         answer(monthStart(now.getFullYear(), now.getMonth()));

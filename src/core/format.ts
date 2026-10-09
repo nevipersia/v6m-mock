@@ -77,3 +77,9 @@ export const parseDigits = (value: string | number | null | undefined): number =
 
 /** Loose check: something@something.something, the most a mock should insist on. */
 export const isEmail = (value: string): boolean => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
+
+/** A date, or a stay's check-in to check-out: "Tue, Oct 13 to Fri, Oct 16 · 3 nights". */
+export function stayText(date: string, nights: number, style: Parameters<typeof formatDate>[1] = 'long'): string {
+  if (nights <= 1) return formatDate(date, style);
+  return `${formatDate(date, style)} to ${formatDate(addDays(date, nights), style)} · ${nights} nights`;
+}

@@ -3,20 +3,18 @@
 import { isMock } from '../core/config.js';
 import { $, html, on, render } from '../core/dom.js';
 import { canReset, getState, loadStore, onSaveError, resetStore, subscribe } from '../core/store.js';
-import { availabilityFor, pendingPaymentChecks } from '../core/rules.js';
+import { MAX_NIGHTS, availabilityFor, canStayLonger, pendingPaymentChecks } from '../core/rules.js';
 import type { Staff, State } from '../core/types.js';
 import { can, canView, currentStaff, hasSession, homePage, restoreSession, signOut } from './auth.js';
 import { alertActions, announcePayments, closeAlerts, goToBooking, isAlertsOpen, resetPaymentWatch } from './components/alerts.js';
 import { createBookingDetail } from './components/booking-detail.js';
 import { createBookingForm } from './components/booking-form.js';
-import { createEventForm } from './components/event-form.js';
 import { createExpenseForm } from './components/expense-form.js';
 import { createGuestSummary } from './components/guest-summary.js';
-import { createStageSummary } from './components/stage-summary.js';
 import { createPackageForm, createPromoForm } from './components/package-form.js';
 import { markEntering } from './components/motion.js';
 import { placeNear } from './components/popover.js';
-import { setDayAvailability, setFieldsToday, startFields } from './components/fields.js';
+import { setDayAvailability, setFieldsToday, setStayProducts, startFields } from './components/fields.js';
 import { createBookingLinkPanel } from './components/booking-link.js';
 import { closeDrawer, openDrawer, syncDrawer } from './components/drawer.js';
 import { jumpBy, refreshJump } from './components/jump.js';
@@ -59,11 +57,8 @@ function buildContext(state: State, staff: Staff): DeskContext {
     newBooking: (prefill = {}) => openDrawer(createBookingForm(prefill), ctx),
     newBookingLink: (prefill = {}) => openDrawer(createBookingLinkPanel(prefill), ctx),
     editBooking: (bookingId) => openDrawer(createBookingForm({}, { editId: bookingId }), ctx),
-    newEvent: () => openDrawer(createEventForm(), ctx),
-    editEvent: (eventId) => openDrawer(createEventForm(eventId), ctx),
     newExpense: (expense) => openDrawer(createExpenseForm(expense), ctx),
     openGuests: (group) => openDrawer(createGuestSummary(group), ctx),
-    openStage: (stage) => openDrawer(createStageSummary(stage), ctx),
     editPackage: (kind, id = '', confirmDelete = false) => openDrawer(createPackageForm(kind, id, { confirmDelete }), ctx),
     editPromo: (id = '') => openDrawer(createPromoForm(id), ctx),
     closeDrawer,
@@ -301,6 +296,10 @@ async function start(): Promise<void> {
   setDayAvailability((product, excludeId) => {
     const state = getState();
     return state ? availabilityFor(state, product, { excludeId }) : null;
+  });
+  setStayProducts((product) => {
+    const state = getState();
+    return state && canStayLonger(state, product) ? MAX_NIGHTS : null;
   });
   onSaveError((error) => showToast(`Not saved: ${error.message}. Reloaded the latest data.`, 'error'));
   try {

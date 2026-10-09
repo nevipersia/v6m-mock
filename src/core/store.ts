@@ -9,6 +9,7 @@ import type { Backend } from './backend.js';
 import { createLocalBackend } from './backends/local.js';
 import { createSupabaseBackend } from './backends/supabase.js';
 import { config } from './config.js';
+import { DEFAULT_CATEGORIES } from './finance.js';
 import { permissionsFor } from './rules.js';
 import { supabaseClient } from './supabase-client.js';
 import type { Role, State } from './types.js';
@@ -36,6 +37,8 @@ function normalize(loaded: State): State {
   loaded.invites ??= [];
   loaded.expenses ??= [];
   loaded.paymentChecks ??= [];
+  // Expense categories became editable; data from before starts with the usual five.
+  if (!loaded.expenseCategories?.length) loaded.expenseCategories = DEFAULT_CATEGORIES.map((category) => ({ ...category }));
   // The ocular visit stage and its date were dropped: an event still at that
   // stage is an inquiry until it is reserved.
   for (const event of loaded.events ?? []) {

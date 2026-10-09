@@ -6,7 +6,7 @@
 import { addDays } from './format.js';
 import { buckets, dayOf, daysBetween, rankSlices, sumOf, within, type Bucket, type Slice } from './period.js';
 import { findBooking } from './rules.js';
-import type { Expense, ExpenseCategory, ISODate, PaymentMethod, PaymentType, State, Timestamp } from './types.js';
+import type { Expense, ExpenseCategory, ExpenseCategoryDef, ISODate, PaymentMethod, PaymentType, State, Timestamp } from './types.js';
 
 /** One bar of the profit and loss trend. */
 export interface FinancePoint extends Bucket {
@@ -14,25 +14,25 @@ export interface FinancePoint extends Bucket {
   spend: number;
 }
 
-/** Fixed order, so a category keeps its place and its colour whatever it cost. */
-export const EXPENSE_CATEGORIES: ExpenseCategory[] = ['payroll', 'utilities', 'supplies', 'upkeep', 'other'];
+/** The category that always stays: a deleted category's expenses move here. */
+export const OTHER_CATEGORY = 'other';
 
-export const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
-  payroll: 'Staff pay',
-  utilities: 'Utilities',
-  supplies: 'Supplies',
-  upkeep: 'Upkeep and repairs',
-  other: 'Other',
-};
+/** The categories a resort starts with. Staff can add more, and delete any but Other. */
+export const DEFAULT_CATEGORIES: ExpenseCategoryDef[] = [
+  { id: 'payroll', label: 'Staff pay', hint: 'Wages, overtime and extra hands for an event', sort: 1 },
+  { id: 'utilities', label: 'Utilities', hint: 'Electricity, water, internet, LPG', sort: 2 },
+  { id: 'supplies', label: 'Supplies', hint: 'Pool chemicals, kitchen, linen, cleaning, guest amenities', sort: 3 },
+  { id: 'upkeep', label: 'Upkeep and repairs', hint: 'Repairs, paint, garden, equipment, fuel', sort: 4 },
+  { id: OTHER_CATEGORY, label: 'Other', hint: 'Permits, fees, transport, anything else', sort: 99 },
+];
 
-/** What each category is for, shown under the picker in the form. */
-export const CATEGORY_HINTS: Record<ExpenseCategory, string> = {
-  payroll: 'Wages, overtime and extra hands for an event',
-  utilities: 'Electricity, water, internet, LPG',
-  supplies: 'Pool chemicals, kitchen, linen, cleaning, guest amenities',
-  upkeep: 'Repairs, paint, garden, equipment, fuel',
-  other: 'Permits, fees, transport, anything else',
-};
+/** The resort's categories in their order, Other last. */
+export const expenseCategories = (state: State): ExpenseCategoryDef[] =>
+  [...state.expenseCategories].sort((a, b) => (a.id === OTHER_CATEGORY ? 1 : b.id === OTHER_CATEGORY ? -1 : a.sort - b.sort));
+
+/** A category's name; an unknown one (from older data) shows as it was stored. */
+export const categoryLabel = (state: State, id: ExpenseCategory): string =>
+  state.expenseCategories.find((category) => category.id === id)?.label ?? (id === OTHER_CATEGORY ? 'Other' : id);
 
 export interface FinanceSummary {
   from: ISODate;
@@ -85,7 +85,7 @@ export function financeBetween(state: State, from: ISODate, to: ISODate): Financ
   const categories = new Map<ExpenseCategory, Slice>();
   expenses.forEach((expense) => {
     const key = expense.category;
-    const slice = categories.get(key) ?? { key, label: CATEGORY_LABELS[key] ?? key, amount: 0, count: 0, share: 0 };
+    const slice = categories.get(key) ?? { key, label: categoryLabel(state, key), amount: 0, count: 0, share: 0 };
     slice.amount += expense.amount;
     slice.count += 1;
     categories.set(key, slice);
@@ -101,7 +101,7 @@ export function financeBetween(state: State, from: ISODate, to: ISODate): Financ
     margin: income > 0 ? (income - spend) / income : null,
     profitBefore: incomeBefore || spendBefore ? incomeBefore - spendBefore : null,
     count: expenses.length,
-    byCategory: rankSlices(EXPENSE_CATEGORIES.flatMap((category) => categories.get(category) ?? [])),
+    byCategory: rankSlices([...categories.values()]),
     // Two spends on one day keep the order they were recorded in.
     expenses: [...expenses].sort((a, b) => (b.date === a.date ? b.createdAt.localeCompare(a.createdAt) : b.date.localeCompare(a.date))),
   };
@@ -168,7 +168,7 @@ export function ledgerEntries(state: State, from: ISODate, to: ISODate, view: Le
       at: expense.createdAt,
       what: expense.item,
       sub: expense.vendor ?? '',
-      category: CATEGORY_LABELS[expense.category],
+      category: categoryLabel(state, expense.category),
       method: expense.method,
       amountIn: 0,
       amountOut: expense.amount,

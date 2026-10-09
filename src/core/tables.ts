@@ -35,6 +35,7 @@ export const TABLES: TableSpec[] = [
   { collection: 'bookings', table: 'bookings', key: 'id', order: { column: 'starts_at', ascending: true } },
   { collection: 'payments', table: 'payments', key: 'id', order: { column: 'received_at', ascending: true } },
   { collection: 'paymentChecks', table: 'payment_checks', key: 'id', order: { column: 'sent_at', ascending: true } },
+  { collection: 'expenseCategories', table: 'expense_categories', key: 'id', order: { column: 'sort', ascending: true } },
   { collection: 'expenses', table: 'expenses', key: 'id', order: { column: 'date', ascending: true } },
   { collection: 'events', table: 'events', key: 'id', order: { column: 'date', ascending: true } },
   { collection: 'inquiries', table: 'inquiries', key: 'id', order: { column: 'received_at', ascending: true } },

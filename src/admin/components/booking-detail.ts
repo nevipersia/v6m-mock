@@ -2,21 +2,21 @@
 // take (check a guest's GCash receipt, record payment, check in, check out, cancel).
 
 import {
-  REJECT_REASONS, applyDiscount, cancelBooking, checkIn, checkOut, checkOutProblem, confirmPaymentCheck, payByQr, recordPayment,
+  REJECT_REASONS, applyDiscount, cancelBooking, checkIn, checkOut, confirmPaymentCheck, extendQuote, extendStay, payByQr, recordPayment,
   rejectPaymentCheck, removeDiscount, setGuestList,
 } from '../../core/actions.js';
 import { $, $maybe, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { blankCompanion, fitGuestList, guestListEditor, readGuestListField } from '../../core/guest-list.js';
 import { blankPaymentCard, paymentCard, type PaymentCardState } from '../../core/payment-card.js';
 import { qrPaymentRequest, sampleReference } from '../../core/qr-payment.js';
-import { formatDate, formatDateTime, peso, plural, timeOf } from '../../core/format.js';
+import { formatDate, formatDateTime, peso, plural, stayText, timeOf } from '../../core/format.js';
 import {
-  DOWNPAYMENT_PERCENT, METHOD_LABELS, SOURCE_LABELS, discountAmount, discountLabel, downpaymentDue, findBooking, isEditable, findGuest, findPackage, findStaff, isActive, pendingPaymentCheck,
+  METHOD_LABELS, canStayLonger, downpaymentName, SOURCE_LABELS, discountAmount, discountLabel, findBooking, stillToConfirm, isEditable, findGuest, findPackage, findStaff, isActive, pendingPaymentCheck,
   productLabel,
 } from '../../core/rules.js';
 import type { Booking, Companion, PaymentCheck, PaymentMethod, State } from '../../core/types.js';
 import type { DeskContext, DrawerContent } from '../types.js';
-import { kindDot, paymentPill, stagePill, statusPill } from './badges.js';
+import { kindDot, paymentPill, statusPill } from './badges.js';
 import { downloadBookingPdf } from './booking-pdf.js';
 import { blankDiscount, discountFields, readDiscountField, type DiscountDraft } from './discount-fields.js';
 import { icon } from './icons.js';
@@ -25,6 +25,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   'booking.created': 'Booking created',
   'booking.checked_in': 'Checked in',
   'booking.checked_out': 'Checked out',
+  'booking.extended': 'Stay extended',
   'booking.cancelled': 'Cancelled',
   'payment.recorded': 'Payment recorded',
   'payment.check_sent': 'GCash receipt sent',
@@ -61,7 +62,9 @@ function facts(state: State, booking: Booking): SafeHTML {
 
   const rows: [string, TemplateValue][] = [
     ['Booking', html`<span class="inline-kind">${kindDot(state, booking.product)} ${event ? event.title : productLabel(state, booking.product)}</span>`],
-    ['When', html`${formatDate(booking.date, 'long')}<br><span class="muted">${timeOf(booking.startsAt)} – ${timeOf(booking.endsAt)}${booking.endsAt.slice(0, 10) !== booking.date ? ' next day' : ''}</span>`],
+    ['When', booking.nights > 1
+      ? html`${stayText(booking.date, booking.nights)}<br><span class="muted">In ${timeOf(booking.startsAt)}, out ${timeOf(booking.endsAt)}</span>`
+      : html`${formatDate(booking.date, 'long')}<br><span class="muted">${timeOf(booking.startsAt)} – ${timeOf(booking.endsAt)}${booking.endsAt.slice(0, 10) !== booking.date ? ' next day' : ''}</span>`],
     ['Guests', guestsText(booking)],
     ['Source', SOURCE_LABELS[booking.source] ?? booking.source],
     ['Contact', guest?.mobile ?? '—'],
@@ -69,7 +72,7 @@ function facts(state: State, booking: Booking): SafeHTML {
   if (guest?.email) rows.push(['Email', guest.email]);
   if (guest?.address) rows.push(['Address', guest.address]);
   if (booking.scPwd) rows.push(['SC / PWD', String(booking.scPwd)]);
-  if (pkg && event) rows.push(['Package', html`${pkg.name} ${stagePill(event.stage)}`]);
+  if (pkg && event) rows.push(['Package', pkg.name]);
   if (booking.pets) rows.push(['Pets', `${booking.pets.count} ${booking.pets.type}, rules acknowledged`]);
   if (booking.notes) rows.push(['Notes', booking.notes]);
   if (booking.cancelReason) rows.push(['Cancelled', booking.cancelReason]);
@@ -104,17 +107,17 @@ function priceSection(state: State, booking: Booking): SafeHTML {
             <dd>−${peso(booking.discount.amount)}</dd>
           </div>` : ''}
         <div class="line-items__row line-items__row--total"><dt>Total</dt><dd>${peso(booking.total)}</dd></div>
-        <div class="line-items__row line-items__row--downpayment ${downpaymentDue(booking) && isActive(booking) ? 'is-due' : ''}">
-          <dt>${DOWNPAYMENT_PERCENT}% downpayment</dt>
-          <dd>${peso(booking.depositRequired)}${downpaymentDue(booking) ? '' : ' ✓'}</dd>
+        <div class="line-items__row line-items__row--downpayment ${stillToConfirm(booking) && isActive(booking) ? 'is-due' : ''}">
+          <dt>${downpaymentName(state, booking.product, booking.nights)}</dt>
+          <dd>${peso(booking.depositRequired)}${stillToConfirm(booking) ? '' : ' ✓'}</dd>
         </div>
         <div class="line-items__row"><dt>Paid</dt><dd>${peso(booking.paid)}</dd></div>
         <div class="line-items__row line-items__row--balance ${booking.balance > 0 && isActive(booking) ? 'is-due' : ''}">
           <dt>Balance</dt><dd>${peso(booking.balance)}</dd>
         </div>
       </dl>
-      ${downpaymentDue(booking) > 0 && isActive(booking)
-        ? html`<p class="small muted">${peso(downpaymentDue(booking))} more confirms this booking. Until then it stays on hold.</p>` : ''}
+      ${stillToConfirm(booking) > 0 && isActive(booking)
+        ? html`<p class="small muted">${peso(stillToConfirm(booking))} more confirms this booking. Until then it stays on hold.</p>` : ''}
     </section>`;
 }
 
@@ -171,6 +174,11 @@ function activitySection(state: State, booking: Booking): SafeHTML | '' {
 export function createBookingDetail(bookingId: string): DrawerContent {
   const ui: {
     checkInOpen: boolean;
+    /** Check-out with a balance: collect it, then the guest leaves. */
+    checkOutOpen: boolean;
+    /** Extending a room stay, and by how many nights. */
+    extendOpen: boolean;
+    extendNights: number;
     confirmCancel: boolean;
     guestListOpen: boolean;
     guestList: Companion[];
@@ -190,7 +198,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     /** A past receipt opened from the payments list. */
     receiptShown: string | null;
   } = {
-    checkInOpen: false, confirmCancel: false, guestListOpen: false, guestList: [], qrOpen: false, discountOpen: false, discount: blankDiscount(), discountError: '',
+    checkInOpen: false, checkOutOpen: false, extendOpen: false, extendNights: 1, confirmCancel: false, guestListOpen: false, guestList: [], qrOpen: false, discountOpen: false, discount: blankDiscount(), discountError: '',
     card: blankPaymentCard(), errors: {},
     receiptLarge: false, rejecting: false, rejectReason: REJECT_REASONS[0] ?? '', checkReference: '', checkError: '', receiptShown: null,
   };
@@ -328,6 +336,38 @@ export function createBookingDetail(bookingId: string): DrawerContent {
       </section>`;
   }
 
+  /** More nights for a room stay, if the room is free for them. */
+  function extendSection(ctx: DeskContext, booking: Booking): SafeHTML | '' {
+    if (!ctx.can('bookings.write') || !canStayLonger(ctx.state, booking.product)) return '';
+    if (!['hold', 'confirmed', 'checked_in'].includes(booking.status) || ui.checkInOpen || ui.checkOutOpen) return '';
+    if (!ui.extendOpen) {
+      return html`
+        <button class="btn btn--secondary btn--block" type="button" data-action="open-extend">${icon('plus')} Extend stay</button>`;
+    }
+    const found = extendQuote(ctx.state, booking, ui.extendNights);
+    return html`
+      <div class="action-card">
+        <h4 class="action-card__title">Extend ${booking.guestName}'s stay</h4>
+        <div class="stepper" role="group" aria-label="Extra nights">
+          <button class="btn btn--secondary btn--icon" type="button" data-action="extend-step" data-step="-1" aria-label="One night fewer" ${ui.extendNights <= 1 ? 'disabled' : ''}>−</button>
+          <span class="stepper__value"><strong>${ui.extendNights}</strong> more ${ui.extendNights === 1 ? 'night' : 'nights'}</span>
+          <button class="btn btn--secondary btn--icon" type="button" data-action="extend-step" data-step="1" aria-label="One night more">+</button>
+        </div>
+        ${found.error !== undefined
+          ? html`<p class="form-error">${found.error}</p>`
+          : html`
+            <dl class="pay-check__facts">
+              <div><dt>New stay</dt><dd>${stayText(booking.date, found.nights)}</dd></div>
+              <div><dt>Adds to the bill</dt><dd><strong>${peso(found.added)}</strong></dd></div>
+            </dl>
+            <p class="small muted">It is added to the balance, paid by check-out. ${booking.status === 'confirmed' ? 'The booking stays confirmed.' : ''}</p>`}
+        <div class="button-row">
+          <button class="btn btn--quiet" type="button" data-action="close-extend">Cancel</button>
+          <button class="btn btn--primary" type="button" data-action="confirm-extend" ${found.error !== undefined ? 'disabled' : ''}>Extend stay</button>
+        </div>
+      </div>`;
+  }
+
   function actionsSection(ctx: DeskContext, booking: Booking): SafeHTML | '' {
     const { state } = ctx;
     const parts: SafeHTML[] = [];
@@ -359,11 +399,29 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     }
 
     if (booking.status === 'checked_in' && ctx.can('bookings.write')) {
-      const blocked = checkOutProblem(booking);
-      parts.push(html`
-        <button class="btn btn--primary btn--block" type="button" data-action="check-out" ${blocked ? 'disabled' : ''}>Check out guest</button>
-        ${blocked ? html`<p class="small muted">${blocked}</p>` : ''}`);
+      if (booking.balance > 0 && ui.checkOutOpen) {
+        // The bill is settled as the guest leaves (walk-ins mostly pay this way).
+        parts.push(html`
+          <div class="action-card">
+            <h4 class="action-card__title">Check out ${booking.guestName}</h4>
+            <label class="field">
+              <span class="field__label">Collect the ${peso(booking.balance)} balance via</span>
+              <select class="input" name="checkOutMethod">${methodOptions('cash')}</select>
+            </label>
+            <div class="button-row">
+              <button class="btn btn--quiet" type="button" data-action="cancel-check-out">Not now</button>
+              <button class="btn btn--primary" type="button" data-action="confirm-check-out">Collect and check out</button>
+            </div>
+          </div>`);
+      } else {
+        parts.push(html`
+          <button class="btn btn--primary btn--block" type="button" data-action="check-out">Check out guest</button>
+          ${booking.balance > 0 ? html`<p class="small muted">${peso(booking.balance)} to collect as they leave.</p>` : ''}`);
+      }
     }
+
+    const extend = extendSection(ctx, booking);
+    if (extend) parts.push(extend);
 
     const qr = qrSection(ctx, booking);
     if (qr) parts.push(qr);
@@ -372,7 +430,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
     if (discount) parts.push(discount);
 
     if (isActive(booking) && booking.status !== 'checked_out' && booking.balance > 0 && ctx.can('payments.write') && !ui.checkInOpen && !ui.qrOpen) {
-      const suggested = downpaymentDue(booking) || booking.balance;
+      const suggested = stillToConfirm(booking) || booking.balance;
       parts.push(html`
         <form class="action-card" data-submit="record-payment" novalidate>
           <h4 class="action-card__title">Record a payment</h4>
@@ -390,7 +448,7 @@ export function createBookingDetail(bookingId: string): DrawerContent {
             <span class="field__label">Reference (optional)</span>
             <input class="input" name="reference" placeholder="GCash or bank reference number">
           </label>
-          ${downpaymentDue(booking) ? html`<p class="small muted">${peso(downpaymentDue(booking))} completes the ${DOWNPAYMENT_PERCENT}% downpayment and confirms the booking.</p>` : ''}
+          ${stillToConfirm(booking) ? html`<p class="small muted">${peso(stillToConfirm(booking))} completes the downpayment and confirms the booking.</p>` : ''}
           <p class="form-error">${ui.errors.payment}</p>
           <button class="btn btn--secondary" type="submit">Record payment</button>
         </form>`);
@@ -687,10 +745,59 @@ export function createBookingDetail(bookingId: string): DrawerContent {
         ctx.toast(`${booking.guestName} checked in${collected ? ` · collected ${peso(collected)}` : ''}`);
       },
 
-      'check-out': ({ ctx }) => {
+      'check-out': ({ ctx, redraw }) => {
+        const booking = findBooking(ctx.state, bookingId);
+        if (booking && booking.balance > 0) {
+          ui.checkOutOpen = true;
+          ui.extendOpen = false;
+          redraw();
+          return;
+        }
         const result = checkOut(bookingId, ctx.staff.id);
         if (result.error !== undefined) ctx.toast(result.error, 'error');
         else ctx.toast(`${result.booking.guestName} checked out`);
+      },
+
+      'cancel-check-out': ({ redraw }) => {
+        ui.checkOutOpen = false;
+        redraw();
+      },
+
+      'confirm-check-out': ({ root, ctx }) => {
+        const booking = findBooking(ctx.state, bookingId);
+        if (!booking) return;
+        const collected = booking.balance;
+        const method = ($maybe<HTMLSelectElement>('[name="checkOutMethod"]', root)?.value ?? 'cash') as PaymentMethod;
+        ui.checkOutOpen = false;
+        const result = checkOut(bookingId, ctx.staff.id, { method });
+        if (result.error !== undefined) ctx.toast(result.error, 'error');
+        else ctx.toast(`${result.booking.guestName} checked out · collected ${peso(collected)}`);
+      },
+
+      'open-extend': ({ redraw }) => {
+        ui.extendOpen = true;
+        ui.extendNights = 1;
+        redraw();
+      },
+
+      'close-extend': ({ redraw }) => {
+        ui.extendOpen = false;
+        redraw();
+      },
+
+      'extend-step': ({ el, redraw }) => {
+        ui.extendNights = Math.max(1, ui.extendNights + (Number(el.dataset.step) || 0));
+        redraw();
+      },
+
+      'confirm-extend': ({ ctx }) => {
+        const result = extendStay(bookingId, ui.extendNights, ctx.staff.id);
+        if (result.error !== undefined) {
+          ctx.toast(result.error, 'error');
+          return;
+        }
+        ui.extendOpen = false;
+        ctx.toast(`Stay extended to ${result.booking.nights} nights · ${peso(result.added)} added to the balance`);
       },
 
       'record-payment': ({ el, ctx, redraw }) => {

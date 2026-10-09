@@ -10,18 +10,18 @@
     "currency": "PHP",
     "seed": 20261007,
     "rules": [
-      "A unit holds one booking per night; exclusive events that are reserved, paid or done close the resort for the day.",
+      "A unit holds one booking per night. Rooms can be booked for several nights.",
       "Regular bookings: per-head entrance for a session (day tour 8 AM–4 PM, night tour 2 PM–10 PM, overnight 3 PM–12 NN, overnight tour 6 PM–6 AM), plus cottages or rooms. Each session caps at 120 guests.",
       "Night tour and 3 PM overnight entrance rates are placeholders until the owner confirms them.",
       "Exclusive rental packages (from the brochure) close the resort to other bookings for their whole time window, and need that window to be free. Up to 120 guests.",
       "Rooms (3 PM–12 NN) and cottages (6 PM–6 AM) add per-head entrance for their session.",
-      "A booking stays on hold until at least 50% of the total is paid; checked-out bookings have zero balance.",
-      "Downpayment: 50% of the total for every booking, rounded up to the peso. Guests on a booking link pay it to the resort's GCash and send their receipt; it counts once staff confirm it in the desk.",
+      "A booking stays on hold until its downpayment is paid; checked-out bookings have zero balance.",
+      "Downpayment: ₱1,000, or the whole total when the booking costs less; 50% for a room stay of 2 nights or more. Guests on a booking link pay it to the resort's GCash and send their receipt; it counts once staff confirm it in the desk.",
       "Booking links are single use: a staff member sends one, the guest fills it in, and the booking lands on the calendar.",
       "Rates come from public listings and the V6M brochure; promo PR-BTS and all event packages are invented for testing.",
       "V6M Desk signs in with an email and password. Demo passwords sit in this file in plain text because it is a mock; a real build would never store them this way.",
       "New accounts are invite only: the owner creates the account, the invite code is used once, and the person sets their own password.",
-      "Owners and managers can give a manual discount (amount or percent). Managers must write a note saying why; owners may skip it. The 50% downpayment follows the discounted total.",
+      "Owners and managers can give a manual discount (amount or percent). Managers must write a note saying why; owners may skip it. The downpayment follows the discounted total.",
       "Expenses are what the resort spent, dated on the day the money went out. The dashboard sets them against the payments received to show profit or loss; both sides are cash, so a booking still owed for is not counted."
     ],
     "counts": {

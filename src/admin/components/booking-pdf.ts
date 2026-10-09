@@ -10,7 +10,7 @@
 import { createPdf, downloadBlob, fitText, pdfPage, textWidth, type PdfItem, type RGB } from '../../core/pdf.js';
 import { formatDate, formatDateTime, formatTime, peso, timeOf } from '../../core/format.js';
 import {
-  DOWNPAYMENT_PERCENT, SOURCE_LABELS, downpaymentDue, exclusiveSessionLabel, findExclusive, findGuest, findSession,
+  SOURCE_LABELS, stillToConfirm, exclusiveSessionLabel, findExclusive, findGuest, findSession,
   findStaff, findUnit,
 } from '../../core/rules.js';
 import type { Booking, Companion, State, Timestamp } from '../../core/types.js';
@@ -175,7 +175,7 @@ export function bookingPdfBlob(state: State, booking: Booking): Blob {
   field(first, 'ROOM / VILLA:', unit?.kind === 'room' ? unit.name : pkg?.includes.split(' +')[0] ?? '', MARGIN + half, half);
   first.y -= FIELD_GAP;
   field(first, 'NUMBER OF PAX:', `${pax}  (${booking.adults} adult${booking.adults === 1 ? '' : 's'}, ${booking.kids} kid${booking.kids === 1 ? '' : 's'}${booking.scPwd ? `, ${booking.scPwd} SC/PWD` : ''})`, MARGIN, left);
-  field(first, 'DOWNPAYMENT:', `${peso(advance)}${downpaymentDue(booking) ? ` (${DOWNPAYMENT_PERCENT}% is ${peso(booking.depositRequired)})` : ''}`, MARGIN + half, half);
+  field(first, 'DOWNPAYMENT:', `${peso(advance)}${stillToConfirm(booking) ? ` (of ${peso(booking.depositRequired)})` : ''}`, MARGIN + half, half);
   first.y -= 28;
 
   // Charges: the price lines, any promo or discount, then the totals.

@@ -1,10 +1,10 @@
 // Single-use booking page. A staff member sends the link; the guest fills it
-// in once, step by step, checks it all on the last step, pays the 50%
+// in once, step by step, checks it all on the last step, pays the
 // downpayment to the resort's GCash and sends back the receipt. The booking
 // appears on the V6M Desk calendar on hold until staff find the payment.
 
 import { demoNow, guestBookingProblem, guestChoiceProblem, guestDetailsProblem } from '../core/actions.js';
-import { setDayAvailability, setFieldsToday, startFields } from '../admin/components/fields.js';
+import { setDayAvailability, setFieldsToday, setStayProducts, startFields } from '../admin/components/fields.js';
 import { isMock } from '../core/config.js';
 import { $, $maybe, on, render } from '../core/dom.js';
 import { DEFAULT_BOOKING_PAGE, loadBookingPage, readableInk } from '../core/booking-page.js';
@@ -12,12 +12,12 @@ import { parseDigits } from '../core/format.js';
 import { blankCompanion, fitGuestList, namesAsked, readGuestListField, updateGuestCount } from '../core/guest-list.js';
 import { blankPaymentCard, readReceipt } from '../core/payment-card.js';
 import { qrPaymentRequest, sampleReceipt, sampleReference } from '../core/qr-payment.js';
-import { availabilityFor, findBooking, findUnit, pendingPaymentCheck } from '../core/rules.js';
+import { MAX_NIGHTS, availabilityFor, canStayLonger, findBooking, findUnit, pendingPaymentCheck, stayNights } from '../core/rules.js';
 import { requireState } from '../core/store.js';
 import type { Booking, BookingLink, BookingPageSettings, PaymentCheck, State } from '../core/types.js';
 import { openLink, sendReceipt, submitBooking, type OpenResult } from './api.js';
 import {
-  bookableIds, checkingScreen, doneScreen, formScreen, guestListBody, payScreen, problemScreen, productCard, stepsFor, summary,
+  bookableIds, checkingScreen, doneScreen, formScreen, guestListBody, payScreen, problemScreen, stepsFor, summary,
   type Draft, type Step,
 } from './screens.js';
 
@@ -25,7 +25,7 @@ const app = $('#app');
 const code = new URLSearchParams(window.location.search).get('code') ?? '';
 
 const draft: Draft = {
-  guestName: '', mobile: '', email: '', address: '', product: '', date: '', adults: 0, kids: 0, scPwd: 0, notes: '',
+  guestName: '', mobile: '', email: '', address: '', product: '', date: '', nights: 1, adults: 0, kids: 0, scPwd: 0, notes: '',
   guestList: [blankCompanion()],
 };
 let step: Step = 'booking';
@@ -123,7 +123,9 @@ function bind(page: BookingPageSettings): void {
       if (field.name === 'companionName') updateGuestCount(app, draft.guestList, namesAsked(draft.adults + draft.kids), false);
       return;
     }
-    if (field.name === 'adults' || field.name === 'kids' || field.name === 'scPwd') {
+    if (field.name === 'nights') {
+      draft.nights = stayNights(requireState(), draft.product, Number(field.value) || 1);
+    } else if (field.name === 'adults' || field.name === 'kids' || field.name === 'scPwd') {
       draft[field.name] = parseDigits(field.value);
       const formatted = String(parseDigits(field.value) || '');
       if (formatted !== field.value) field.value = formatted;
@@ -135,7 +137,13 @@ function bind(page: BookingPageSettings): void {
     } else if (['guestName', 'mobile', 'email', 'address', 'product', 'date', 'notes'].includes(field.name)) {
       draft[field.name as 'guestName'] = field.value;
     }
-    if (field.name === 'product') fill('product', draft.product ? productCard(requireState(), draft.product) : '');
+    if (field.name === 'product') {
+      // A room is a stay of nights and anything else one visit: the date field changes with it.
+      draft.nights = stayNights(requireState(), draft.product, draft.nights);
+      error = '';
+      showForm(page, screen.link, false);
+      return;
+    }
     error = '';
     fill('summary', summary(requireState(), page, draft));
     showError('');
@@ -274,6 +282,7 @@ async function start(): Promise<void> {
   // The desk's dropdowns and date picker, with each day's availability for the chosen booking.
   setFieldsToday(state.meta.asOf);
   setDayAvailability((product) => availabilityFor(requireState(), product, { strict: true }));
+  setStayProducts((product) => (canStayLonger(requireState(), product) ? MAX_NIGHTS : null));
   startFields();
   if (stage.stage === 'problem') {
     render(app, problemScreen(page, stage.message));

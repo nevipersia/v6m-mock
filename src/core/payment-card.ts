@@ -11,7 +11,6 @@ import { html, raw, type SafeHTML } from './dom.js';
 import { peso } from './format.js';
 import { qrSvg } from './qr.js';
 import { GCASH_ACCOUNT, type QrPaymentRequest } from './qr-payment.js';
-import { DOWNPAYMENT_PERCENT } from './rules.js';
 
 export interface PaymentCardState {
   reference: string;
@@ -63,7 +62,7 @@ export function paymentCard(request: QrPaymentRequest, card: PaymentCardState, {
           <figcaption>GCash · ${GCASH_ACCOUNT.name}</figcaption>
         </figure>
         <div class="pay-qr__details">
-          <p class="pay-qr__label">${partial ? 'Rest of the downpayment' : `${DOWNPAYMENT_PERCENT}% downpayment`}</p>
+          <p class="pay-qr__label">${partial ? 'Rest of the downpayment' : 'Downpayment'}</p>
           <p class="pay-qr__amount">${peso(request.amount)}</p>
           <dl class="pay-qr__facts">
             <div><dt>Pay to</dt><dd>${GCASH_ACCOUNT.name}</dd></div>

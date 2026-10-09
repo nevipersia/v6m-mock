@@ -5,7 +5,7 @@
 import { $maybe, flag, html, type SafeHTML, type TemplateValue } from '../../core/dom.js';
 import { addDays, formatDate, parseDate, peso, plural, timeOf, toISODate } from '../../core/format.js';
 import {
-  bookingWindow, closingEvent, exclusiveOn, exclusiveOverlapping, findSession, isActive, live, liveEvents, poolGuests, productLabel, unitBookingOn,
+  bookingWindow, exclusiveOn, exclusiveOverlapping, findSession, isActive, live, poolGuests, productLabel, unitBookingOn,
 } from '../../core/rules.js';
 import type { ISODate, State, Unit } from '../../core/types.js';
 import type { DeskContext, HandlerMap } from '../types.js';
@@ -71,17 +71,17 @@ const shortName = (name: string): string => {
   return last ? `${first} ${last.charAt(0)}.` : first;
 };
 
-const bookingsOn = (state: State, day: ISODate) => state.bookings.filter((booking) => isActive(booking) && booking.date === day);
+/** Bookings on a day: those starting then, and room stays still running that night. */
+const bookingsOn = (state: State, day: ISODate) => state.bookings.filter((booking) =>
+  isActive(booking) && (booking.date === day || (booking.nights > 1 && day > booking.date && day < addDays(booking.date, booking.nights))));
 
 // ---------- Day view ----------
 
 function dayView(ctx: DeskContext, day: ISODate): SafeHTML {
   const { state } = ctx;
-  const event = closingEvent(state, day);
   const bookings = bookingsOn(state, day).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 
   return html`
-    ${event ? html`<p class="notice notice--event">Closed for ${event.title}. Walk-ins and other bookings are blocked.</p>` : ''}
     ${exclusiveOn(state, day) ? html`
       <p class="notice notice--exclusive">
         Exclusive rental: ${exclusiveOn(state, day)?.guestName} has ${productLabel(state, exclusiveOn(state, day)?.product ?? '')}
@@ -179,19 +179,9 @@ function exclusiveCell(ctx: DeskContext, day: ISODate): SafeHTML {
       aria-label="Book an exclusive rental on ${formatDate(day)}">${icon('plus')}</button>`;
 }
 
-function eventCell(ctx: DeskContext, day: ISODate): SafeHTML {
-  const event = liveEvents(ctx.state).find((item) => item.date === day);
-  if (!event) return html`<span class="cal-empty"></span>`;
-  if (event.bookingId) {
-    return html`<button class="cal-chip cal-chip--event" type="button" data-action="open-booking" data-id="${event.bookingId}" title="${event.title}">${event.title}</button>`;
-  }
-  return html`<span class="cal-chip cal-chip--event ${event.blocksCalendar ? '' : 'cal-chip--hold'}" title="${event.title}">${event.title}</span>`;
-}
-
 interface GridRow {
   label: string;
   cell: (day: ISODate) => TemplateValue;
-  alwaysShow?: boolean;
 }
 
 /** The day the strip has open: the one tapped, else today, else the first day shown. */
@@ -204,7 +194,6 @@ function pickedDay(state: State, days: ISODate[]): ISODate {
 function weekView(ctx: DeskContext, days: ISODate[]): SafeHTML {
   const { state } = ctx;
   const rows: GridRow[] = [
-    { label: 'Events', cell: (day) => eventCell(ctx, day), alwaysShow: true },
     { label: 'Exclusive rental', cell: (day) => exclusiveCell(ctx, day) },
     ...live(state.poolSessions).map((session): GridRow => ({ label: session.label, cell: (day) => poolCell(ctx, session.id, day) })),
     ...live(state.units).map((unit): GridRow => ({ label: unit.name, cell: (day) => unitCell(ctx, unit, day) })),
@@ -238,10 +227,7 @@ function weekView(ctx: DeskContext, days: ISODate[]): SafeHTML {
             ${rows.map((row) => html`
               <tr>
                 <th scope="row">${row.label}</th>
-                ${days.map((day) => {
-                  const closed = closingEvent(state, day) && !row.alwaysShow;
-                  return html`<td class="${day === state.meta.asOf ? 'is-today' : ''}">${closed ? html`<span class="cal-closed">Closed</span>` : row.cell(day)}</td>`;
-                })}
+                ${days.map((day) => html`<td class="${day === state.meta.asOf ? 'is-today' : ''}">${row.cell(day)}</td>`)}
               </tr>`)}
           </tbody>
         </table>
@@ -260,13 +246,12 @@ function weekStrip(ctx: DeskContext, days: ISODate[], picked: ISODate): SafeHTML
     <div class="day-strip" role="tablist" aria-label="Day of the week">
       ${days.map((day) => {
         const count = bookingsOn(state, day).length;
-        const closed = closingEvent(state, day);
         return html`
           <button class="day-strip__day ${day === picked ? 'is-picked' : ''} ${day === state.meta.asOf ? 'is-today' : ''}"
             type="button" role="tab" aria-selected="${flag(day === picked)}" data-action="pick-day" data-date="${day}">
             <span class="day-strip__weekday">${formatDate(day, 'weekday')}</span>
             <span class="day-strip__date">${parseDate(day).getDate()}</span>
-            <span class="day-strip__mark ${closed ? 'is-closed' : ''}">${closed ? '×' : count ? count : ''}</span>
+            <span class="day-strip__mark">${count || ''}</span>
           </button>`;
       })}
     </div>`;
@@ -285,16 +270,14 @@ function monthView(ctx: DeskContext, days: ISODate[]): SafeHTML {
         ${Array.from({ length: leading }, () => html`<span class="month__cell month__cell--blank"></span>`)}
         ${days.map((day) => {
           const bookings = bookingsOn(state, day);
-          const event = closingEvent(state, day);
           const guests = bookings.reduce((sum, booking) => sum + booking.adults + booking.kids, 0);
-          const canBook = ctx.can('bookings.write') && !event;
+          const canBook = ctx.can('bookings.write');
           return html`
             <div class="month__cell ${day === state.meta.asOf ? 'is-today' : ''}" data-action="open-day" data-date="${day}">
               <div class="month__head">
                 <button class="month__date" type="button" data-action="open-day" data-date="${day}" aria-label="Open ${formatDate(day, 'long')}">${parseDate(day).getDate()}</button>
                 ${canBook ? html`<button class="month__add" type="button" data-action="new-booking" data-date="${day}" aria-label="New booking on ${formatDate(day, 'long')}">${icon('plus')}</button>` : ''}
               </div>
-              ${event ? html`<span class="cal-chip cal-chip--event month__event" title="${event.title}">${event.title}</span>` : ''}
               ${bookings.length ? html`
                 <button class="month__summary" type="button" data-action="open-day" data-date="${day}"
                   aria-label="${plural(bookings.length, 'booking')}, ${plural(guests, 'guest')} on ${formatDate(day, 'long')}">
@@ -429,7 +412,6 @@ const LEGEND = html`
     <li><span class="legend__swatch legend__swatch--room"></span>Rooms</li>
     <li><span class="legend__swatch legend__swatch--cottage"></span>Cottages</li>
     <li><span class="legend__swatch legend__swatch--exclusive"></span>Exclusive rental</li>
-    <li><span class="legend__swatch legend__swatch--event"></span>Events</li>
     <li><span class="legend__swatch legend__swatch--hold"></span>On hold, downpayment due</li>
     <li><span class="legend__swatch legend__swatch--done"></span>Checked out</li>
   </ul>`;

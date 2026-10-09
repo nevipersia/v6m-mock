@@ -13,7 +13,7 @@ const RIGHT = pdfPage.width - MARGIN;
 const NAVY: RGB = [0.12, 0.18, 0.36];
 const ORANGE: RGB = [0.82, 0.37, 0.09];
 const GREEN: RGB = [0.24, 0.49, 0.23];
-/** Only a loss is red; money out is plain, as on the Finances page. */
+/** A loss is red and a profit green; money out is plain, as on the Finances page. */
 const RED: RGB = [0.72, 0.27, 0.18];
 const ROW = 24;
 /** Nothing in the table comes lower than this; the page footer sits under it. */
@@ -99,7 +99,7 @@ function totalsStrip(pen: Pen, report: LedgerReport) {
     ? [['INCOME', peso(income), GREEN]]
     : report.view === 'out'
       ? [['EXPENSES', peso(spend), undefined]]
-      : [['INCOME', peso(income), GREEN], ['EXPENSES', peso(spend), undefined], [profit < 0 ? 'LOSS' : 'PROFIT', peso(Math.abs(profit)), profit < 0 ? RED : undefined]];
+      : [['INCOME', peso(income), GREEN], ['EXPENSES', peso(spend), undefined], [profit < 0 ? 'LOSS' : 'PROFIT', peso(Math.abs(profit)), profit < 0 ? RED : GREEN]];
   const gap = 10;
   const width = (RIGHT - MARGIN - gap * 2) / 3;
   boxes.forEach(([label, value, color], index) => {
